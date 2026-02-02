@@ -2,14 +2,17 @@ import { useEffect, useState } from "react";
 import { Outlet, useNavigate, Link, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { 
-  LayoutDashboard, 
-  FileQuestion, 
-  Settings, 
+import {
+  LayoutDashboard,
+  FileQuestion,
+  Settings,
   LogOut,
   Menu,
   X,
-  GraduationCap
+  GraduationCap,
+  Gamepad2,
+  Puzzle,
+  Timer
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -21,14 +24,34 @@ export default function AdminLayout() {
 
   useEffect(() => {
     const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+
+        if (!session) {
+          navigate("/admin/login");
+          return;
+        }
+
+        // Check user role
+        const { data: roleData, error } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', session.user.id)
+          .single();
+
+        if (error || !roleData || roleData.role !== 'admin') {
+          // If no role found or not admin, sign out and redirect
+          console.error("Unauthorized access attempt", error);
+          await supabase.auth.signOut();
+          navigate("/admin/login");
+          return;
+        }
+
+        setIsLoading(false);
+      } catch (err) {
+        console.error("Auth check failed", err);
         navigate("/admin/login");
-        return;
       }
-      
-      setIsLoading(false);
     };
 
     checkAuth();
@@ -57,7 +80,10 @@ export default function AdminLayout() {
 
   const navItems = [
     { path: "/admin", icon: LayoutDashboard, label: "لوحة التحكم" },
-    { path: "/admin/questions", icon: FileQuestion, label: "الأسئلة" },
+    { path: "/admin/questions", icon: FileQuestion, label: "الأسئلة (تلقائي)" },
+    { path: "/admin/matching", icon: Gamepad2, label: "لعبة المطابقة" },
+    { path: "/admin/ordering", icon: Puzzle, label: "لغز الترتيب" },
+    { path: "/admin/speed", icon: Timer, label: "تحدي السرعة" },
     { path: "/admin/settings", icon: Settings, label: "الإعدادات" },
   ];
 

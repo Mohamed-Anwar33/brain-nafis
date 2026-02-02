@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>إعادة تعيين كلمة المرور</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        background-color: #f3f4f6;
+        font-family: 'Tajawal', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+        direction: rtl;
+        text-align: right;
+      }
+      .container {
+        max-width: 600px;
+        margin: 40px auto;
+        background-color: #1f2937; /* Dark gray bg matching image */
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      }
+      .header {
+        background-color: #e02424; /* Red color from site */
+        padding: 40px 20px;
+        text-align: center;
+      }
+      .header h1 {
+        color: white;
+        margin: 0;
+        font-size: 28px;
+        font-weight: bold;
+      }
+      .content {
+        padding: 40px 30px;
+        color: #f3f4f6;
+        text-align: right;
+      }
+      .title {
+        color: #ffffff;
+        font-size: 24px;
+        font-weight: bold;
+        margin-bottom: 20px;
+        text-align: right;
+      }
+      .text {
+        color: #d1d5db; /* Light gray text */
+        font-size: 16px;
+        line-height: 1.6;
+        margin-bottom: 30px;
+        text-align: right;
+      }
+      .button-container {
+        text-align: center;
+        margin: 30px 0;
+      }
+      .button {
+        display: inline-block;
+        background-color: #e02424; /* Red color */
+        color: white;
+        padding: 14px 28px;
+        text-decoration: none;
+        border-radius: 8px;
+        font-weight: bold;
+        font-size: 16px;
+        transition: background-color 0.2s;
+      }
+      .button:hover {
+        background-color: #c51e1e;
+      }
+      .footer {
+        border-top: 1px solid #374151;
+        padding: 20px 30px;
+        color: #9ca3af;
+        font-size: 14px;
+        text-align: center;
+        background-color: #111827;
+      }
+      /* RTL specific adjustments */
+      *[dir="rtl"] {
+        text-align: right;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>شنو ناكل؟</h1>
+      </div>
+      <div class="content">
+        <h2 class="title">إعادة تعيين كلمة المرور</h2>
+        <p class="text">
+          لقد طلبت إعادة تعيين كلمة المرور لحسابك. <br />
+          اضغط على الزر أدناه لإنشاء كلمة مرور جديدة.
+        </p>
+        
+        <div class="button-container">
+          <a href="{{ .ConfirmationURL }}" class="button">إعادة تعيين كلمة المرور</a>
+        </div>
+        
+        <p class="text" style="font-size: 14px; margin-top: 30px; border-top: 1px solid #374151; padding-top: 20px;">
+          هذا الرابط صالح لمدة ساعة واحدة فقط.<br />
+          إذا لم تطلب إعادة تعيين كلمة المرور، يمكنك تجاهل هذا البريد.
+        </p>
+      </div>
+      <div class="footer">
+        &copy; 2026 Shino Nakel. جميع الحقوق محفوظة.
+      </div>
+    </div>
+  </body>
+</html>

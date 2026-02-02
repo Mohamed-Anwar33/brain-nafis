@@ -1,9 +1,11 @@
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ExamResult } from "@/types/exam";
-import { Trophy, Clock, AlertCircle, Home, RotateCcw } from "lucide-react";
+import { Trophy, Clock, AlertCircle, Home, RotateCcw, CheckCircle2, XCircle, Star } from "lucide-react";
 import { format } from "date-fns";
 import { ar } from "date-fns/locale";
 import { useNavigate } from "react-router-dom";
+import confetti from "canvas-confetti";
 
 interface ResultScreenProps {
   result: ExamResult;
@@ -12,96 +14,142 @@ interface ResultScreenProps {
 export function ResultScreen({ result }: ResultScreenProps) {
   const navigate = useNavigate();
   const percentage = Math.round((result.score / result.question_count) * 100);
-  
+
   const getGradeInfo = () => {
-    if (percentage >= 90) return { label: "ممتاز", color: "text-success", emoji: "🏆" };
-    if (percentage >= 75) return { label: "جيد جداً", color: "text-primary", emoji: "🌟" };
-    if (percentage >= 60) return { label: "جيد", color: "text-accent", emoji: "👍" };
-    if (percentage >= 50) return { label: "مقبول", color: "text-warning", emoji: "📝" };
-    return { label: "يحتاج تحسين", color: "text-destructive", emoji: "💪" };
+    if (percentage >= 90) return { label: "إسطوري!", color: "text-yellow-500", bg: "bg-yellow-500/10", border: "border-yellow-500/20", emoji: "👑" };
+    if (percentage >= 75) return { label: "ممتاز", color: "text-green-500", bg: "bg-green-500/10", border: "border-green-500/20", emoji: "🌟" };
+    if (percentage >= 60) return { label: "جيد جداً", color: "text-blue-500", bg: "bg-blue-500/10", border: "border-blue-500/20", emoji: "👍" };
+    if (percentage >= 50) return { label: "جيد", color: "text-orange-500", bg: "bg-orange-500/10", border: "border-orange-500/20", emoji: "💪" };
+    return { label: "حاول مرة أخرى", color: "text-red-500", bg: "bg-red-500/10", border: "border-red-500/20", emoji: "📚" };
   };
 
   const grade = getGradeInfo();
 
-  return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <div className="w-full max-w-lg">
-        <div className="card-elevated p-8 md:p-10 text-center animate-bounce-in">
-          {/* Trophy Icon */}
-          <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-primary/10 mb-6">
-            <Trophy className="w-12 h-12 text-primary" />
-          </div>
+  useEffect(() => {
+    if (percentage >= 50) {
+      const duration = 3 * 1000;
+      const animationEnd = Date.now() + duration;
+      const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 };
 
-          {/* Grade */}
-          <div className="mb-4">
-            <span className="text-5xl mb-2">{grade.emoji}</span>
-            <h1 className={`text-3xl font-bold ${grade.color} mt-2`}>
+      const randomInRange = (min: number, max: number) => Math.random() * (max - min) + min;
+
+      const interval: any = setInterval(function () {
+        const timeLeft = animationEnd - Date.now();
+
+        if (timeLeft <= 0) {
+          return clearInterval(interval);
+        }
+
+        const particleCount = 50 * (timeLeft / duration);
+        confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } });
+        confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } });
+      }, 250);
+    }
+  }, [percentage]);
+
+  return (
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Dynamic Background Elements */}
+      <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-purple-200/30 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-200/30 rounded-full blur-3xl animate-pulse delay-1000"></div>
+      </div>
+
+      <div className="w-full max-w-2xl relative z-10">
+        <div className="bg-white/80 backdrop-blur-xl border border-white/20 shadow-2xl rounded-3xl overflow-hidden animate-fade-in-up">
+
+          {/* Header Section */}
+          <div className="relative p-8 pb-16 text-center bg-gradient-to-b from-slate-50 to-white border-b border-slate-100">
+            <div className="mb-6 inline-flex p-4 rounded-full bg-white shadow-lg shadow-slate-200/50 animate-bounce-slow">
+              <span className="text-6xl filter drop-shadow-md">{grade.emoji}</span>
+            </div>
+
+            <h1 className={`text-4xl md:text-5xl font-black mb-2 tracking-tight ${grade.color}`}>
               {grade.label}
             </h1>
+            <p className="text-slate-500 font-medium">نتيجة الإختبار النهائي</p>
           </div>
 
-          {/* Score */}
-          <div className="score-display my-8">
-            {result.score}/{result.question_count}
-          </div>
+          {/* Stats Grid - Overlapping the Header */}
+          <div className="px-8 -mt-10 mb-8 relative z-20">
+            <div className="bg-white rounded-2xl shadow-xl p-6 flex flex-col md:flex-row items-center justify-between gap-6 border border-slate-100">
 
-          {/* Student Name */}
-          <div className="mb-8 p-4 rounded-xl bg-secondary/50">
-            <p className="text-lg font-semibold text-foreground">
-              {result.student_name}
-            </p>
-          </div>
-
-          {/* Stats */}
-          <div className="grid grid-cols-2 gap-4 mb-8">
-            <div className="p-4 rounded-xl bg-muted">
-              <div className="flex items-center justify-center gap-2 text-muted-foreground mb-1">
-                <AlertCircle className="w-4 h-4" />
-                <span className="text-sm">الخصومات</span>
+              {/* Score Circle */}
+              <div className="flex items-center gap-4">
+                <div className={`relative w-20 h-20 rounded-full flex items-center justify-center border-4 ${grade.color} bg-white shadow-inner`}>
+                  <span className={`text-2xl font-bold ${grade.color}`}>{percentage}%</span>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm text-slate-400 font-bold mb-1">الدرجة النهائية</p>
+                  <p className="text-3xl font-black text-slate-800">{result.score}<span className="text-lg text-slate-400 font-medium">/{result.question_count}</span></p>
+                </div>
               </div>
-              <p className="text-2xl font-bold text-destructive">
-                {result.total_penalty}
-              </p>
-            </div>
-            <div className="p-4 rounded-xl bg-muted">
-              <div className="flex items-center justify-center gap-2 text-muted-foreground mb-1">
-                <Clock className="w-4 h-4" />
-                <span className="text-sm">وقت البدء</span>
+
+              <div className="h-12 w-px bg-slate-100 hidden md:block"></div>
+
+              {/* Score Breakdown */}
+              <div className="flex gap-4 sm:gap-8">
+                <div className="text-center">
+                  <div className="w-10 h-10 mx-auto bg-red-50 rounded-full flex items-center justify-center mb-2 text-red-500">
+                    <AlertCircle className="w-5 h-5" />
+                  </div>
+                  <p className="text-2xl font-bold text-slate-800">{result.total_penalty}</p>
+                  <p className="text-xs text-slate-500 font-bold">خصومات</p>
+                </div>
+                <div className="text-center">
+                  <div className="w-10 h-10 mx-auto bg-green-50 rounded-full flex items-center justify-center mb-2 text-green-500">
+                    <CheckCircle2 className="w-5 h-5" />
+                  </div>
+                  <p className="text-2xl font-bold text-slate-800">{result.score + result.total_penalty}</p>
+                  <p className="text-xs text-slate-500 font-bold">إجابات صحيحة</p>
+                </div>
               </div>
-              <p className="text-sm font-semibold text-foreground">
-                {format(new Date(result.started_at), "hh:mm a", { locale: ar })}
-              </p>
+
             </div>
           </div>
 
-          {/* Time Info */}
-          <div className="text-sm text-muted-foreground mb-8">
-            <p>
-              بدأ في: {format(new Date(result.started_at), "dd MMMM yyyy - hh:mm a", { locale: ar })}
-            </p>
-            <p>
-              انتهى في: {format(new Date(result.finished_at), "dd MMMM yyyy - hh:mm a", { locale: ar })}
-            </p>
+          {/* Details Section */}
+          <div className="px-8 pb-8 space-y-6">
+
+            {/* Student Info Card */}
+            <div className="bg-slate-50 rounded-xl p-4 flex items-center justify-between border border-slate-100">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-slate-400 font-bold border shadow-sm">
+                  {result.student_name.charAt(0)}
+                </div>
+                <div>
+                  <p className="text-sm text-slate-400 font-bold">الطالب</p>
+                  <p className="font-bold text-slate-800">{result.student_name}</p>
+                </div>
+              </div>
+              <div className="text-left">
+                <p className="text-sm text-slate-400 font-bold">الوقت</p>
+                <p className="font-bold text-slate-800 dir-ltr font-mono text-sm">
+                  {format(new Date(result.finished_at), "hh:mm a")}
+                </p>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-4">
+              <Button
+                onClick={() => navigate("/")}
+                variant="outline"
+                className="h-14 rounded-xl border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-bold text-lg"
+              >
+                <Home className="w-5 h-5 ml-2" />
+                الرئيسية
+              </Button>
+              <Button
+                onClick={() => navigate("/")}
+                className="h-14 rounded-xl bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 text-white shadow-lg shadow-primary/25 font-bold text-lg"
+              >
+                <RotateCcw className="w-5 h-5 ml-2" />
+                اختبار جديد
+              </Button>
+            </div>
           </div>
 
-          {/* Actions */}
-          <div className="flex flex-col sm:flex-row gap-4">
-            <Button
-              onClick={() => navigate("/")}
-              variant="outline"
-              className="flex-1 h-12 text-base rounded-xl"
-            >
-              <Home className="w-5 h-5 ml-2" />
-              الرئيسية
-            </Button>
-            <Button
-              onClick={() => navigate("/")}
-              className="flex-1 h-12 text-base rounded-xl btn-primary-gradient"
-            >
-              <RotateCcw className="w-5 h-5 ml-2" />
-              اختبار جديد
-            </Button>
-          </div>
         </div>
       </div>
     </div>

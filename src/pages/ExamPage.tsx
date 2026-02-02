@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ExamQuestion } from "@/components/exam/ExamQuestion";
 import { AttemptData, ExamQuestion as ExamQuestionType } from "@/types/exam";
@@ -18,6 +18,12 @@ export default function ExamPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isFinishing, setIsFinishing] = useState(false);
   const [completedQuestions, setCompletedQuestions] = useState<Set<string>>(new Set());
+  const [penalties, setPenalties] = useState(0);
+
+  // Refs for synchronous access inside timeouts/callbacks
+  const scoreRef = useRef(0);
+  const penaltiesRef = useRef(0);
+  const questionPenaltiesRef = useRef<Record<string, number>>({});
 
   // Load exam data from sessionStorage
   useEffect(() => {
@@ -33,34 +39,100 @@ export default function ExamPage() {
       // Try to get from sessionStorage first (for instant loading)
       const cached = sessionStorage.getItem(`exam_${attemptId}`);
       if (cached) {
-        const data = JSON.parse(cached) as AttemptData;
-        setExamData(data);
-        setScore(data.score);
-        setIsLoading(false);
-        return;
+        try {
+          const data = JSON.parse(cached) as AttemptData;
+          setExamData(data);
+          setScore(data.score);
+          scoreRef.current = data.score; // Sync ref
+          setIsLoading(false);
+          return;
+        } catch (e) {
+          console.error("Error parsing cached exam:", e);
+          sessionStorage.removeItem(`exam_${attemptId}`);
+        }
       }
 
-      // If not in cache, redirect to start
-      toast.error("جلسة الاختبار غير موجودة");
-      navigate("/");
+      // If not in cache, fetch from server (exam-start function)
+      try {
+        const { data, error } = await supabase.functions.invoke("exam-start", {
+          body: { attempt_id: attemptId }
+        });
+
+        if (error) {
+          console.error("Error fetching exam:", error);
+          throw error;
+        }
+
+        if (data) {
+          const attemptData = data as AttemptData;
+          sessionStorage.setItem(`exam_${attemptId}`, JSON.stringify(attemptData));
+          setExamData(attemptData);
+          setScore(attemptData.score);
+          scoreRef.current = attemptData.score; // Sync ref
+        } else {
+          throw new Error("No data returned from exam-start");
+        }
+      } catch (err) {
+        console.error("Failed to load exam:", err);
+        toast.error("فشل تحميل الاختبار. يرجى المحاولة مرة أخرى.");
+        navigate("/student/dashboard"); // Redirect to dashboard instead of /
+      } finally {
+        setIsLoading(false);
+      }
     };
 
     loadExam();
   }, [attemptId, navigate]);
 
   const finishExam = useCallback(async () => {
-    if (!attemptId) return;
+    if (!attemptId || !examData) return;
 
     setIsFinishing(true);
     try {
-      const { data, error } = await supabase.functions.invoke("exam-finish", {
-        body: { attempt_id: attemptId },
+      // Calculate final results locally using Refs for accuracy
+      const currentScore = scoreRef.current;
+      const currentPenalties = penaltiesRef.current;
+
+      // Deduct penalties from score (1 point per penalty)
+      const calculatedScore = currentScore - currentPenalties;
+      const finalScore = Math.max(0, calculatedScore);
+      const finalPenalty = currentPenalties;
+
+      const resultData = {
+        student_name: examData.student_name,
+        score: finalScore,
+        question_count: examData.question_count,
+        total_questions: examData.question_count, // redundancy for safety
+        total_penalty: finalPenalty,
+        started_at: new Date().toISOString(), // approximate
+        finished_at: new Date().toISOString()
+      };
+
+      // Update attempt in DB directly
+      const { error } = await supabase
+        .from("attempts")
+        .update({
+          score: finalScore,
+          total_penalty: finalPenalty
+        })
+        .eq("id", attemptId);
+
+      if (error) {
+        console.error("Error updating attempt:", error);
+        // Continue anyway to show results
+      }
+
+      // Trigger Email Notification (Non-blocking)
+      // We invoke the function but don't await the result to block navigation
+      supabase.functions.invoke("exam-finish", {
+        body: { attempt_id: attemptId }
+      }).then(({ data, error }) => {
+        if (error) console.error("Email notification failed:", error);
+        else console.log("Email notification status:", data?.email_status);
       });
 
-      if (error) throw error;
-
       // Store result and navigate
-      sessionStorage.setItem(`result_${attemptId}`, JSON.stringify(data));
+      sessionStorage.setItem(`result_${attemptId}`, JSON.stringify(resultData));
       sessionStorage.removeItem(`exam_${attemptId}`);
 
       navigate(`/result/${attemptId}`);
@@ -69,13 +141,13 @@ export default function ExamPage() {
       toast.error("حدث خطأ أثناء إنهاء الاختبار");
       setIsFinishing(false);
     }
-  }, [attemptId, navigate]);
+  }, [attemptId, navigate, examData]); // Removed score dependencies to rely on refs
 
   const nextQuestion = useCallback(() => {
     if (examData && currentIndex < examData.questions.length - 1) {
       setCurrentIndex(prev => prev + 1);
     } else {
-      finishExam();
+      finishExam(); // refs will ensure correct score is used
     }
   }, [examData, currentIndex, finishExam]);
 
@@ -85,89 +157,51 @@ export default function ExamPage() {
     const currentQuestion = examData.questions[currentIndex];
     const selectedChoice = currentQuestion.choices.find(c => c.id === choiceId);
 
-    // Determine correctness locally if possible for instant feedback
-    const isCorrectLocal = selectedChoice?.is_correct;
+    // Logic: we trust local is_correct from the client-side fetch in Dashboard
+    const isCorrect = selectedChoice?.is_correct === true;
 
     setIsSubmitting(true);
 
-    // Optimistic UI Update
-    if (typeof isCorrectLocal === 'boolean') {
-      if (isCorrectLocal) {
-        audioManager.playCorrect();
-        setCompletedQuestions(prev => new Set(prev).add(currentQuestion.id));
-      } else {
-        audioManager.playWrong();
-      }
-    }
+    if (isCorrect) {
+      audioManager.playCorrect();
 
-    // Fire and forget server update
-    const serverUpdatePromise = supabase.functions.invoke("exam-answer", {
-      body: {
+      // Update score locally and in Ref
+      setScore(prev => prev + 1);
+      scoreRef.current += 1;
+
+      setCompletedQuestions(prev => new Set(prev).add(currentQuestion.id));
+
+      // Save answer to database (Critical for exam-finish validation)
+      const wrongCount = questionPenaltiesRef.current[currentQuestion.id] || 0;
+      await supabase.from("attempt_answers").insert({
         attempt_id: attemptId,
         question_id: currentQuestion.id,
-        selected_choice_id: choiceId,
-      },
-    }).then(({ data, error }) => {
-      if (error) {
-        console.error("Server answer error:", error);
-        return;
-      }
-      if (data) {
-        setScore(data.score); // Sync exact score from server
-      }
-    });
+        choice_id: choiceId,
+        is_correct: true,
+        wrong_count: wrongCount
+      });
 
-    // If this is the last question, we MUST wait for the server update
-    // before moving on to finishExam to ensure the DB is consistent.
-    if (currentIndex === examData.questions.length - 1) {
-      await serverUpdatePromise;
+    } else {
+      audioManager.playWrong();
+
+      setPenalties(prev => prev + 1);
+      penaltiesRef.current += 1;
+
+      // Track per-question penalties
+      questionPenaltiesRef.current[currentQuestion.id] = (questionPenaltiesRef.current[currentQuestion.id] || 0) + 1;
     }
 
-    // If we didn't have local correctness, we HAVE to wait.
-    if (typeof isCorrectLocal !== 'boolean') {
-      try {
-        const { data, error } = await supabase.functions.invoke("exam-answer", {
-          body: {
-            attempt_id: attemptId,
-            question_id: currentQuestion.id,
-            selected_choice_id: choiceId,
-          },
-        });
-
-        if (error) throw error;
-
-        if (data.correct) {
-          audioManager.playCorrect();
-          setScore(data.score);
-          setCompletedQuestions(prev => new Set(prev).add(currentQuestion.id));
-          setTimeout(() => nextQuestion(), 400);
-          return true;
-        } else {
-          audioManager.playWrong();
-          setScore(data.score);
-          return false;
-        }
-      } catch (err) {
-        console.error("Error submitting answer:", err);
-        toast.error("حدث خطأ أثناء إرسال الإجابة");
-        return false;
-      } finally {
-        setIsSubmitting(false);
-      }
-    }
-
-    // If we DID handle it locally:
-    // Wait for the delay then move next ONLY if correct
+    // Delay to show animation/sound
     setTimeout(() => {
-      if (isCorrectLocal) {
+      if (isCorrect) {
         nextQuestion();
       }
-      setIsSubmitting(false); // Re-enable input after transition/action
-    }, 400);
+      setIsSubmitting(false);
+    }, 1000);
 
-    return isCorrectLocal as boolean;
+    return isCorrect;
 
-  }, [examData, attemptId, currentIndex, isSubmitting, finishExam, nextQuestion]);
+  }, [examData, attemptId, currentIndex, isSubmitting, nextQuestion]);
 
   if (isLoading || !examData || isFinishing) {
     return (

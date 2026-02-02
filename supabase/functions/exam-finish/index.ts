@@ -22,7 +22,7 @@ serve(async (req: Request) => {
   }
 
   try {
-    const { attempt_id } = await req.json();
+    const { attempt_id, is_game } = await req.json();
 
     if (!attempt_id) {
       return new Response(
@@ -36,97 +36,175 @@ serve(async (req: Request) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Get attempt data
-    const { data: attempt, error: attemptError } = await supabase
-      .from("attempts")
-      .select("*")
-      .eq("id", attempt_id)
-      .single();
+    let attempt: any;
+    let attemptError: any;
+    const tableName = is_game ? "game_attempts" : "attempts";
+
+    // Get attempt data from appropriate table
+    if (is_game) {
+      // For game attempts
+      const result = await supabase
+        .from("game_attempts")
+        .select("*")
+        .eq("id", attempt_id)
+        .single();
+      attempt = result.data;
+      attemptError = result.error;
+    } else {
+      // For regular exam attempts
+      const result = await supabase
+        .from("attempts")
+        .select("*")
+        .eq("id", attempt_id)
+        .single();
+      attempt = result.data;
+      attemptError = result.error;
+    }
 
     if (attemptError || !attempt) {
       return new Response(
-        JSON.stringify({ error: "Invalid attempt" }),
+        JSON.stringify({ error: "Invalid attempt", table: tableName }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-
-    // Verify all questions are answered correctly
-    const { data: attemptQuestions } = await supabase
-      .from("attempt_questions")
-      .select("question_id")
-      .eq("attempt_id", attempt_id);
-
-    const { data: studentAnswers } = await supabase
-      .from("attempt_answers")
-      .select("question_id")
-      .eq("attempt_id", attempt_id);
-
-    if (!attemptQuestions || !studentAnswers) {
-      throw new Error("Failed to verify answers");
-    }
-
-    if (studentAnswers.length < attemptQuestions.length) {
-      return new Response(
-        JSON.stringify({ error: "لم يتم الإجابة على جميع الأسئلة" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Update finished_at
-    const finishedAt = new Date().toISOString();
-    await supabase
-      .from("attempts")
-      .update({ finished_at: finishedAt })
-      .eq("id", attempt_id);
 
     let emailStatus = "not_attempted";
     let emailDebug = "";
 
-    // Send teacher email if not already sent
+    // Only verify questions for regular exams, not games
+    if (!is_game) {
+      // Verify all questions are answered correctly
+      const { data: attemptQuestions } = await supabase
+        .from("attempt_questions")
+        .select("question_id")
+        .eq("attempt_id", attempt_id);
+
+      const { data: studentAnswers } = await supabase
+        .from("attempt_answers")
+        .select("question_id")
+        .eq("attempt_id", attempt_id);
+
+      if (!attemptQuestions || !studentAnswers) {
+        throw new Error("Failed to verify answers");
+      }
+
+      if (studentAnswers.length < attemptQuestions.length) {
+        return new Response(
+          JSON.stringify({ error: "لم يتم الإجابة على جميع الأسئلة" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Update finished_at for regular exams
+      const finishedAt = new Date().toISOString();
+      await supabase
+        .from("attempts")
+        .update({ finished_at: finishedAt })
+        .eq("id", attempt_id);
+    }
+
+    // Send admin email if not already sent
     if (!attempt.teacher_email_sent) {
-      // Fetch notification email from settings
-      const { data: settings } = await supabase
-        .from("settings")
-        .select("notification_email")
-        .eq("id", 1)
-        .single();
+      console.log("[exam-finish] Starting email notification process...");
 
-      const teacherEmail = settings?.notification_email; // Use DB setting
-      const resendApiKey = Deno.env.get("RESEND_API_KEY");
-      const sendgridApiKey = Deno.env.get("SENDGRID_API_KEY");
+      // Fetch email settings from app_settings
+      const { data: settings, error: settingsError } = await supabase
+        .from("app_settings")
+        .select("key, value")
+        .in("key", ["admin_email", "resend_api_key"]);
 
-      if (!teacherEmail) {
-        emailStatus = "skipped_no_email_setting";
-      } else if (!resendApiKey && !sendgridApiKey) {
-        emailStatus = "skipped_no_api_keys";
+      console.log("[exam-finish] Settings fetched:", settings?.map((s: { key: string }) => s.key));
+
+      if (settingsError) {
+        console.error("[exam-finish] Error fetching settings:", settingsError);
+        emailStatus = "error_fetching_settings";
+        emailDebug = settingsError.message;
+      }
+
+      // Recipient email (changeable by admin)
+      const recipientEmail = settings?.find((s: any) => s.key === "admin_email")?.value;
+
+      // Resend API Key
+      const resendApiKey = settings?.find((s: any) => s.key === "resend_api_key")?.value;
+
+      // Log configuration (masked for security)
+      console.log("[exam-finish] Recipient (TO):", recipientEmail ? `${recipientEmail.substring(0, 3)}***` : "NOT SET");
+      console.log("[exam-finish] Resend API Key:", resendApiKey ? `SET (${resendApiKey.substring(0, 4)}***)` : "NOT SET");
+
+      if (!recipientEmail) {
+        console.warn("[exam-finish] Skipping email: No recipient email configured");
+        emailStatus = "skipped_no_recipient";
+        emailDebug = "Recipient email not configured in app_settings";
+      } else if (!resendApiKey) {
+        console.warn("[exam-finish] Skipping email: No Resend API Key configured");
+        emailStatus = "skipped_no_api_key";
+        emailDebug = "Resend API Key not configured";
       } else {
         try {
-          // Get answer details for breakdown
-          const { data: answers } = await supabase
-            .from("attempt_answers")
-            .select("question_id, wrong_count")
-            .eq("attempt_id", attempt_id);
+          let subject: string;
+          let htmlBody: string;
 
-          const penalizedCount = (answers as Answer[] || []).filter((a: Answer) => a.wrong_count > 0).length;
+          if (is_game) {
+            // Game attempts - simpler HTML
+            const gameTypeAr = attempt.game_type === "speed" ? "تحدي السرعة" :
+              attempt.game_type === "matching" ? "لعبة المطابقة" :
+                attempt.game_type === "ordering" ? "لغز الترتيب" : attempt.game_type;
 
-          const subject = `نتيجة اختبار جديد - ${attempt.student_name} - ${attempt.score}/${attempt.question_count}`;
+            subject = `نتيجة ${gameTypeAr} جديدة`;
 
-          const htmlBody = `
-            <div dir="rtl" style="font-family: Arial, sans-serif; padding: 20px;">
-              <h1 style="color: #0D9488;">نتيجة اختبار جديد</h1>
-              <hr>
-              <p><strong>اسم الطالب:</strong> ${attempt.student_name}</p>
-              <p><strong>النتيجة:</strong> <span style="font-size: 24px; color: #0D9488; font-weight: bold;">${attempt.score}/${attempt.question_count}</span></p>
-              <p><strong>عدد الأسئلة التي تم الخصم عليها:</strong> ${penalizedCount}</p>
-              <p><strong>إجمالي الخصومات:</strong> ${attempt.total_penalty}</p>
-              <hr>
-              <p><strong>وقت البدء:</strong> ${new Date(attempt.started_at).toLocaleString('ar-EG')}</p>
-              <p><strong>وقت الانتهاء:</strong> ${new Date(finishedAt).toLocaleString('ar-EG')}</p>
+            htmlBody = `
+            <div dir="rtl" style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px; background-color: #f8fafc;">
+              <h1 style="color: #0D9488; text-align: center;">تقرير نتيجة ${gameTypeAr}</h1>
+              <hr style="border: 1px solid #0D9488;">
+              <p style="font-size: 16px;"><strong>نوع اللعبة:</strong> ${gameTypeAr}</p>
+              <p style="font-size: 16px;"><strong>النتيجة النهائية:</strong> <span style="font-size: 20px; color: #0D9488; font-weight: bold;">${attempt.score || 0}</span> نقطة</p>
+              <p style="font-size: 16px;"><strong>الإجابات الصحيحة:</strong> ${attempt.correct_count || 0}</p>
+              <p style="font-size: 16px;"><strong>إجمالي الأسئلة:</strong> ${attempt.total_questions || 0}</p>
+              
+              <div style="background-color: white; padding: 15px; border-radius: 6px; margin-top: 15px;">
+                  <p><strong>وقت المحاولة:</strong> ${new Date(attempt.created_at).toLocaleString('ar-EG')}</p>
+              </div>
+              
+              <p style="text-align: center; margin-top: 20px; color: #64748b; font-size: 12px;">تم الإرسال من نظام TestWise</p>
             </div>
           `;
+          } else {
+            // Regular exam - get answer details
+            const { data: answers } = await supabase
+              .from("attempt_answers")
+              .select("question_id, wrong_count")
+              .eq("attempt_id", attempt_id);
 
-          if (resendApiKey) {
-            // Use Resend
+            const penalizedCount = (answers as Answer[] || []).filter((a: Answer) => a.wrong_count > 0).length;
+
+            subject = `نتيجة اختبار جديد - ${attempt.student_name}`;
+
+            const finishedAt = attempt.finished_at || new Date().toISOString();
+
+            htmlBody = `
+            <div dir="rtl" style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px; background-color: #f8fafc;">
+              <h1 style="color: #0D9488; text-align: center;">تقرير نتيجة اختبار</h1>
+              <hr style="border: 1px solid #0D9488;">
+              <p style="font-size: 16px;"><strong>اسم الطالب:</strong> ${attempt.student_name}</p>
+              <p style="font-size: 16px;"><strong>الدرجة النهائية:</strong> <span style="font-size: 20px; color: #0D9488; font-weight: bold;">${attempt.score}</span> / ${attempt.question_count}</p>
+              <p style="font-size: 16px;"><strong>عدد الخصومات:</strong> ${attempt.total_penalty || 0}</p>
+              
+              <div style="background-color: white; padding: 15px; border-radius: 6px; margin-top: 15px;">
+                  <p><strong>وقت البدء:</strong> ${new Date(attempt.started_at).toLocaleString('ar-EG')}</p>
+                  <p><strong>وقت الانتهاء:</strong> ${new Date(finishedAt).toLocaleString('ar-EG')}</p>
+              </div>
+              
+              <p style="text-align: center; margin-top: 20px; color: #64748b; font-size: 12px;">تم الإرسال من نظام TestWise</p>
+            </div>
+          `;
+          }
+
+          // Use Resend API (simple and works perfectly!)
+          console.log("[exam-finish] Sending email via Resend...");
+          console.log("[exam-finish] Recipient:", recipientEmail);
+          console.log("[exam-finish] Subject:", subject);
+
+          try {
             const response = await fetch("https://api.resend.com/emails", {
               method: "POST",
               headers: {
@@ -134,45 +212,30 @@ serve(async (req: Request) => {
                 "Authorization": `Bearer ${resendApiKey}`,
               },
               body: JSON.stringify({
-                from: "Test Bank <onboarding@resend.dev>",
-                to: [teacherEmail],
-                subject,
+                from: `TestWise <delivered@resend.dev>`,
+                to: [recipientEmail],
+                subject: subject,
                 html: htmlBody,
               }),
             });
 
-            if (response.ok) {
-              emailStatus = "sent_resend";
-            } else {
-              const errorText = await response.text();
-              console.error("Resend error:", errorText);
-              emailStatus = "failed_resend";
-              emailDebug = errorText;
-            }
-          } else if (sendgridApiKey) {
-            // Use SendGrid
-            const response = await fetch("https://api.sendgrid.com/v3/mail/send", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${sendgridApiKey}`,
-              },
-              body: JSON.stringify({
-                personalizations: [{ to: [{ email: teacherEmail }] }],
-                from: { email: "noreply@example.com", name: "Test Bank" },
-                subject,
-                content: [{ type: "text/html", value: htmlBody }],
-              }),
-            });
+            const responseData = await response.json();
+            console.log("[exam-finish] Resend response status:", response.status);
+            console.log("[exam-finish] Resend response:", JSON.stringify(responseData));
 
             if (response.ok) {
-              emailStatus = "sent_sendgrid";
+              console.log("[exam-finish] ✅ Email sent successfully via Resend!");
+              emailStatus = "sent_resend";
+              emailDebug = JSON.stringify(responseData);
             } else {
-              const errorText = await response.text();
-              console.error("SendGrid error:", errorText);
-              emailStatus = "failed_sendgrid";
-              emailDebug = errorText;
+              console.error("[exam-finish] ❌ Resend error:", responseData);
+              emailStatus = "failed_resend";
+              emailDebug = `Status ${response.status}: ${JSON.stringify(responseData)}`;
             }
+          } catch (fetchError: any) {
+            console.error("[exam-finish] ❌ Fetch error:", fetchError);
+            emailStatus = "failed_fetch";
+            emailDebug = fetchError.message || String(fetchError);
           }
 
           if (emailStatus.startsWith("sent")) {
@@ -194,22 +257,18 @@ serve(async (req: Request) => {
 
     return new Response(
       JSON.stringify({
-        student_name: attempt.student_name,
-        score: attempt.score,
-        question_count: attempt.question_count,
-        total_penalty: attempt.total_penalty,
-        started_at: attempt.started_at,
-        finished_at: finishedAt,
+        success: true,
         email_status: emailStatus,
-        email_debug: emailDebug
+        debug: emailDebug
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
     console.error("Error in exam-finish:", error);
+    // Return success to client even if server fails loggic, to prevent UI getting stuck
     return new Response(
-      JSON.stringify({ error: "حدث خطأ أثناء إنهاء الاختبار" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify({ success: false, error: "Internal Error" }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });

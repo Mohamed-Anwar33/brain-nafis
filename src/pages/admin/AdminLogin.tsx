@@ -24,15 +24,30 @@ export default function AdminLogin() {
       });
 
       if (error) {
-        toast.error("بيانات الدخول غير صحيحة");
+        console.error("Login Error Details:", error);
+        toast.error(error.message || "بيانات الدخول غير صحيحة");
         return;
       }
 
       if (data.user) {
+        // Check role
+        const { data: roleData, error: roleError } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', data.user.id)
+          .single();
+
+        if (roleError || !roleData || roleData.role !== 'admin') {
+          toast.error("عذراً، هذا الحساب لا يملك صلاحيات المسؤول");
+          await supabase.auth.signOut();
+          return;
+        }
+
         toast.success("تم تسجيل الدخول بنجاح");
         navigate("/admin");
       }
     } catch (err) {
+      console.error(err);
       toast.error("حدث خطأ أثناء تسجيل الدخول");
     } finally {
       setIsLoading(false);

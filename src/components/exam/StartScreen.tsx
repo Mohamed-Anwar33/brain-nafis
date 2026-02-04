@@ -59,7 +59,7 @@ export function StartScreen({ onStart, isLoading }: StartScreenProps) {
             <div className="space-y-2 mb-8 animate-fade-in delay-100">
               <h2 className="text-xl md:text-2xl font-bold text-gray-800">المتوسطة الرابعة والعشرون جدة</h2>
               <div className="flex flex-wrap justify-center gap-4 text-sm md:text-base text-muted-foreground">
-                <p>معلمة الصف: <span className="font-semibold text-primary">هيفاء شجيع السلمي</span></p>
+                <p>معلمة مادة العلوم: <span className="font-semibold text-primary">هيفاء شجيع السلمي</span></p>
                 <span className="hidden md:inline">•</span>
                 <p>قائدة المدرسة: <span className="font-semibold text-primary">تهاني السفياني</span></p>
               </div>

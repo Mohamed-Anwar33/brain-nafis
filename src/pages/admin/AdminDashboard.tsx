@@ -6,6 +6,9 @@ import { FileQuestion, Users, CheckCircle, TrendingUp, AlertTriangle } from "luc
 interface Stats {
   totalQuestions: number;
   activeQuestions: number;
+  speedQuestions: number;
+  matchingQuestions: number;
+  orderingQuestions: number;
   totalAttempts: number;
   averageScore: number;
   requiredQuestions: number;
@@ -15,6 +18,9 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState<Stats>({
     totalQuestions: 0,
     activeQuestions: 0,
+    speedQuestions: 0,
+    matchingQuestions: 0,
+    orderingQuestions: 0,
     totalAttempts: 0,
     averageScore: 0,
     requiredQuestions: 20,
@@ -24,7 +30,7 @@ export default function AdminDashboard() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        // Get questions count
+        // Get questions count (Regular)
         const { count: totalQuestions } = await supabase
           .from("questions")
           .select("*", { count: "exact", head: true });
@@ -33,6 +39,22 @@ export default function AdminDashboard() {
           .from("questions")
           .select("*", { count: "exact", head: true })
           .eq("active", true);
+
+        // Get Game Question Counts
+        const { count: speedQuestions } = await supabase
+          .from("speed_challenge_questions")
+          .select("*", { count: "exact", head: true })
+          .eq("is_active", true);
+
+        const { count: matchingQuestions } = await supabase
+          .from("matching_game_questions")
+          .select("*", { count: "exact", head: true })
+          .eq("is_active", true);
+
+        const { count: orderingQuestions } = await supabase
+          .from("ordering_game_questions")
+          .select("*", { count: "exact", head: true })
+          .eq("is_active", true);
 
         // Get attempts stats
         const { data: attempts } = await supabase
@@ -55,6 +77,9 @@ export default function AdminDashboard() {
         setStats({
           totalQuestions: totalQuestions || 0,
           activeQuestions: activeQuestions || 0,
+          speedQuestions: speedQuestions || 0,
+          matchingQuestions: matchingQuestions || 0,
+          orderingQuestions: orderingQuestions || 0,
           totalAttempts,
           averageScore: Math.round(averageScore),
           requiredQuestions: settings?.exam_question_count || 20,
@@ -143,6 +168,31 @@ export default function AdminDashboard() {
             </CardContent>
           </Card>
         ))}
+
+        {/* Game Stats */}
+        <Card className="card-elevated border-indigo-100 bg-indigo-50/30">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">تحدي السرعة</CardTitle>
+            <div className="p-2 rounded-lg bg-indigo-100 text-indigo-600"><TrendingUp className="w-5 h-5" /></div>
+          </CardHeader>
+          <CardContent><div className="text-3xl font-bold text-indigo-700">{stats.speedQuestions}</div></CardContent>
+        </Card>
+
+        <Card className="card-elevated border-pink-100 bg-pink-50/30">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">المطابقة</CardTitle>
+            <div className="p-2 rounded-lg bg-pink-100 text-pink-600"><CheckCircle className="w-5 h-5" /></div>
+          </CardHeader>
+          <CardContent><div className="text-3xl font-bold text-pink-700">{stats.matchingQuestions}</div></CardContent>
+        </Card>
+
+        <Card className="card-elevated border-orange-100 bg-orange-50/30">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">الترتيب</CardTitle>
+            <div className="p-2 rounded-lg bg-orange-100 text-orange-600"><FileQuestion className="w-5 h-5" /></div>
+          </CardHeader>
+          <CardContent><div className="text-3xl font-bold text-orange-700">{stats.orderingQuestions}</div></CardContent>
+        </Card>
       </div>
 
       {/* Quick Actions */}

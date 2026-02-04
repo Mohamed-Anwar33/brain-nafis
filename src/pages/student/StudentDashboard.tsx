@@ -58,33 +58,101 @@ export default function StudentDashboard() {
 
             const limitCount = setting?.exam_question_count || 10;
 
-            const { data: questionsData, error: questionsError } = await supabase
+            // 1. Fetch all active questions (IDs only for performance)
+            const { data: allQuestions, error: questionsError } = await supabase
                 .from("questions")
-                .select("*, choices(*)")
-                .eq("active", true)
-                .limit(limitCount);
+                .select("id")
+                .eq("active", true);
 
-            if (questionsError || !questionsData || questionsData.length === 0) {
+            if (questionsError || !allQuestions || allQuestions.length === 0) {
                 toast.error("لا توجد أسئلة متاحة حالياً");
                 setLoading(false);
                 return;
             }
 
-            const shuffledQuestions = [...questionsData].sort(() => Math.random() - 0.5);
+            if (allQuestions.length < limitCount) {
+                toast.error(`لا يوجد عدد كافٍ من الأسئلة. المطلوب: ${limitCount}, المتاح: ${allQuestions.length}`);
+                setLoading(false);
+                return;
+            }
 
+            // 2. Fetch seen question IDs for this user (performance: IDs only)
+            const { data: seenHistory } = await supabase
+                .from("student_question_history")
+                .select("question_id")
+                .eq("user_id", session.user.id)
+                .eq("game_type", "exam");
+
+            const seenIds = new Set(seenHistory?.map(h => h.question_id) || []);
+
+            // 3. Filter unseen questions
+            let availableQuestions = allQuestions.filter(q => !seenIds.has(q.id));
+
+            // 4. Reset if needed
+            let didReset = false;
+            if (availableQuestions.length < limitCount) {
+                await supabase
+                    .from("student_question_history")
+                    .delete()
+                    .eq("user_id", session.user.id)
+                    .eq("game_type", "exam");
+
+                availableQuestions = allQuestions;
+                // Silent reset - no notification to student
+            }
+
+            // 5. Shuffle with Fisher-Yates
+            const shuffled = [...availableQuestions];
+            for (let i = shuffled.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            }
+
+            // 6. Select first N questions
+            const selectedQuestionIds = shuffled.slice(0, limitCount).map(q => q.id);
+
+            // 7. Fetch full question data with choices
+            const { data: selectedQuestionsData, error: fullDataError } = await supabase
+                .from("questions")
+                .select("*, choices(*)")
+                .in("id", selectedQuestionIds);
+
+            if (fullDataError || !selectedQuestionsData) {
+                toast.error("فشل تحميل بيانات الأسئلة");
+                setLoading(false);
+                return;
+            }
+
+            // Preserve shuffle order
+            const questionMap = new Map(selectedQuestionsData.map(q => [q.id, q]));
+            const orderedQuestions = selectedQuestionIds.map(id => questionMap.get(id)).filter(Boolean);
+
+            // 8. Create attempt
             const { data: attempt, error: attemptError } = await supabase
                 .from("attempts")
                 .insert({
                     student_name: studentName || "Student",
                     score: 0,
-                    question_count: shuffledQuestions.length
+                    question_count: orderedQuestions.length
                 })
                 .select()
                 .single();
 
             if (attemptError) throw attemptError;
 
-            const examQuestions = shuffledQuestions.map((q, index) => ({
+            // 9. Record seen questions (ON CONFLICT DO NOTHING to handle race conditions)
+            const historyRecords = selectedQuestionIds.map(qid => ({
+                user_id: session.user.id,
+                question_id: qid,
+                game_type: "exam"
+            }));
+
+            await supabase
+                .from("student_question_history")
+                .upsert(historyRecords, { onConflict: "user_id,question_id,game_type", ignoreDuplicates: true });
+
+            // 10. Build exam data
+            const examQuestions = orderedQuestions.map((q, index) => ({
                 id: q.id,
                 text: q.text,
                 choices: q.choices.map((c: any) => ({

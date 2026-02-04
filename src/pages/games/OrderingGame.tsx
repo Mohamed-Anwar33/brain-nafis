@@ -46,32 +46,69 @@ export default function OrderingGame() {
     const fetchQuestions = async () => {
         setLoading(true);
         try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) {
+                toast.error("يجب تسجيل الدخول أولاً");
+                setLoading(false);
+                return;
+            }
+
             // Get Config
             const { data: setting } = await supabase.from("app_settings").select("value").eq("key", "ordering_questions_limit").maybeSingle();
             const limit = setting ? parseInt(setting.value) : 10;
 
-            const { data, error } = await supabase
+            // 1. Fetch all active questions (IDs only)
+            const { data: allQuestions, error } = await supabase
                 .from("ordering_game_questions")
-                .select("*")
+                .select("id")
                 .eq("is_active", true)
                 .eq("level", gameState.level);
 
-            let loadedQuestions = data || [];
-
-            if (loadedQuestions.length === 0) {
-                loadedQuestions = [
-                    {
-                        id: 'o1',
-                        title: 'رتب العناصر حسب العدد الذري (الأصغر للأكبر)',
-                        items: ['Li (3)', 'H (1)', 'Be (4)', 'He (2)'],
-                        drop_labels: ['1', '2', '3', '4'],
-                        correct_order: ['H (1)', 'He (2)', 'Li (3)', 'Be (4)'],
-                        stage: 'demo', level: 1, is_active: true, created_at: ''
-                    }
-                ] as any;
+            if (error || !allQuestions || allQuestions.length === 0) {
+                toast.error("لا توجد أسئلة متاحة");
+                setLoading(false);
+                return;
             }
+
+            // 2. Fetch seen question IDs
+            const { data: seenHistory } = await supabase
+                .from("student_question_history")
+                .select("question_id")
+                .eq("user_id", session.user.id)
+                .eq("game_type", "ordering");
+
+            const seenIds = new Set(seenHistory?.map(h => h.question_id) || []);
+
+            // 3. Filter unseen
+            let availableQuestions = allQuestions.filter(q => !seenIds.has(q.id));
+
+            // 4. Reset if needed
+            if (availableQuestions.length < limit) {
+                await supabase
+                    .from("student_question_history")
+                    .delete()
+                    .eq("user_id", session.user.id)
+                    .eq("game_type", "ordering");
+
+                availableQuestions = allQuestions;
+                // Silent reset - no notification to student
+            }
+
+            // 5. Fetch full data
+            const availableIds = availableQuestions.map(q => q.id);
+            const { data: fullQuestions, error: fullError } = await supabase
+                .from("ordering_game_questions")
+                .select("*")
+                .in("id", availableIds);
+
+            if (fullError || !fullQuestions) {
+                toast.error("فشل تحميل بيانات الأسئلة");
+                setLoading(false);
+                return;
+            }
+
             // Cast json arrays to string[]
-            loadedQuestions = loadedQuestions.map((q: any) => ({
+            let loadedQuestions = fullQuestions.map((q: any) => ({
                 ...q,
                 items: Array.isArray(q.items) ? q.items : [],
                 correct_order: Array.isArray(q.correct_order) ? q.correct_order : [],
@@ -79,13 +116,28 @@ export default function OrderingGame() {
             }));
 
             const typedQuestions = loadedQuestions as Question[];
-            // Shuffle the questions so they don't appear in the same order every time
-            const shuffledQuestions = [...typedQuestions]
-                .sort(() => Math.random() - 0.5)
-                .slice(0, limit);
 
-            setQuestions(shuffledQuestions);
-            if (shuffledQuestions.length > 0) loadQuestion(shuffledQuestions[0]);
+            // 6. Shuffle
+            const shuffledQuestions = [...typedQuestions];
+            for (let i = shuffledQuestions.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffledQuestions[i], shuffledQuestions[j]] = [shuffledQuestions[j], shuffledQuestions[i]];
+            }
+            const selectedQuestions = shuffledQuestions.slice(0, limit);
+
+            // 7. Record seen
+            const historyRecords = selectedQuestions.map(q => ({
+                user_id: session.user.id,
+                question_id: q.id,
+                game_type: "ordering"
+            }));
+
+            await supabase
+                .from("student_question_history")
+                .upsert(historyRecords, { onConflict: "user_id,question_id,game_type", ignoreDuplicates: true });
+
+            setQuestions(selectedQuestions);
+            if (selectedQuestions.length > 0) loadQuestion(selectedQuestions[0]);
         } catch (error) {
             console.error("Error fetching questions:", error);
             toast.error("فشل تحميل الأسئلة");

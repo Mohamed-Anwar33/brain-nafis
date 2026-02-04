@@ -48,36 +48,88 @@ export default function MatchingGame() {
     const fetchQuestions = async () => {
         setLoading(true);
         try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) {
+                toast.error("يجب تسجيل الدخول أولاً");
+                setLoading(false);
+                return;
+            }
+
             // Get Config
             const { data: setting } = await supabase.from("app_settings").select("value").eq("key", "matching_pairs_count").maybeSingle();
             const limit = setting ? parseInt(setting.value) : 6;
 
-            const { data, error } = await supabase
+            // 1. Fetch all active questions (IDs only)
+            const { data: allQuestions, error } = await supabase
                 .from("matching_game_questions")
-                .select("*")
+                .select("id")
                 .eq("is_active", true)
-                .eq("level", gameState.level); // For now just fetch current level
+                .eq("level", gameState.level);
 
-            let loadedQuestions = data || [];
-
-            // Fallback Mock Data if DB is empty (for testing)
-            if (loadedQuestions.length === 0) {
-                loadedQuestions = [
-                    { id: 'm1', left_text: 'الهيدروجين', right_text: 'H', stage: 'demo', level: 1, is_active: true, created_at: '' },
-                    { id: 'm2', left_text: 'الأكسجين', right_text: 'O', stage: 'demo', level: 1, is_active: true, created_at: '' },
-                    { id: 'm3', left_text: 'الكربون', right_text: 'C', stage: 'demo', level: 1, is_active: true, created_at: '' },
-                    { id: 'm4', left_text: 'النيتروجين', right_text: 'N', stage: 'demo', level: 1, is_active: true, created_at: '' },
-                ] as any;
-                console.log("Using Mock Data for Matching Game");
+            if (error || !allQuestions || allQuestions.length === 0) {
+                toast.error("لا توجد أسئلة متاحة");
+                setLoading(false);
+                return;
             }
 
-            // Shuffle questions and pick a subset based on config
-            const shuffledQuestions = (loadedQuestions as Question[])
-                .sort(() => Math.random() - 0.5)
-                .slice(0, limit);
+            // 2. Fetch seen question IDs
+            const { data: seenHistory } = await supabase
+                .from("student_question_history")
+                .select("question_id")
+                .eq("user_id", session.user.id)
+                .eq("game_type", "matching");
 
-            setQuestions(shuffledQuestions);
-            initializeGame(shuffledQuestions);
+            const seenIds = new Set(seenHistory?.map(h => h.question_id) || []);
+
+            // 3. Filter unseen
+            let availableQuestions = allQuestions.filter(q => !seenIds.has(q.id));
+
+            // 4. Reset if needed
+            if (availableQuestions.length < limit) {
+                await supabase
+                    .from("student_question_history")
+                    .delete()
+                    .eq("user_id", session.user.id)
+                    .eq("game_type", "matching");
+
+                availableQuestions = allQuestions;
+                // Silent reset - no notification to student
+            }
+
+            // 5. Fetch full data
+            const availableIds = availableQuestions.map(q => q.id);
+            const { data: fullQuestions, error: fullError } = await supabase
+                .from("matching_game_questions")
+                .select("*")
+                .in("id", availableIds);
+
+            if (fullError || !fullQuestions) {
+                toast.error("فشل تحميل بيانات الأسئلة");
+                setLoading(false);
+                return;
+            }
+
+            // 6. Shuffle
+            const shuffledQuestions = [...fullQuestions];
+            for (let i = shuffledQuestions.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffledQuestions[i], shuffledQuestions[j]] = [shuffledQuestions[j], shuffledQuestions[i]];
+            }
+            const selectedQuestions = shuffledQuestions.slice(0, limit);
+
+            // 7. Record seen
+            const historyRecords = selectedQuestions.map(q => ({
+                user_id: session.user.id,
+                question_id: q.id,
+                game_type: "matching"
+            }));
+
+            await supabase
+                .from("student_question_history")
+                .upsert(historyRecords, { onConflict: "user_id,question_id,game_type", ignoreDuplicates: true });
+
+            setQuestions(selectedQuestions);
+            initializeGame(selectedQuestions);
         } catch (error) {
             console.error("Error fetching questions:", error);
             toast.error("فشل تحميل الأسئلة");

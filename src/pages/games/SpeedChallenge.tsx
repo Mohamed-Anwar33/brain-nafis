@@ -80,42 +80,88 @@ export default function SpeedChallenge() {
     const fetchQuestions = async () => {
         setLoading(true);
         try {
-            const { data, error } = await supabase
-                .from("speed_challenge_questions")
-                .select("*")
-                .eq("is_active", true);
-
-            let loadedQuestions = data || [];
-
-            if (loadedQuestions.length === 0) {
-                loadedQuestions = [
-                    { id: 's1', question_text: 'ما هو العنصر الذي رمزه Au؟', choice1: 'فضة', choice2: 'ذهب', choice3: 'نحاس', choice4: 'ألومنيوم', correct_choice_index: 2 },
-                    { id: 's2', question_text: 'ما هو العدد الذري للهيدروجين؟', choice1: '1', choice2: '2', choice3: '3', choice4: '4', correct_choice_index: 1 },
-                    { id: 's3', question_text: 'أي الغازات التالية خامل؟', choice1: 'أكسجين', choice2: 'نيتروجين', choice3: 'هيليوم', choice4: 'هيدروجين', correct_choice_index: 3 },
-                    { id: 's4', question_text: 'كم عدد ألوان الطيف؟', choice1: '5', choice2: '6', choice3: '7', choice4: '8', correct_choice_index: 3 },
-                    { id: 's5', question_text: 'ما هو أقرب كوكب للشمس؟', choice1: 'الأرض', choice2: 'المريخ', choice3: 'عطارد', choice4: 'الزهرة', correct_choice_index: 3 },
-                ] as any;
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) {
+                toast.error("يجب تسجيل الدخول أولاً");
+                setLoading(false);
+                return;
             }
 
-            // Robust Fisher-Yates Shuffle
-            const shuffled = [...loadedQuestions];
+            // 1. Fetch all active questions (IDs only for performance)
+            const { data: allQuestions, error } = await supabase
+                .from("speed_challenge_questions")
+                .select("id")
+                .eq("is_active", true);
+
+            if (error || !allQuestions || allQuestions.length === 0) {
+                toast.error("لا توجد أسئلة متاحة");
+                setLoading(false);
+                return;
+            }
+
+            // 2. Fetch seen question IDs for this user
+            const { data: seenHistory } = await supabase
+                .from("student_question_history")
+                .select("question_id")
+                .eq("user_id", session.user.id)
+                .eq("game_type", "speed");
+
+            const seenIds = new Set(seenHistory?.map(h => h.question_id) || []);
+
+            // 3. Filter unseen questions
+            let availableQuestions = allQuestions.filter(q => !seenIds.has(q.id));
+
+            // 4. Reset if needed (need at least 20 questions)
+            const requiredCount = 20;
+            if (availableQuestions.length < requiredCount) {
+                await supabase
+                    .from("student_question_history")
+                    .delete()
+                    .eq("user_id", session.user.id)
+                    .eq("game_type", "speed");
+
+                availableQuestions = allQuestions;
+                // Silent reset - no notification to student
+            }
+
+            // 5. Fetch full data for available questions
+            const availableIds = availableQuestions.map(q => q.id);
+            const { data: fullQuestions, error: fullError } = await supabase
+                .from("speed_challenge_questions")
+                .select("*")
+                .in("id", availableIds);
+
+            if (fullError || !fullQuestions) {
+                toast.error("فشل تحميل بيانات الأسئلة");
+                setLoading(false);
+                return;
+            }
+
+            // 6. Shuffle with Fisher-Yates
+            const shuffled = [...fullQuestions];
             for (let i = shuffled.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
                 [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
             }
 
-            // Select up to 20 questions
-            const selectedQuestions = shuffled.slice(0, 20);
+            // 7. Select first 20
+            const selectedQuestions = shuffled.slice(0, requiredCount);
 
-            console.log(`Loaded ${loadedQuestions.length} questions, selected ${selectedQuestions.length}`);
+            // 8. Record seen questions
+            const historyRecords = selectedQuestions.map(q => ({
+                user_id: session.user.id,
+                question_id: q.id,
+                game_type: "speed"
+            }));
+
+            await supabase
+                .from("student_question_history")
+                .upsert(historyRecords, { onConflict: "user_id,question_id,game_type", ignoreDuplicates: true });
+
+            console.log(`Pool: ${fullQuestions.length}, Selected: ${selectedQuestions.length}`);
 
             setQuestions(selectedQuestions);
             setLoading(false);
-            // Don't auto start, wait for logic or keep current behavior?
-            // Original code called startGame() here, which reset time to 60.
-            // We should use initialTime. Because simple useEffect order, initialTime might be set later? 
-            // We called fetchConfigAndQuestions, so initialTime updates correctly.
-            // But startGame() resets it. Let's update startGame.
             setIsPlaying(true);
             setGameState({ score: 0, correctCount: 0, answeringCount: 0, level: 1 });
             setCurrentIndex(0);

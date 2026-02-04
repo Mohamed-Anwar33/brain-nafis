@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,7 +6,20 @@ import { ArrowRight, RotateCcw, Check } from "lucide-react";
 import { toast } from "sonner";
 import confetti from "canvas-confetti";
 import { audioManager } from "@/lib/audio";
+import {
+    DndContext,
+    DragOverlay,
+    useSensor,
+    useSensors,
+    MouseSensor,
+    TouchSensor,
+    DragStartEvent,
+    DragEndEvent,
+    UniqueIdentifier,
+} from "@dnd-kit/core";
+import { useDraggable, useDroppable } from "@dnd-kit/core";
 
+// --- Types ---
 interface Question {
     id: string;
     items: string[];
@@ -20,6 +32,80 @@ interface GameState {
     score: number;
     level: number;
 }
+
+// --- Draggable Component ---
+function DraggableItem({ id, content, disabled }: { id: string; content: string; disabled: boolean }) {
+    const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+        id: id,
+        data: { content },
+        disabled: disabled,
+    });
+
+    if (isDragging) {
+        return (
+            <div
+                ref={setNodeRef}
+                className="opacity-50 px-6 py-3 bg-white border-2 border-primary/20 text-primary rounded-full font-bold shadow-sm"
+            >
+                {content}
+            </div>
+        );
+    }
+
+    return (
+        <div
+            ref={setNodeRef}
+            {...listeners}
+            {...attributes}
+            className={`px-6 py-3 bg-white border-2 border-primary/20 text-primary rounded-full font-bold shadow-sm cursor-grab active:cursor-grabbing hover:scale-105 transition-transform touch-none ${disabled ? 'cursor-default hover:scale-100 opacity-80' : ''}`}
+        >
+            {content}
+        </div>
+    );
+}
+
+// --- Droppable Slot Component ---
+function DroppableSlot({ id, index, label, content, isChecked, isCorrect, onRemove }: { id: string; index: number; label: string; content: string | null; isChecked: boolean; isCorrect: boolean; onRemove: (item: string) => void }) {
+    const { setNodeRef, isOver } = useDroppable({
+        id: id,
+        data: { index },
+    });
+
+    return (
+        <div className="flex flex-col items-center gap-2">
+            <span className="text-sm font-medium text-gray-500">
+                {label}
+            </span>
+            <div
+                ref={setNodeRef}
+                className={`
+                    w-full h-24 rounded-2xl border-2 border-dashed flex items-center justify-center transition-colors relative min-w-[120px]
+                    ${!content ? (isOver ? 'border-primary bg-primary/10' : 'border-gray-300 bg-gray-50 hover:bg-gray-100') : 'border-primary bg-primary/5'}
+                    ${isChecked && isCorrect ? 'border-green-500 bg-green-50 ring-2 ring-green-200' : ''}
+                    ${isChecked && !isCorrect ? 'border-red-500 bg-red-50 ring-2 ring-red-200' : ''}
+                `}
+            >
+                {content ? (
+                    <div
+                        onClick={() => !isChecked && onRemove(content)}
+                        className={`px-4 py-2 bg-white shadow-sm rounded-xl font-bold ${!isChecked ? 'cursor-pointer hover:text-red-500' : ''}`}
+                    >
+                        {content}
+                    </div>
+                ) : (
+                    <span className="text-gray-300">أفلت هنا</span>
+                )}
+
+                {isChecked && isCorrect && (
+                    <div className="absolute -top-3 -right-3 bg-green-500 text-white p-1 rounded-full shadow-lg">
+                        <Check className="w-4 h-4" />
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
+
 
 export default function OrderingGame() {
     const [loading, setLoading] = useState(true);
@@ -36,7 +122,23 @@ export default function OrderingGame() {
 
     const [isChecked, setIsChecked] = useState(false);
     const [isCorrect, setIsCorrect] = useState(false);
-    const [draggedItem, setDraggedItem] = useState<string | null>(null);
+    const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null);
+    const [activeContent, setActiveContent] = useState<string | null>(null);
+
+    // Sensors configuration
+    const sensors = useSensors(
+        useSensor(MouseSensor, {
+            activationConstraint: {
+                distance: 10,
+            },
+        }),
+        useSensor(TouchSensor, {
+            activationConstraint: {
+                delay: 250,
+                tolerance: 5,
+            },
+        })
+    );
 
     useEffect(() => {
         audioManager.preload();
@@ -155,31 +257,42 @@ export default function OrderingGame() {
         setIsCorrect(false);
     };
 
-    const handleDragStart = (e: React.DragEvent, item: string) => {
-        setDraggedItem(item);
+    const handleDragStart = (event: DragStartEvent) => {
+        const { active } = event;
+        setActiveId(active.id);
+        setActiveContent(active.data.current?.content);
     };
 
-    const handleDrop = (e: React.DragEvent, index: number) => {
-        e.preventDefault();
-        if (!draggedItem || isChecked) return;
+    const handleDragEnd = (event: DragEndEvent) => {
+        const { active, over } = event;
 
-        const newAvailable = availableItems.filter(i => i !== draggedItem);
+        setActiveId(null);
+        setActiveContent(null);
+
+        if (!over) return;
+
+        const draggedItemContent = active.data.current?.content;
+        const droppableIndex = over.data.current?.index;
+
+        if (!draggedItemContent || droppableIndex === undefined) return;
+
+        // If something is already in the slot, return it to pool first
+        const currentItemInSlot = placedItems[droppableIndex];
+        let newAvailable = [...availableItems];
+
+        // Remove the dragged item from available
+        newAvailable = newAvailable.filter(i => i !== draggedItemContent);
+
+        // If there was an item in the slot, add it back to available
+        if (currentItemInSlot) {
+            newAvailable.push(currentItemInSlot);
+        }
+
         const newPlaced = [...placedItems];
-
-        // Check if item was already placed elsewhere, remove it
-        const existingIndex = newPlaced.indexOf(draggedItem);
-        if (existingIndex !== -1) {
-            newPlaced[existingIndex] = null;
-        }
-
-        if (newPlaced[index]) {
-            newAvailable.push(newPlaced[index]!);
-        }
-        newPlaced[index] = draggedItem;
+        newPlaced[droppableIndex] = draggedItemContent;
 
         setAvailableItems(newAvailable);
         setPlacedItems(newPlaced);
-        setDraggedItem(null);
     };
 
     const handleReturnToPool = (item: string) => {
@@ -187,10 +300,6 @@ export default function OrderingGame() {
         const newPlaced = placedItems.map(i => i === item ? null : i);
         setPlacedItems(newPlaced);
         setAvailableItems([...availableItems, item]);
-    };
-
-    const handleDragOver = (e: React.DragEvent) => {
-        e.preventDefault();
     };
 
     const checkOrder = () => {
@@ -202,8 +311,9 @@ export default function OrderingGame() {
 
         setIsChecked(true);
 
+        const currentPlaced = placedItems as string[];
         let correct = true;
-        placedItems.forEach((item, index) => {
+        currentPlaced.forEach((item, index) => {
             if (item !== currentQ.correct_order[index]) {
                 correct = false;
             }
@@ -244,14 +354,12 @@ export default function OrderingGame() {
                 const { data: attemptData, error: insertError } = await supabase.from("game_attempts").insert({
                     user_id: user.id,
                     game_type: "ordering",
-                    score: gameState.score, // usage of already updated state
+                    score: gameState.score,
                     correct_count: 1,
                     total_questions: questions.length,
                 }).select().single();
 
-                // Send email notification
                 if (attemptData && !insertError) {
-                    console.log("[Ordering Game] Sending email for attempt:", attemptData.id);
                     await supabase.functions.invoke('exam-finish', {
                         body: { attempt_id: attemptData.id, is_game: true }
                     });
@@ -263,112 +371,98 @@ export default function OrderingGame() {
     };
 
     return (
-        <div className="min-h-screen bg-slate-50 flex flex-col" dir="rtl">
-            <div className="bg-white border-b py-4 px-6 shadow-sm sticky top-0 z-10">
-                <div className="max-w-5xl mx-auto flex items-center justify-between">
-                    <Button variant="ghost" size="sm" asChild className="rounded-full">
-                        <Link to="/student/dashboard">
-                            <ArrowRight className="w-5 h-5 ml-1" />
-                            الخروج
-                        </Link>
-                    </Button>
-                    <div className="font-bold text-xl text-primary">لغز الترتيب</div>
-                    <div className="font-bold text-lg text-green-600">{gameState.score} نقطة</div>
-                </div>
-            </div>
-
-            <main className="flex-1 container max-w-4xl mx-auto p-4 md:p-8 flex flex-col items-center">
-                {loading ? (
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-                ) : questions.length === 0 ? (
-                    <div className="text-center">لا توجد أسئلة.</div>
-                ) : (
-                    <div className="w-full space-y-8 animate-fade-in">
-                        <div className="text-center space-y-2">
-                            <h2 className="text-2xl font-bold">{questions[currentQuestionIndex].title || "رتب العناصر التالية"}</h2>
-                            <p className="text-muted-foreground">اسحب العناصر إلى الخانات الصحيحة</p>
-                        </div>
-
-                        <div className="bg-white p-6 rounded-2xl shadow-sm border min-h-[100px] flex flex-wrap justify-center gap-4">
-                            {availableItems.length === 0 && !isChecked && (
-                                <p className="text-gray-400 text-sm py-2">جميع العناصر مرتبة</p>
-                            )}
-                            {availableItems.map((item) => (
-                                <div
-                                    key={item}
-                                    draggable={!isChecked}
-                                    onDragStart={(e) => handleDragStart(e, item)}
-                                    className="px-6 py-3 bg-white border-2 border-primary/20 text-primary rounded-full font-bold shadow-sm cursor-grab active:cursor-grabbing hover:scale-105 transition-transform"
-                                >
-                                    {item}
-                                </div>
-                            ))}
-                        </div>
-
-                        <div className="grid gap-4 md:grid-flow-col auto-cols-fr">
-                            {placedItems.map((item, index) => (
-                                <div
-                                    key={index}
-                                    className="flex flex-col items-center gap-2"
-                                    onDragOver={handleDragOver}
-                                    onDrop={(e) => handleDrop(e, index)}
-                                >
-                                    <span className="text-sm font-medium text-gray-500">
-                                        {questions[currentQuestionIndex].drop_labels?.[index] || `${index + 1}`}
-                                    </span>
-                                    <div
-                                        className={`
-                                        w-full h-24 rounded-2xl border-2 border-dashed flex items-center justify-center transition-colors relative
-                                        ${!item ? 'border-gray-300 bg-gray-50 hover:bg-gray-100' : 'border-primary bg-primary/5'}
-                                        ${isChecked && item === questions[currentQuestionIndex].correct_order[index] ? 'border-green-500 bg-green-50 ring-2 ring-green-200' : ''}
-                                        ${isChecked && item !== questions[currentQuestionIndex].correct_order[index] ? 'border-red-500 bg-red-50 ring-2 ring-red-200' : ''}
-                                    `}
-                                    >
-                                        {item ? (
-                                            <div
-                                                onClick={() => handleReturnToPool(item)}
-                                                className="px-4 py-2 bg-white shadow-sm rounded-xl font-bold cursor-pointer hover:text-red-500"
-                                            >
-                                                {item}
-                                            </div>
-                                        ) : (
-                                            <span className="text-gray-300">أفلت هنا</span>
-                                        )}
-
-                                        {isChecked && item === questions[currentQuestionIndex].correct_order[index] && (
-                                            <div className="absolute -top-3 -right-3 bg-green-500 text-white p-1 rounded-full shadow-lg">
-                                                <Check className="w-4 h-4" />
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-
-                        <div className="flex justify-center gap-4 pt-8">
-                            {!isChecked ? (
-                                <Button size="lg" onClick={checkOrder} className="w-full md:w-auto px-8">
-                                    تحقق من الترتيب
-                                </Button>
-                            ) : (
-                                <>
-                                    {isCorrect ? (
-                                        <Button size="lg" onClick={nextQuestion} className="bg-green-600 hover:bg-green-700">
-                                            السؤال التالي
-                                            <ArrowRight className="w-4 h-4 mr-2" />
-                                        </Button>
-                                    ) : (
-                                        <Button variant="outline" size="lg" onClick={resetCurrent} className="text-destructive border-destructive hover:bg-destructiv/10">
-                                            <RotateCcw className="w-4 h-4 ml-2" />
-                                            حاول مرة أخرى
-                                        </Button>
-                                    )}
-                                </>
-                            )}
-                        </div>
+        <DndContext
+            sensors={sensors}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+        >
+            <div className="min-h-screen bg-slate-50 flex flex-col" dir="rtl">
+                <div className="bg-white border-b py-4 px-6 shadow-sm sticky top-0 z-10">
+                    <div className="max-w-5xl mx-auto flex items-center justify-between">
+                        <Button variant="ghost" size="sm" asChild className="rounded-full">
+                            <Link to="/student/dashboard">
+                                <ArrowRight className="w-5 h-5 ml-1" />
+                                الخروج
+                            </Link>
+                        </Button>
+                        <div className="font-bold text-xl text-primary">لغز الترتيب</div>
+                        <div className="font-bold text-lg text-green-600">{gameState.score} نقطة</div>
                     </div>
-                )}
-            </main>
-        </div>
+                </div>
+
+                <main className="flex-1 container max-w-4xl mx-auto p-4 md:p-8 flex flex-col items-center">
+                    {loading ? (
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+                    ) : questions.length === 0 ? (
+                        <div className="text-center">لا توجد أسئلة.</div>
+                    ) : (
+                        <div className="w-full space-y-8 animate-fade-in">
+                            <div className="text-center space-y-2">
+                                <h2 className="text-2xl font-bold">{questions[currentQuestionIndex].title || "رتب العناصر التالية"}</h2>
+                                <p className="text-muted-foreground">اسحب العناصر إلى الخانات الصحيحة</p>
+                            </div>
+
+                            <div className="bg-white p-6 rounded-2xl shadow-sm border min-h-[100px] flex flex-wrap justify-center gap-4">
+                                {availableItems.length === 0 && !isChecked && (
+                                    <p className="text-gray-400 text-sm py-2">جميع العناصر مرتبة</p>
+                                )}
+                                {availableItems.map((item, idx) => (
+                                    <DraggableItem
+                                        key={`item-${item}-${idx}`}
+                                        id={`item-${item}-${idx}`} // Unique ID using index to handle duplicate text if any, though game logic might expect unique items
+                                        content={item}
+                                        disabled={isChecked}
+                                    />
+                                ))}
+                            </div>
+
+                            <div className="grid gap-4 md:grid-flow-col auto-cols-fr">
+                                {placedItems.map((item, index) => (
+                                    <DroppableSlot
+                                        key={`slot-${index}`}
+                                        id={`slot-${index}`}
+                                        index={index}
+                                        label={questions[currentQuestionIndex].drop_labels?.[index] || `${index + 1}`}
+                                        content={item}
+                                        isChecked={isChecked}
+                                        isCorrect={item !== null && item === questions[currentQuestionIndex].correct_order[index]}
+                                        onRemove={handleReturnToPool}
+                                    />
+                                ))}
+                            </div>
+
+                            <div className="flex justify-center gap-4 pt-8">
+                                {!isChecked ? (
+                                    <Button size="lg" onClick={checkOrder} className="w-full md:w-auto px-8">
+                                        تحقق من الترتيب
+                                    </Button>
+                                ) : (
+                                    <>
+                                        {isCorrect ? (
+                                            <Button size="lg" onClick={nextQuestion} className="bg-green-600 hover:bg-green-700">
+                                                السؤال التالي
+                                                <ArrowRight className="w-4 h-4 mr-2" />
+                                            </Button>
+                                        ) : (
+                                            <Button variant="outline" size="lg" onClick={resetCurrent} className="text-destructive border-destructive hover:bg-destructiv/10">
+                                                <RotateCcw className="w-4 h-4 ml-2" />
+                                                حاول مرة أخرى
+                                            </Button>
+                                        )}
+                                    </>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                </main>
+            </div>
+            <DragOverlay>
+                {activeContent ? (
+                    <div className="px-6 py-3 bg-white border-2 border-primary text-primary rounded-full font-bold shadow-lg opacity-90 cursor-grabbing">
+                        {activeContent}
+                    </div>
+                ) : null}
+            </DragOverlay>
+        </DndContext>
     );
 }

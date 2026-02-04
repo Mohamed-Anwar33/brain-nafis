@@ -127,6 +127,7 @@ export default function AdminSettings() {
     }
 
     setIsTesting(true);
+    let testAttemptId: string | null = null;
 
     try {
       // First, save current settings
@@ -151,13 +152,12 @@ export default function AdminSettings() {
         throw new Error("فشل إنشاء اختبار تجريبي");
       }
 
+      testAttemptId = testAttempt.id;
+
       // Call the Edge Function
       const { data, error } = await supabase.functions.invoke("exam-finish", {
-        body: { attempt_id: testAttempt.id }
+        body: { attempt_id: testAttemptId }
       });
-
-      // Clean up test attempt
-      await supabase.from("attempts").delete().eq("id", testAttempt.id);
 
       console.log("Test email result:", data);
 
@@ -168,8 +168,8 @@ export default function AdminSettings() {
       }
 
       // Check email status from response
-      if (data?.email_status === "sent_gmail_smtp") {
-        toast.success("✅ تم إرسال البريد التجريبي بنجاح عبر Gmail! تحقق من صندوق الوارد.");
+      if (data?.email_status === "sent_gmail_smtp" || data?.email_status?.startsWith("sent")) {
+        toast.success("✅ تم إرسال البريد التجريبي بنجاح! تحقق من صندوق الوارد.");
       } else if (data?.email_status?.startsWith("skipped")) {
         toast.warning(`⚠️ تم تخطي الإرسال: ${data.debug || 'تحقق من الإعدادات'}`);
       } else {
@@ -180,6 +180,11 @@ export default function AdminSettings() {
       console.error("Error testing email:", err);
       toast.error(`حدث خطأ: ${err.message || 'خطأ غير معروف'}`);
     } finally {
+      // Always cleanup test attempt, even if sending failed
+      if (testAttemptId) {
+        await supabase.from("attempts").delete().eq("id", testAttemptId);
+        console.log("Test attempt cleaned up:", testAttemptId);
+      }
       setIsTesting(false);
     }
   };
@@ -208,17 +213,19 @@ export default function AdminSettings() {
       </div>
 
       <Tabs defaultValue="exam" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4 h-14 p-1 bg-slate-100/80 rounded-2xl mb-8">
-          <TabsTrigger value="exam" className="rounded-xl h-full data-[state=active]:bg-white data-[state=active]:shadow-sm font-bold">
-            <FileQuestion className="w-4 h-4 ml-2" /> الاختبار الرئيسي
-          </TabsTrigger>
-          <TabsTrigger value="games" className="rounded-xl h-full data-[state=active]:bg-white data-[state=active]:shadow-sm font-bold">
-            <Gamepad2 className="w-4 h-4 ml-2" /> إعدادات الألعاب
-          </TabsTrigger>
-          <TabsTrigger value="notifications" className="rounded-xl h-full data-[state=active]:bg-white data-[state=active]:shadow-sm font-bold">
-            <Mail className="w-4 h-4 ml-2" /> الإشعارات
-          </TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto pb-2 -mx-4 px-4 md:mx-0 md:px-0 md:pb-0">
+          <TabsList className="inline-flex w-auto min-w-full lg:w-full h-auto p-1 bg-slate-100/80 rounded-2xl mb-2 lg:mb-8 lg:grid lg:grid-cols-4 whitespace-nowrap">
+            <TabsTrigger value="exam" className="rounded-xl px-4 py-3 data-[state=active]:bg-white data-[state=active]:shadow-sm font-bold">
+              <FileQuestion className="w-4 h-4 ml-2 inline-block" /> الاختبار الرئيسي
+            </TabsTrigger>
+            <TabsTrigger value="games" className="rounded-xl px-4 py-3 data-[state=active]:bg-white data-[state=active]:shadow-sm font-bold">
+              <Gamepad2 className="w-4 h-4 ml-2 inline-block" /> إعدادات الألعاب
+            </TabsTrigger>
+            <TabsTrigger value="notifications" className="rounded-xl px-4 py-3 data-[state=active]:bg-white data-[state=active]:shadow-sm font-bold">
+              <Mail className="w-4 h-4 ml-2 inline-block" /> الإشعارات
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         {/* --- Exam Settings --- */}
         <TabsContent value="exam" className="space-y-6">

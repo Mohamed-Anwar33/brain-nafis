@@ -42,14 +42,26 @@ serve(async (req: Request) => {
 
     // Get attempt data from appropriate table
     if (is_game) {
-      // For game attempts
+      // For game attempts - include student name from student_profiles
       const result = await supabase
         .from("game_attempts")
-        .select("*")
+        .select(`
+          *,
+          student_profiles!game_attempts_user_id_fkey(
+            full_name
+          )
+        `)
         .eq("id", attempt_id)
         .single();
       attempt = result.data;
       attemptError = result.error;
+
+      // Add student_name for consistent access
+      if (attempt && attempt.student_profiles) {
+        attempt.student_name = attempt.student_profiles.full_name || "طالب";
+      } else {
+        attempt.student_name = "طالب";
+      }
     } else {
       // For regular exam attempts
       const result = await supabase
@@ -150,12 +162,13 @@ serve(async (req: Request) => {
               attempt.game_type === "matching" ? "لعبة المطابقة" :
                 attempt.game_type === "ordering" ? "لغز الترتيب" : attempt.game_type;
 
-            subject = `نتيجة ${gameTypeAr} جديدة`;
+            subject = `نتيجة ${gameTypeAr} جديدة - ${attempt.student_name}`;
 
             htmlBody = `
             <div dir="rtl" style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px; background-color: #f8fafc;">
               <h1 style="color: #0D9488; text-align: center;">تقرير نتيجة ${gameTypeAr}</h1>
               <hr style="border: 1px solid #0D9488;">
+              <p style="font-size: 16px;"><strong>اسم الطالب:</strong> ${attempt.student_name}</p>
               <p style="font-size: 16px;"><strong>نوع اللعبة:</strong> ${gameTypeAr}</p>
               <p style="font-size: 16px;"><strong>النتيجة النهائية:</strong> <span style="font-size: 20px; color: #0D9488; font-weight: bold;">${attempt.score || 0}</span> نقطة</p>
               <p style="font-size: 16px;"><strong>الإجابات الصحيحة:</strong> ${attempt.correct_count || 0}</p>
@@ -239,11 +252,18 @@ serve(async (req: Request) => {
           }
 
           if (emailStatus.startsWith("sent")) {
-            // Mark email as sent
-            await supabase
-              .from("attempts")
-              .update({ teacher_email_sent: true })
-              .eq("id", attempt_id);
+            // Mark email as sent in the correct table
+            if (is_game) {
+              await supabase
+                .from("game_attempts")
+                .update({ teacher_email_sent: true })
+                .eq("id", attempt_id);
+            } else {
+              await supabase
+                .from("attempts")
+                .update({ teacher_email_sent: true })
+                .eq("id", attempt_id);
+            }
           }
         } catch (emailError: any) {
           console.error("Error sending email:", emailError);

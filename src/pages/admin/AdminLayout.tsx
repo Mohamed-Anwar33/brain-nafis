@@ -119,7 +119,7 @@ export default function AdminLayout() {
                   <GraduationCap className="w-6 h-6 text-primary" />
                 </div>
                 <div>
-                  <h1 className="font-bold text-lg">بنك الاختبارات</h1>
+                  <h1 className="font-bold text-lg">براين نافس</h1>
                   <p className="text-xs text-muted-foreground">لوحة الإدارة</p>
                 </div>
               </div>
@@ -171,8 +171,8 @@ export default function AdminLayout() {
         )}
 
         {/* Main Content */}
-        <main className="flex-1 min-h-screen">
-          <div className="p-6 lg:p-8">
+        <main className="flex-1 min-h-screen min-w-0 w-full overflow-x-hidden">
+          <div className="p-4 lg:p-8 w-full max-w-full">
             <Outlet />
           </div>
         </main>

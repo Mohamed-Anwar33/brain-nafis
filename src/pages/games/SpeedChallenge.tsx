@@ -92,13 +92,24 @@ export default function SpeedChallenge() {
                     { id: 's1', question_text: 'ما هو العنصر الذي رمزه Au؟', choice1: 'فضة', choice2: 'ذهب', choice3: 'نحاس', choice4: 'ألومنيوم', correct_choice_index: 2 },
                     { id: 's2', question_text: 'ما هو العدد الذري للهيدروجين؟', choice1: '1', choice2: '2', choice3: '3', choice4: '4', correct_choice_index: 1 },
                     { id: 's3', question_text: 'أي الغازات التالية خامل؟', choice1: 'أكسجين', choice2: 'نيتروجين', choice3: 'هيليوم', choice4: 'هيدروجين', correct_choice_index: 3 },
+                    { id: 's4', question_text: 'كم عدد ألوان الطيف؟', choice1: '5', choice2: '6', choice3: '7', choice4: '8', correct_choice_index: 3 },
+                    { id: 's5', question_text: 'ما هو أقرب كوكب للشمس؟', choice1: 'الأرض', choice2: 'المريخ', choice3: 'عطارد', choice4: 'الزهرة', correct_choice_index: 3 },
                 ] as any;
             }
 
-            // Shuffle
-            loadedQuestions = [...loadedQuestions].sort(() => Math.random() - 0.5);
+            // Robust Fisher-Yates Shuffle
+            const shuffled = [...loadedQuestions];
+            for (let i = shuffled.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            }
 
-            setQuestions(loadedQuestions);
+            // Select up to 20 questions
+            const selectedQuestions = shuffled.slice(0, 20);
+
+            console.log(`Loaded ${loadedQuestions.length} questions, selected ${selectedQuestions.length}`);
+
+            setQuestions(selectedQuestions);
             setLoading(false);
             // Don't auto start, wait for logic or keep current behavior?
             // Original code called startGame() here, which reset time to 60.

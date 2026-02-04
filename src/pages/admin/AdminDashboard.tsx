@@ -151,10 +151,10 @@ export default function AdminDashboard() {
           <CardTitle>البدء السريع</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
             <a
               href="/admin/questions"
-              className="p-4 rounded-xl border border-border hover:border-primary/50 hover:bg-primary/5 transition-colors"
+              className="p-4 rounded-xl border border-border hover:border-primary/50 hover:bg-primary/5 transition-colors flex flex-col items-center text-center sm:items-start sm:text-right"
             >
               <FileQuestion className="w-8 h-8 text-primary mb-3" />
               <h3 className="font-semibold">إدارة الأسئلة</h3>
@@ -164,7 +164,7 @@ export default function AdminDashboard() {
             </a>
             <a
               href="/admin/settings"
-              className="p-4 rounded-xl border border-border hover:border-primary/50 hover:bg-primary/5 transition-colors"
+              className="p-4 rounded-xl border border-border hover:border-primary/50 hover:bg-primary/5 transition-colors flex flex-col items-center text-center sm:items-start sm:text-right"
             >
               <TrendingUp className="w-8 h-8 text-accent mb-3" />
               <h3 className="font-semibold">الإعدادات</h3>
@@ -175,7 +175,7 @@ export default function AdminDashboard() {
             <a
               href="/"
               target="_blank"
-              className="p-4 rounded-xl border border-border hover:border-primary/50 hover:bg-primary/5 transition-colors"
+              className="p-4 rounded-xl border border-border hover:border-primary/50 hover:bg-primary/5 transition-colors flex flex-col items-center text-center sm:items-start sm:text-right"
             >
               <Users className="w-8 h-8 text-success mb-3" />
               <h3 className="font-semibold">صفحة الطلاب</h3>

@@ -60,8 +60,8 @@ export default function AdminLogin() {
         <div className="card-elevated p-8 animate-fade-in">
           {/* Header */}
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10 mb-4">
-              <Shield className="w-8 h-8 text-primary" />
+            <div className="inline-flex items-center justify-center w-40 h-40 mb-4 animate-in zoom-in duration-500">
+              <img src="/logo.jpg" alt="Logo" className="w-full h-full object-contain mix-blend-multiply" />
             </div>
             <h1 className="text-2xl font-bold text-foreground">لوحة الإدارة</h1>
             <p className="text-muted-foreground mt-2">سجل دخولك للوصول إلى لوحة التحكم</p>

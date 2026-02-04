@@ -7,7 +7,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Trash2, Plus, Loader2, Upload } from "lucide-react";
+import { Trash2, Plus, Loader2, Upload, CheckSquare, Square, AlertTriangle } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface OrderingQuestion {
     id: string;
@@ -22,6 +33,10 @@ export default function AdminOrdering() {
     const [questions, setQuestions] = useState<OrderingQuestion[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [selectedIds, setSelectedIds] = useState<string[]>([]);
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [itemToDelete, setItemToDelete] = useState<string | null>(null);
+    const [isBulkDelete, setIsBulkDelete] = useState(false);
 
     // Form State
 
@@ -110,17 +125,80 @@ export default function AdminOrdering() {
         }
     };
 
+    const confirmDelete = (id: string) => {
+        setItemToDelete(id);
+        setIsBulkDelete(false);
+        setDeleteDialogOpen(true);
+    };
+
+    const confirmBulkDelete = () => {
+        if (selectedIds.length === 0) return;
+        setIsBulkDelete(true);
+        setDeleteDialogOpen(true);
+    };
+
+    const executeDelete = async () => {
+        setDeleteDialogOpen(false);
+
+        if (isBulkDelete) {
+            await handleBulkDelete();
+        } else if (itemToDelete) {
+            await handleDelete(itemToDelete);
+        }
+
+        setItemToDelete(null);
+        setIsBulkDelete(false);
+    };
+
     const handleDelete = async (id: string) => {
-        if (!confirm("هل أنت متأكد من الحذف؟")) return;
         try {
             const { error } = await supabase.from("ordering_game_questions").delete().eq("id", id);
             if (error) throw error;
-            toast.success("تم الحذف");
-            fetchQuestions();
+
+            // Update UI immediately
+            setQuestions(prev => prev.filter(q => q.id !== id));
+            toast.success("تم الحذف بنجاح");
         } catch (err) {
             console.error(err);
             toast.error("فشل الحذف");
+            fetchQuestions(); // Reload on error
         }
+    };
+
+    const handleBulkDelete = async () => {
+        try {
+            const { error } = await supabase
+                .from("ordering_game_questions")
+                .delete()
+                .in("id", selectedIds);
+
+            if (error) throw error;
+
+            // Update UI immediately
+            setQuestions(prev => prev.filter(q => !selectedIds.includes(q.id)));
+            setSelectedIds([]);
+            toast.success(`تم حذف ${selectedIds.length} سؤال بنجاح`);
+        } catch (err) {
+            console.error(err);
+            toast.error("فشل الحذف الجماعي");
+            fetchQuestions(); // Reload on error
+        }
+    };
+
+    const toggleSelectAll = () => {
+        if (selectedIds.length === questions.length) {
+            setSelectedIds([]);
+        } else {
+            setSelectedIds(questions.map(q => q.id));
+        }
+    };
+
+    const toggleSelect = (id: string) => {
+        setSelectedIds(prev =>
+            prev.includes(id)
+                ? prev.filter(i => i !== id)
+                : [...prev, id]
+        );
     };
 
     const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -225,7 +303,7 @@ export default function AdminOrdering() {
                                         value={newQuestion.item1 || ''}
                                         onChange={e => setNewQuestion({ ...newQuestion, item1: e.target.value })}
                                         placeholder="مثال: طفل"
-                                        className="bg-white"
+                                        className="bg-white p-3 h-10"
                                     />
                                 </div>
                                 <div className="space-y-2">
@@ -234,7 +312,7 @@ export default function AdminOrdering() {
                                         value={newQuestion.item2 || ''}
                                         onChange={e => setNewQuestion({ ...newQuestion, item2: e.target.value })}
                                         placeholder="مثال: شاب"
-                                        className="bg-white"
+                                        className="bg-white p-3 h-10"
                                     />
                                 </div>
                                 <div className="space-y-2">
@@ -243,7 +321,7 @@ export default function AdminOrdering() {
                                         value={newQuestion.item3 || ''}
                                         onChange={e => setNewQuestion({ ...newQuestion, item3: e.target.value })}
                                         placeholder="مثال: رجل"
-                                        className="bg-white"
+                                        className="bg-white p-3 h-10"
                                     />
                                 </div>
                                 <div className="space-y-2">
@@ -252,7 +330,7 @@ export default function AdminOrdering() {
                                         value={newQuestion.item4 || ''}
                                         onChange={e => setNewQuestion({ ...newQuestion, item4: e.target.value })}
                                         placeholder="مثال: عجوز"
-                                        className="bg-white"
+                                        className="bg-white p-3 h-10"
                                     />
                                 </div>
                             </div>
@@ -267,12 +345,21 @@ export default function AdminOrdering() {
             </Card>
 
             <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <div className="space-y-1">
+                <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 space-y-0 pb-2">
+                    <div className="space-y-1 w-full md:w-auto">
                         <CardTitle className="text-2xl font-bold">الأسئلة</CardTitle>
-                        <p className="text-sm text-muted-foreground">إجمالي: {questions.length} سؤال</p>
+                        <p className="text-sm text-muted-foreground">
+                            إجمالي: {questions.length} سؤال
+                            {selectedIds.length > 0 && ` • محدد: ${selectedIds.length}`}
+                        </p>
                     </div>
-                    <div>
+                    <div className="flex flex-wrap gap-2 w-full md:w-auto">
+                        {selectedIds.length > 0 && (
+                            <Button variant="destructive" onClick={confirmBulkDelete} className="flex-1 md:flex-none">
+                                <Trash2 className="w-4 h-4 ml-2" />
+                                حذف ({selectedIds.length})
+                            </Button>
+                        )}
                         <Input
                             type="file"
                             accept=".csv, .txt"
@@ -280,7 +367,7 @@ export default function AdminOrdering() {
                             id="csv-upload"
                             onChange={handleFileUpload}
                         />
-                        <Button variant="outline" onClick={() => document.getElementById('csv-upload')?.click()}>
+                        <Button variant="outline" onClick={() => document.getElementById('csv-upload')?.click()} className="flex-1 md:flex-none">
                             <Upload className="w-4 h-4 ml-2" />
                             استيراد CSV
                         </Button>
@@ -292,45 +379,91 @@ export default function AdminOrdering() {
                     ) : questions.length === 0 ? (
                         <div className="p-8 text-center text-muted-foreground">لا توجد بيانات</div>
                     ) : (
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>العنوان</TableHead>
-                                    <TableHead>العناصر (الترتيب الصحيح)</TableHead>
-                                    <TableHead>المستوى</TableHead>
-                                    <TableHead>الحالة</TableHead>
-                                    <TableHead>إجراءات</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {questions.map(q => (
-                                    <TableRow key={q.id}>
-                                        <TableCell className="font-medium">{q.title}</TableCell>
-                                        <TableCell>
-                                            <div className="flex flex-wrap gap-1">
-                                                {q.correct_order?.map((item, i) => (
-                                                    <Badge key={i} variant="outline">{item}</Badge>
-                                                ))}
-                                            </div>
-                                        </TableCell>
-                                        <TableCell>{q.level}</TableCell>
-                                        <TableCell>
-                                            <Badge variant={q.is_active ? "default" : "secondary"}>
-                                                {q.is_active ? "نشط" : "معطل"}
-                                            </Badge>
-                                        </TableCell>
-                                        <TableCell>
-                                            <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDelete(q.id)}>
-                                                <Trash2 className="w-4 h-4" />
+                        <div className="overflow-x-auto">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead className="w-12">
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={toggleSelectAll}
+                                                className="h-8 w-8 p-0"
+                                            >
+                                                {selectedIds.length === questions.length && questions.length > 0 ?
+                                                    <CheckSquare className="w-4 h-4" /> :
+                                                    <Square className="w-4 h-4" />
+                                                }
                                             </Button>
-                                        </TableCell>
+                                        </TableHead>
+                                        <TableHead className="min-w-[200px]">العنوان</TableHead>
+                                        <TableHead className="min-w-[250px]">العناصر (الترتيب الصحيح)</TableHead>
+                                        <TableHead className="min-w-[80px]">المستوى</TableHead>
+                                        <TableHead className="min-w-[80px]">الحالة</TableHead>
+                                        <TableHead className="w-[100px]">إجراءات</TableHead>
                                     </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
+                                </TableHeader>
+                                <TableBody>
+                                    {questions.map(q => (
+                                        <TableRow key={q.id} className={selectedIds.includes(q.id) ? "bg-muted/50" : ""}>
+                                            <TableCell>
+                                                <Checkbox
+                                                    checked={selectedIds.includes(q.id)}
+                                                    onCheckedChange={() => toggleSelect(q.id)}
+                                                />
+                                            </TableCell>
+                                            <TableCell className="font-medium line-clamp-2 max-w-[200px]" title={q.title}>
+                                                {q.title}
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="flex flex-wrap gap-1">
+                                                    {q.correct_order?.map((item, i) => (
+                                                        <Badge key={i} variant="outline" className="whitespace-nowrap">{item}</Badge>
+                                                    ))}
+                                                </div>
+                                            </TableCell>
+                                            <TableCell>{q.level}</TableCell>
+                                            <TableCell>
+                                                <Badge variant={q.is_active ? "default" : "secondary"}>
+                                                    {q.is_active ? "نشط" : "معطل"}
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10" onClick={() => confirmDelete(q.id)}>
+                                                    <Trash2 className="w-4 h-4" />
+                                                </Button>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </div>
                     )}
                 </CardContent>
             </Card>
+
+            <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+                            <AlertTriangle className="w-5 h-5" />
+                            تأكيد الحذف
+                        </AlertDialogTitle>
+                        <AlertDialogDescription className="text-right">
+                            {isBulkDelete
+                                ? `هل أنت متأكد من حذف ${selectedIds.length} أسئلة؟ لا يمكن التراجع عن هذا الإجراء.`
+                                : "هل أنت متأكد من حذف هذا السؤال؟ لا يمكن التراجع عن هذا الإجراء."
+                            }
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter className="gap-2 sm:gap-0">
+                        <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                        <AlertDialogAction onClick={executeDelete} className="bg-destructive hover:bg-destructive/90">
+                            حذف
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }

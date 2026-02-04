@@ -26,7 +26,7 @@ export function StartScreen({ onStart, isLoading }: StartScreenProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateName(studentName)) {
       return;
     }
@@ -44,15 +44,26 @@ export function StartScreen({ onStart, isLoading }: StartScreenProps) {
         <div className="card-elevated p-8 md:p-12 animate-bounce-in">
           {/* Header */}
           <div className="text-center mb-10">
-            <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-primary/10 mb-6">
-              <GraduationCap className="w-10 h-10 text-primary" />
+            <div className="inline-flex items-center justify-center w-48 h-48 mb-8 animate-in zoom-in duration-500">
+              <img src="/logo.jpg" alt="Logo" className="w-full h-full object-contain mix-blend-multiply" />
             </div>
-            <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-3">
-              بنك الاختبارات
+            <h1 className="text-4xl md:text-6xl font-black text-gray-900 mb-6 tracking-tight">
+              <span className="text-primary relative inline-block">
+                براين نافس
+                <svg className="absolute w-full h-3 -bottom-1 right-0 text-primary/20" viewBox="0 0 100 10" preserveAspectRatio="none">
+                  <path d="M0 5 Q 50 10 100 5" stroke="currentColor" strokeWidth="8" fill="none" />
+                </svg>
+              </span>
             </h1>
-            <p className="text-muted-foreground text-lg">
-              اختبر معلوماتك وتعلم من أخطائك
-            </p>
+
+            <div className="space-y-2 mb-8 animate-fade-in delay-100">
+              <h2 className="text-xl md:text-2xl font-bold text-gray-800">المتوسطة الرابعة والعشرون جدة</h2>
+              <div className="flex flex-wrap justify-center gap-4 text-sm md:text-base text-muted-foreground">
+                <p>معلمة الصف: <span className="font-semibold text-primary">هيفاء شجيع السلمي</span></p>
+                <span className="hidden md:inline">•</span>
+                <p>قائدة المدرسة: <span className="font-semibold text-primary">تهاني السفياني</span></p>
+              </div>
+            </div>
           </div>
 
           {/* Features */}

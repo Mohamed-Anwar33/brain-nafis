@@ -7,8 +7,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Trash2, Plus, Loader2, Upload } from "lucide-react";
+import { Trash2, Plus, Loader2, Upload, CheckSquare, Square, AlertTriangle } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface SpeedQuestion {
     id: string;
@@ -25,6 +36,10 @@ export default function AdminSpeed() {
     const [questions, setQuestions] = useState<SpeedQuestion[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [selectedIds, setSelectedIds] = useState<string[]>([]);
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [itemToDelete, setItemToDelete] = useState<string | null>(null);
+    const [isBulkDelete, setIsBulkDelete] = useState(false);
 
     // Form State
     const [newQuestion, setNewQuestion] = useState({
@@ -95,12 +110,14 @@ export default function AdminSpeed() {
                 choice3: answers[2] || "",
                 choice4: answers[3] || "",
                 correct_choice_index: correctIndex,
-                stage: "default",
-                level: 1,
-                is_active: true
+                is_active: true,
+                stage: "default"
             });
 
-            if (error) throw error;
+            if (error) {
+                console.error("Error adding question:", error);
+                throw error;
+            }
 
             toast.success("تمت الإضافة بنجاح");
             setNewQuestion({
@@ -117,17 +134,80 @@ export default function AdminSpeed() {
         }
     };
 
+    const confirmDelete = (id: string) => {
+        setItemToDelete(id);
+        setIsBulkDelete(false);
+        setDeleteDialogOpen(true);
+    };
+
+    const confirmBulkDelete = () => {
+        if (selectedIds.length === 0) return;
+        setIsBulkDelete(true);
+        setDeleteDialogOpen(true);
+    };
+
+    const executeDelete = async () => {
+        setDeleteDialogOpen(false);
+
+        if (isBulkDelete) {
+            await handleBulkDelete();
+        } else if (itemToDelete) {
+            await handleDelete(itemToDelete);
+        }
+
+        setItemToDelete(null);
+        setIsBulkDelete(false);
+    };
+
     const handleDelete = async (id: string) => {
-        if (!confirm("هل أنت متأكد من الحذف؟")) return;
         try {
             const { error } = await supabase.from("speed_challenge_questions").delete().eq("id", id);
             if (error) throw error;
-            toast.success("تم الحذف");
-            fetchQuestions();
+
+            // Update UI immediately
+            setQuestions(prev => prev.filter(q => q.id !== id));
+            toast.success("تم الحذف بنجاح");
         } catch (err) {
             console.error(err);
             toast.error("فشل الحذف");
+            fetchQuestions(); // Reload on error
         }
+    };
+
+    const handleBulkDelete = async () => {
+        try {
+            const { error } = await supabase
+                .from("speed_challenge_questions")
+                .delete()
+                .in("id", selectedIds);
+
+            if (error) throw error;
+
+            // Update UI immediately
+            setQuestions(prev => prev.filter(q => !selectedIds.includes(q.id)));
+            setSelectedIds([]);
+            toast.success(`تم حذف ${selectedIds.length} سؤال بنجاح`);
+        } catch (err) {
+            console.error(err);
+            toast.error("فشل الحذف الجماعي");
+            fetchQuestions(); // Reload on error
+        }
+    };
+
+    const toggleSelectAll = () => {
+        if (selectedIds.length === questions.length) {
+            setSelectedIds([]);
+        } else {
+            setSelectedIds(questions.map(q => q.id));
+        }
+    };
+
+    const toggleSelect = (id: string) => {
+        setSelectedIds(prev =>
+            prev.includes(id)
+                ? prev.filter(i => i !== id)
+                : [...prev, id]
+        );
     };
 
     const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -240,7 +320,7 @@ export default function AdminSpeed() {
                                     value={newQuestion.choice1} // Using choice1 state for Correct Answer temporally
                                     onChange={e => setNewQuestion({ ...newQuestion, choice1: e.target.value })}
                                     placeholder="الإجابة الصحيحة هنا"
-                                    className="border-green-300 focus-visible:ring-green-500"
+                                    className="border-green-300 focus-visible:ring-green-500 p-3 h-10"
                                 />
                             </div>
                         </div>
@@ -284,12 +364,21 @@ export default function AdminSpeed() {
             </Card>
 
             <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <div className="space-y-1">
+                <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 space-y-0 pb-2">
+                    <div className="space-y-1 w-full md:w-auto">
                         <CardTitle className="text-2xl font-bold">الأسئلة</CardTitle>
-                        <p className="text-sm text-muted-foreground">إجمالي: {questions.length} سؤال</p>
+                        <p className="text-sm text-muted-foreground">
+                            إجمالي: {questions.length} سؤال
+                            {selectedIds.length > 0 && ` • محدد: ${selectedIds.length}`}
+                        </p>
                     </div>
-                    <div>
+                    <div className="flex flex-wrap gap-2 w-full md:w-auto">
+                        {selectedIds.length > 0 && (
+                            <Button variant="destructive" onClick={confirmBulkDelete} className="flex-1 md:flex-none">
+                                <Trash2 className="w-4 h-4 ml-2" />
+                                حذف ({selectedIds.length})
+                            </Button>
+                        )}
                         <Input
                             type="file"
                             accept=".csv, .txt"
@@ -297,7 +386,7 @@ export default function AdminSpeed() {
                             id="csv-upload"
                             onChange={handleFileUpload}
                         />
-                        <Button variant="outline" onClick={() => document.getElementById('csv-upload')?.click()}>
+                        <Button variant="outline" onClick={() => document.getElementById('csv-upload')?.click()} className="flex-1 md:flex-none">
                             <Upload className="w-4 h-4 ml-2" />
                             استيراد CSV
                         </Button>
@@ -309,42 +398,97 @@ export default function AdminSpeed() {
                     ) : questions.length === 0 ? (
                         <div className="p-8 text-center text-muted-foreground">لا توجد بيانات</div>
                     ) : (
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>السؤال</TableHead>
-                                    <TableHead>الإجابة الصحيحة</TableHead>
-                                    <TableHead>الحالة</TableHead>
-                                    <TableHead>إجراءات</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {questions.map(q => (
-                                    <TableRow key={q.id}>
-                                        <TableCell className="font-medium max-w-md truncate">{q.question_text}</TableCell>
-                                        <TableCell>
-                                            <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50">
-                                                {/* @ts-ignore */}
-                                                {q[`choice${q.correct_choice_index}`]}
-                                            </Badge>
-                                        </TableCell>
-                                        <TableCell>
-                                            <Badge variant={q.is_active ? "default" : "secondary"}>
-                                                {q.is_active ? "نشط" : "معطل"}
-                                            </Badge>
-                                        </TableCell>
-                                        <TableCell>
-                                            <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDelete(q.id)}>
-                                                <Trash2 className="w-4 h-4" />
+                        <div className="overflow-x-auto">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead className="w-12">
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={toggleSelectAll}
+                                                className="h-8 w-8 p-0"
+                                            >
+                                                {selectedIds.length === questions.length && questions.length > 0 ?
+                                                    <CheckSquare className="w-4 h-4" /> :
+                                                    <Square className="w-4 h-4" />
+                                                }
                                             </Button>
-                                        </TableCell>
+                                        </TableHead>
+                                        <TableHead className="min-w-[200px]">السؤال</TableHead>
+                                        <TableHead className="min-w-[150px]">الإجابات</TableHead>
+                                        <TableHead className="min-w-[100px]">الصحيحة</TableHead>
+                                        <TableHead className="min-w-[100px]">الحالة</TableHead>
+                                        <TableHead className="w-[100px]">إجراءات</TableHead>
                                     </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
+                                </TableHeader>
+                                <TableBody>
+                                    {questions.map(q => (
+                                        <TableRow key={q.id} className={selectedIds.includes(q.id) ? "bg-muted/50" : ""}>
+                                            <TableCell>
+                                                <Checkbox
+                                                    checked={selectedIds.includes(q.id)}
+                                                    onCheckedChange={() => toggleSelect(q.id)}
+                                                />
+                                            </TableCell>
+                                            <TableCell className="font-medium line-clamp-2 max-w-[200px]" title={q.question_text}>
+                                                {q.question_text}
+                                            </TableCell>
+                                            <TableCell className="text-xs text-muted-foreground">
+                                                <div className="flex flex-wrap gap-1">
+                                                    <span className="bg-slate-100 px-1 rounded">{q.choice1}</span>
+                                                    <span className="bg-slate-100 px-1 rounded">{q.choice2}</span>
+                                                    <span className="bg-slate-100 px-1 rounded">{q.choice3}</span>
+                                                    <span className="bg-slate-100 px-1 rounded">{q.choice4}</span>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="text-green-600 font-bold">
+                                                {q.correct_choice_index === 1 && q.choice1}
+                                                {q.correct_choice_index === 2 && q.choice2}
+                                                {q.correct_choice_index === 3 && q.choice3}
+                                                {q.correct_choice_index === 4 && q.choice4}
+                                            </TableCell>
+                                            <TableCell>
+                                                <Badge variant={q.is_active ? "default" : "secondary"}>
+                                                    {q.is_active ? "نشط" : "معطل"}
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10" onClick={() => confirmDelete(q.id)}>
+                                                    <Trash2 className="w-4 h-4" />
+                                                </Button>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </div>
                     )}
                 </CardContent>
             </Card>
+
+            <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+                            <AlertTriangle className="w-5 h-5" />
+                            تأكيد الحذف
+                        </AlertDialogTitle>
+                        <AlertDialogDescription className="text-right">
+                            {isBulkDelete
+                                ? `هل أنت متأكد من حذف ${selectedIds.length} أسئلة؟ لا يمكن التراجع عن هذا الإجراء.`
+                                : "هل أنت متأكد من حذف هذا السؤال؟ لا يمكن التراجع عن هذا الإجراء."
+                            }
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter className="gap-2 sm:gap-0">
+                        <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                        <AlertDialogAction onClick={executeDelete} className="bg-destructive hover:bg-destructive/90">
+                            حذف
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div >
     );
 }

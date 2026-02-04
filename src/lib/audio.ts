@@ -10,7 +10,7 @@ class AudioManager {
     // Create audio elements with mp3 files from public folder
     // Correct sound
     this.correctSound = new Audio('/correct.mp3');
-    
+
     // Wrong sound
     this.wrongSound = new Audio('/wrong.mp3');
 
@@ -24,14 +24,24 @@ class AudioManager {
   playCorrect() {
     if (this.correctSound) {
       this.correctSound.currentTime = 0;
-      this.correctSound.play().catch(() => {});
+      this.correctSound.play().catch(() => { });
+    }
+  }
+
+  playClick() {
+    // Reusing correct sound for click/start for now to avoid missing file error
+    // Ideally we should have a click.mp3
+    if (this.correctSound) {
+      const clone = this.correctSound.cloneNode() as HTMLAudioElement;
+      clone.volume = 0.2;
+      clone.play().catch(() => { });
     }
   }
 
   playWrong() {
     if (this.wrongSound) {
       this.wrongSound.currentTime = 0;
-      this.wrongSound.play().catch(() => {});
+      this.wrongSound.play().catch(() => { });
     }
   }
 }

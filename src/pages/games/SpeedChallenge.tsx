@@ -48,6 +48,7 @@ export default function SpeedChallenge() {
     });
 
     const [initialTime, setInitialTime] = useState(60);
+    const [questionsWithErrors, setQuestionsWithErrors] = useState<Set<string>>(new Set());
 
     const timerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -223,11 +224,24 @@ export default function SpeedChallenge() {
         } else {
             audioManager.playWrong();
             toast.error("خطأ! حاول مرة أخرى", { duration: 500, position: 'top-center' });
-            setGameState(prev => ({
-                ...prev,
-                score: Math.max(0, prev.score - 1), // Deduct 1 point, min 0
-                answeringCount: prev.answeringCount + 1
-            }));
+
+            // Only deduct score if this question hasn't been answered wrong before
+            if (!questionsWithErrors.has(currentQ.id)) {
+                setGameState(prev => ({
+                    ...prev,
+                    score: Math.max(0, prev.score - 1),
+                    answeringCount: prev.answeringCount + 1
+                }));
+
+                // Mark this question as having at least one error
+                setQuestionsWithErrors(prev => new Set(prev).add(currentQ.id));
+            } else {
+                // Still count the attempt even if no penalty
+                setGameState(prev => ({
+                    ...prev,
+                    answeringCount: prev.answeringCount + 1
+                }));
+            }
             // Do NOT move to next question
         }
     };

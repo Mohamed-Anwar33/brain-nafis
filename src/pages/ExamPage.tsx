@@ -21,11 +21,13 @@ export default function ExamPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isFinishing, setIsFinishing] = useState(false);
   const [completedQuestions, setCompletedQuestions] = useState<Set<string>>(new Set());
+  const [questionsWithErrors, setQuestionsWithErrors] = useState<Set<string>>(new Set());
   const [penalties, setPenalties] = useState(0);
 
   // Refs for synchronous access inside timeouts/callbacks
   const scoreRef = useRef(0);
   const penaltiesRef = useRef(0);
+  const questionsWithErrorsRef = useRef<Set<string>>(new Set());
   const questionPenaltiesRef = useRef<Record<string, number>>({});
 
   // Load exam data from sessionStorage
@@ -187,10 +189,17 @@ export default function ExamPage() {
     } else {
       audioManager.playWrong();
 
-      setPenalties(prev => prev + 1);
-      penaltiesRef.current += 1;
+      // Only add penalty if this question hasn't been answered wrong before
+      if (!questionsWithErrorsRef.current.has(currentQuestion.id)) {
+        setPenalties(prev => prev + 1);
+        penaltiesRef.current += 1;
 
-      // Track per-question penalties
+        // Mark this question as having at least one error
+        questionsWithErrorsRef.current.add(currentQuestion.id);
+        setQuestionsWithErrors(new Set(questionsWithErrorsRef.current));
+      }
+
+      // Track per-question penalties for database record
       questionPenaltiesRef.current[currentQuestion.id] = (questionPenaltiesRef.current[currentQuestion.id] || 0) + 1;
     }
 

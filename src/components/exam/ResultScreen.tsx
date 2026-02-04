@@ -90,18 +90,18 @@ export function ResultScreen({ result }: ResultScreenProps) {
               {/* Score Breakdown */}
               <div className="flex gap-4 sm:gap-8">
                 <div className="text-center">
+                  <div className="w-10 h-10 mx-auto bg-green-50 rounded-full flex items-center justify-center mb-2 text-green-500">
+                    <CheckCircle2 className="w-5 h-5" />
+                  </div>
+                  <p className="text-2xl font-bold text-slate-800">{result.question_count}</p>
+                  <p className="text-xs text-slate-500 font-bold">إجابات صحيحة</p>
+                </div>
+                <div className="text-center">
                   <div className="w-10 h-10 mx-auto bg-red-50 rounded-full flex items-center justify-center mb-2 text-red-500">
                     <AlertCircle className="w-5 h-5" />
                   </div>
                   <p className="text-2xl font-bold text-slate-800">{result.total_penalty}</p>
                   <p className="text-xs text-slate-500 font-bold">خصومات</p>
-                </div>
-                <div className="text-center">
-                  <div className="w-10 h-10 mx-auto bg-green-50 rounded-full flex items-center justify-center mb-2 text-green-500">
-                    <CheckCircle2 className="w-5 h-5" />
-                  </div>
-                  <p className="text-2xl font-bold text-slate-800">{result.score + result.total_penalty}</p>
-                  <p className="text-xs text-slate-500 font-bold">إجابات صحيحة</p>
                 </div>
               </div>
 

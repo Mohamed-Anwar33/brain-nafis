@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -7,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Trash2, Plus, Loader2, Upload, CheckSquare, Square, AlertTriangle } from "lucide-react";
+import { Trash2, Plus, Loader2, Upload, CheckSquare, Square, AlertTriangle, Image as ImageIcon } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
     AlertDialog,
@@ -24,6 +23,8 @@ interface OrderingQuestion {
     id: string;
     items: string[];
     correct_order: string[];
+    item_images?: string[];
+    image_url?: string; // Main question image
     title: string;
     is_active: boolean;
     level: number;
@@ -37,9 +38,6 @@ export default function AdminOrdering() {
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [itemToDelete, setItemToDelete] = useState<string | null>(null);
     const [isBulkDelete, setIsBulkDelete] = useState(false);
-
-    // Form State
-
 
     useEffect(() => {
         fetchQuestions();
@@ -58,7 +56,9 @@ export default function AdminOrdering() {
             const typedData = (data || []).map((item: any) => ({
                 ...item,
                 items: item.items as string[],
-                correct_order: item.correct_order as string[]
+                correct_order: item.correct_order as string[],
+                item_images: item.item_images as string[] || [],
+                image_url: item.image_url
             }));
 
             setQuestions(typedData);
@@ -80,6 +80,50 @@ export default function AdminOrdering() {
         level: 1
     });
 
+    // Image states
+    const [titleImage, setTitleImage] = useState<File | null>(null);
+    const [titleImagePreview, setTitleImagePreview] = useState<string>("");
+    const [itemImages, setItemImages] = useState<(File | null)[]>([null, null, null, null]);
+    const [imagePreviews, setImagePreviews] = useState<string[]>(["", "", "", ""]);
+
+    const handleImageSelect = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                const result = reader.result as string;
+                if (index === -1) {
+                    setTitleImage(file);
+                    setTitleImagePreview(result);
+                } else {
+                    const newImages = [...itemImages];
+                    newImages[index] = file;
+                    setItemImages(newImages);
+
+                    const newPreviews = [...imagePreviews];
+                    newPreviews[index] = result;
+                    setImagePreviews(newPreviews);
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const clearImage = (index: number) => {
+        if (index === -1) {
+            setTitleImage(null);
+            setTitleImagePreview("");
+        } else {
+            const newImages = [...itemImages];
+            newImages[index] = null;
+            setItemImages(newImages);
+
+            const newPreviews = [...imagePreviews];
+            newPreviews[index] = "";
+            setImagePreviews(newPreviews);
+        }
+    };
+
     const handleAdd = async (e: React.FormEvent) => {
         e.preventDefault();
 
@@ -90,6 +134,10 @@ export default function AdminOrdering() {
             newQuestion.item4
         ].filter(s => s && s.trim());
 
+        // Validate items count OR if generic placeholders are fine, but basically we need 4 items structure
+        // If we want exactly 4 items always, it's easier. The current code filters empty strings.
+        // Let's assume user fills inputs sequentially.
+
         if (items.length < 2) {
             toast.error("يجب إدخال عنصرين على الأقل");
             return;
@@ -97,12 +145,87 @@ export default function AdminOrdering() {
 
         setIsSubmitting(true);
         try {
+            // Upload images
+            let titleImageUrl = "";
+            if (titleImage) {
+                const fileExt = titleImage.name.split('.').pop();
+                const fileName = `ordering-title-${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`;
+                const { error: uploadError } = await supabase.storage.from('question-images').upload(fileName, titleImage);
+                if (!uploadError) {
+                    const { data } = supabase.storage.from('question-images').getPublicUrl(fileName);
+                    titleImageUrl = data.publicUrl;
+                }
+            }
+
+            // Loop through 4 potential slots
+            for (let i = 0; i < 4; i++) {
+                if (itemImages[i]) {
+                    const file = itemImages[i]!;
+                    const fileExt = file.name.split('.').pop();
+                    const fileName = `ordering-${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`;
+
+                    const { error: uploadError } = await supabase.storage
+                        .from('question-images')
+                        .upload(fileName, file);
+
+                    if (uploadError) {
+                        console.error(`Upload error for item ${i + 1}:`, uploadError);
+                        // Push empty or null placeholder to match index? 
+                        // The items array is filtered, so indices might shift if an item text is empty.
+                        // Ideally we enforce filling items 1 to N.
+                        // Let's assume we map uploaded images 1-to-1 to input fields.
+                        // If input 1 has text, we look at image 1.
+                    } else {
+                        const { data: { publicUrl } } = supabase.storage
+                            .from('question-images')
+                            .getPublicUrl(fileName);
+
+                        // We need to store strictly if this image belongs to a valid item
+                        // But wait, the `items` array above is filtered. itemImages is fixed length 4.
+                        // We must rebuild `items` and `item_images` such that they align.
+                    }
+                }
+            }
+
+            // Revised logic: align items and images
+            const finalItems: string[] = [];
+            const finalImages: string[] = []; // Store null/empty string for items without images
+
+            const inputs = [newQuestion.item1, newQuestion.item2, newQuestion.item3, newQuestion.item4];
+
+            for (let i = 0; i < 4; i++) {
+                const text = inputs[i]?.trim();
+                if (text) {
+                    finalItems.push(text);
+
+                    let uploadedUrl = "";
+                    if (itemImages[i]) {
+                        const file = itemImages[i]!;
+                        const fileExt = file.name.split('.').pop();
+                        const fileName = `ordering-${Math.random().toString(36).substring(2)}-${Date.now()}-${i}.${fileExt}`;
+
+                        const { error: uploadError } = await supabase.storage
+                            .from('question-images')
+                            .upload(fileName, file);
+
+                        if (!uploadError) {
+                            const { data } = supabase.storage.from('question-images').getPublicUrl(fileName);
+                            uploadedUrl = data.publicUrl;
+                        }
+                    }
+                    finalImages.push(uploadedUrl);
+                }
+            }
+
+
             // We assume input is in correct order
             const { error } = await supabase.from("ordering_game_questions").insert({
                 title: newQuestion.title || "رتب العناصر التالية",
-                items: items, // Save as correct array
-                correct_order: items, // Same array
-                drop_labels: items.map((_, i) => `${i + 1}`), // Default labels 1, 2, ...
+                items: finalItems,
+                correct_order: finalItems, // Same array items are correct order initially
+                item_images: finalImages, // Save image URLs parallel to items
+                image_url: titleImageUrl,
+                drop_labels: finalItems.map((_, i) => `${i + 1}`),
                 level: 1,
                 stage: "default",
                 is_active: true
@@ -116,6 +239,10 @@ export default function AdminOrdering() {
                 item1: "", item2: "", item3: "", item4: "",
                 level: 1
             });
+            setItemImages([null, null, null, null]);
+            setImagePreviews(["", "", "", ""]);
+            setTitleImage(null);
+            setTitleImagePreview("");
             fetchQuestions();
         } catch (err) {
             console.error(err);
@@ -216,18 +343,20 @@ export default function AdminOrdering() {
                 const line = lines[i].trim();
                 if (!line) continue;
 
-                // Assuming simple CSV: Title, Item1, Item2, Item3, Item4
                 const cols = line.split(',').map(c => c.trim().replace(/^"|"$/g, ''));
 
-                if (cols.length >= 3) { // Title + at least 2 items
+                if (cols.length >= 3) {
                     const title = cols[0];
                     const items = cols.slice(1).filter(i => i && i !== "");
+
+                    // No images in CSV import for now
 
                     if (items.length >= 2) {
                         validQuestions.push({
                             title: title,
                             items: items,
                             correct_order: items,
+                            item_images: items.map(() => ""), // Empty images
                             drop_labels: items.map((_, idx) => `${idx + 1}`),
                             level: 1,
                             stage: "default",
@@ -267,14 +396,12 @@ export default function AdminOrdering() {
             <div className="bg-blue-50 border border-blue-200 text-blue-800 p-4 rounded-lg text-sm">
                 <h3 className="font-bold mb-2">تعليمات الإضافة:</h3>
                 <ul className="list-disc list-inside space-y-1">
-                    <li>أكتب <strong>عنوان السؤال</strong> بوضوح (مثال: رتب الكواكب من الأقرب للشمس).</li>
-                    <li>أدخل العناصر في الحقول المرقمة <strong>بالترتيب الصحيح</strong> (من 1 إلى 4).</li>
-                    <li>مثال: 1: عطارد، 2: الزهرة، 3: الأرض، 4: المريخ.</li>
-                    <li>النظام سيقوم بخلط هذه العناصر تلقائياً عند عرضها للطالب.</li>
+                    <li>أكتب <strong>عنوان السؤال</strong> بوضوح.</li>
+                    <li>أدخل <strong>النص</strong> و optionally <strong>الصورة</strong> لكل عنصر.</li>
+                    <li>أدخل العناصر <strong>بالترتيب الصحيح</strong> (من 1 إلى 4).</li>
+                    <li>النظام سيقوم بخلط العناصر تلقائياً.</li>
                 </ul>
             </div>
-
-
 
             <Card>
                 <CardHeader>
@@ -282,63 +409,110 @@ export default function AdminOrdering() {
                 </CardHeader>
                 <CardContent>
                     <form onSubmit={handleAdd} className="space-y-4">
-                        <div className="space-y-4">
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium">عنوان السؤال</label>
-                                <Input
-                                    value={newQuestion.title}
-                                    onChange={e => setNewQuestion({ ...newQuestion, title: e.target.value })}
-                                    placeholder="مثال: رتب العناصر حسب العدد الذري"
-                                />
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">عنوان السؤال</label>
+                            <div className="flex gap-4">
+                                <div className="flex-1">
+                                    <Input
+                                        value={newQuestion.title}
+                                        onChange={e => setNewQuestion({ ...newQuestion, title: e.target.value })}
+                                        placeholder="مثال: رتب العناصر حسب العدد الذري"
+                                    />
+                                </div>
+                                <div className="shrink-0 flex items-center gap-2">
+                                    <Input
+                                        type="file"
+                                        accept="image/*"
+                                        className="hidden"
+                                        id="title-img-upload"
+                                        onChange={(e) => handleImageSelect(-1, e)}
+                                    />
+                                    {!titleImagePreview ? (
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            onClick={() => document.getElementById("title-img-upload")?.click()}
+                                            className="gap-2"
+                                        >
+                                            <ImageIcon className="w-4 h-4" />
+                                            صورة للسؤال
+                                        </Button>
+                                    ) : (
+                                        <div className="relative">
+                                            <img src={titleImagePreview} alt="Preview" className="h-10 w-10 object-cover rounded border" />
+                                            <button
+                                                type="button"
+                                                onClick={() => clearImage(-1)}
+                                                className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-0.5 w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600"
+                                            >
+                                                x
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
-
                         </div>
+
                         <div className="grid grid-cols-1 gap-4 bg-blue-50 p-4 rounded-lg border border-blue-100">
                             <label className="text-sm font-bold text-blue-800 mb-2 block">العناصر بالترتيب الصحيح (من 1 إلى 4)</label>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <label className="text-xs font-medium text-gray-500">العنصر رقم 1 (الأول)</label>
-                                    <Input
-                                        value={newQuestion.item1 || ''}
-                                        onChange={e => setNewQuestion({ ...newQuestion, item1: e.target.value })}
-                                        placeholder="مثال: طفل"
-                                        className="bg-white p-3 h-10"
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-xs font-medium text-gray-500">العنصر رقم 2</label>
-                                    <Input
-                                        value={newQuestion.item2 || ''}
-                                        onChange={e => setNewQuestion({ ...newQuestion, item2: e.target.value })}
-                                        placeholder="مثال: شاب"
-                                        className="bg-white p-3 h-10"
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-xs font-medium text-gray-500">العنصر رقم 3</label>
-                                    <Input
-                                        value={newQuestion.item3 || ''}
-                                        onChange={e => setNewQuestion({ ...newQuestion, item3: e.target.value })}
-                                        placeholder="مثال: رجل"
-                                        className="bg-white p-3 h-10"
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-xs font-medium text-gray-500">العنصر رقم 4 (الأخير)</label>
-                                    <Input
-                                        value={newQuestion.item4 || ''}
-                                        onChange={e => setNewQuestion({ ...newQuestion, item4: e.target.value })}
-                                        placeholder="مثال: عجوز"
-                                        className="bg-white p-3 h-10"
-                                    />
-                                </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {[1, 2, 3, 4].map((num, i) => {
+                                    const itemKey = `item${num}` as keyof typeof newQuestion;
+                                    return (
+                                        <div key={num} className="space-y-2 border p-3 rounded-lg bg-white">
+                                            <label className="text-xs font-medium text-gray-500 block mb-1">العنصر رقم {num}</label>
+
+                                            <Input
+                                                value={newQuestion[itemKey] as string}
+                                                onChange={e => setNewQuestion({ ...newQuestion, [itemKey]: e.target.value })}
+                                                placeholder={`نص العنصر ${num}`}
+                                                className="mb-2"
+                                            />
+
+                                            {/* Image Upload */}
+                                            <div className="flex items-start gap-2">
+                                                <div className="flex-1">
+                                                    <Input
+                                                        id={`img-${i}`}
+                                                        type="file"
+                                                        accept="image/*"
+                                                        className="hidden"
+                                                        onChange={(e) => handleImageSelect(i, e)}
+                                                    />
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => document.getElementById(`img-${i}`)?.click()}
+                                                        className="w-full gap-2 text-xs"
+                                                    >
+                                                        <ImageIcon className="w-4 h-4" />
+                                                        {imagePreviews[i] ? "تغيير الصورة" : "صورة"}
+                                                    </Button>
+                                                </div>
+                                                {imagePreviews[i] && (
+                                                    <div className="relative shrink-0">
+                                                        <img src={imagePreviews[i]} alt="pv" className="w-10 h-10 object-cover rounded border" />
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => clearImage(i)}
+                                                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-0.5 w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600"
+                                                        >
+                                                            x
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </div>
 
-                        <Button type="submit" disabled={isSubmitting} className="w-full">
-                            {isSubmitting ? <Loader2 className="animate-spin" /> : <Plus className="w-4 h-4 ml-2" />}
-                            حفظ الترتيب (سيتم خلطه تلقائياً)
+                        <Button type="submit" disabled={isSubmitting} className="w-full h-12 text-lg">
+                            {isSubmitting ? <Loader2 className="animate-spin" /> : <Plus className="w-5 h-5 ml-2" />}
+                            حفظ الترتيب
                         </Button>
                     </form>
                 </CardContent>
@@ -397,7 +571,7 @@ export default function AdminOrdering() {
                                             </Button>
                                         </TableHead>
                                         <TableHead className="min-w-[200px]">العنوان</TableHead>
-                                        <TableHead className="min-w-[250px]">العناصر (الترتيب الصحيح)</TableHead>
+                                        <TableHead className="min-w-[250px]">العناصر</TableHead>
                                         <TableHead className="min-w-[80px]">المستوى</TableHead>
                                         <TableHead className="min-w-[80px]">الحالة</TableHead>
                                         <TableHead className="w-[100px]">إجراءات</TableHead>
@@ -416,9 +590,14 @@ export default function AdminOrdering() {
                                                 {q.title}
                                             </TableCell>
                                             <TableCell>
-                                                <div className="flex flex-wrap gap-1">
+                                                <div className="flex flex-wrap gap-2">
                                                     {q.correct_order?.map((item, i) => (
-                                                        <Badge key={i} variant="outline" className="whitespace-nowrap">{item}</Badge>
+                                                        <div key={i} className="flex items-center gap-1 bg-slate-100 rounded px-2 py-1 text-sm border">
+                                                            <span>{item}</span>
+                                                            {q.item_images && q.item_images[i] && (
+                                                                <ImageIcon className="w-3 h-3 text-blue-500" />
+                                                            )}
+                                                        </div>
                                                     ))}
                                                 </div>
                                             </TableCell>

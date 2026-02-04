@@ -13,6 +13,7 @@ interface Question {
     id: string;
     left_text: string;
     right_text: string;
+    left_image_url?: string;
     right_image_url?: string;
 }
 
@@ -26,7 +27,7 @@ export default function MatchingGame() {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
     const [questions, setQuestions] = useState<Question[]>([]);
-    const [leftItems, setLeftItems] = useState<{ id: string; text: string; matched: boolean }[]>([]);
+    const [leftItems, setLeftItems] = useState<{ id: string; text: string; imageUrl?: string; matched: boolean }[]>([]);
     const [rightItems, setRightItems] = useState<{ id: string; text: string; imageUrl?: string; matched: boolean }[]>([]);
 
     const [selectedLeft, setSelectedLeft] = useState<string | null>(null);
@@ -140,7 +141,7 @@ export default function MatchingGame() {
 
     const initializeGame = (qs: Question[]) => {
         // Prepare items and shuffle
-        const left = qs.map(q => ({ id: q.id, text: q.left_text, matched: false }));
+        const left = qs.map(q => ({ id: q.id, text: q.left_text, imageUrl: q.left_image_url, matched: false }));
         const right = qs.map(q => ({ id: q.id, text: q.right_text, imageUrl: q.right_image_url, matched: false }));
 
         // Shuffle arrays
@@ -333,7 +334,17 @@ export default function MatchingGame() {
                                         ${questions.length > 8 ? 'text-base p-2' : 'text-lg md:text-xl md:p-6'} 
                                     `}
                                 >
-                                    <span className="font-semibold">{item.text}</span>
+                                    {item.imageUrl ? (
+                                        <div className="w-full h-full flex items-center justify-center min-h-[120px] md:min-h-[160px]">
+                                            <img
+                                                src={item.imageUrl}
+                                                alt="question"
+                                                className="w-full h-full object-contain max-h-40 md:max-h-64 mix-blend-multiply transition-transform hover:scale-110 duration-300"
+                                            />
+                                        </div>
+                                    ) : (
+                                        <span className="font-semibold">{item.text}</span>
+                                    )}
                                 </Card>
                             ))}
                         </div>

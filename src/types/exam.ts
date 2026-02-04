@@ -2,12 +2,14 @@ export interface Choice {
   id: string;
   text: string;
   is_correct?: boolean;
+  image_url?: string;
 }
 
 export interface Question {
   id: string;
   text: string;
   choices: Choice[];
+  image_url?: string;
 }
 
 export interface ExamQuestion extends Question {

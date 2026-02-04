@@ -83,11 +83,19 @@ export function ExamQuestion({
         </div>
       </div>
 
-      {/* Question Content */}
       <div className="flex-1 container max-w-3xl mx-auto px-4 py-8">
         <div className="animate-slide-in">
-          {/* Question Text */}
-          <div className="card-elevated p-6 md:p-8 mb-8">
+          {/* Question Text & Image */}
+          <div className="card-elevated p-6 md:p-8 mb-8 text-center space-y-6">
+            {question.image_url && (
+              <div className="flex justify-center mb-4">
+                <img
+                  src={question.image_url}
+                  alt="Question"
+                  className="max-h-64 rounded-xl shadow-sm border border-slate-200 object-contain bg-white"
+                />
+              </div>
+            )}
             <h2 className="text-xl md:text-2xl font-bold text-foreground leading-relaxed">
               {question.text}
             </h2>
@@ -107,7 +115,7 @@ export function ExamQuestion({
                   onClick={() => handleChoiceClick(choice)}
                   disabled={disabled || isSubmitting || answerState === "correct"}
                   className={cn(
-                    "w-full text-right choice-option transition-all duration-150",
+                    "w-full text-right choice-option transition-all duration-150 p-4",
                     isCorrectAnswer && "choice-correct",
                     isWrongAnswer && "choice-wrong",
                     isPending && !answerState && "border-primary bg-primary/10 scale-[0.99] animate-pulse",
@@ -121,9 +129,20 @@ export function ExamQuestion({
                     )}>
                       {String.fromCharCode(1571 + index)}
                     </span>
-                    <span className="flex-1 text-lg font-medium">
-                      {choice.text}
-                    </span>
+
+                    <div className="flex-1 flex flex-col md:flex-row items-center md:items-start gap-3">
+                      {choice.image_url && (
+                        <img
+                          src={choice.image_url}
+                          alt={`Choice ${index + 1}`}
+                          className="h-24 md:h-20 w-auto rounded-md object-contain bg-white border border-slate-100"
+                        />
+                      )}
+                      <span className="text-lg font-medium self-center md:self-auto pt-1">
+                        {choice.text}
+                      </span>
+                    </div>
+
                     {isPending && !answerState && (
                       <Loader2 className="w-5 h-5 text-primary animate-spin" />
                     )}

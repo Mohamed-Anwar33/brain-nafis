@@ -24,6 +24,7 @@ interface MatchingQuestion {
     id: string;
     left_text: string;
     right_text: string;
+    left_image_url?: string;
     right_image_url?: string;
     is_active: boolean;
     stage: string;
@@ -45,8 +46,10 @@ export default function AdminMatching() {
         right_text: "",
         level: 1
     });
-    const [selectedImage, setSelectedImage] = useState<File | null>(null);
-    const [imagePreview, setImagePreview] = useState<string>("");
+    const [selectedRightImage, setSelectedRightImage] = useState<File | null>(null);
+    const [rightImagePreview, setRightImagePreview] = useState<string>("");
+    const [selectedLeftImage, setSelectedLeftImage] = useState<File | null>(null);
+    const [leftImagePreview, setLeftImagePreview] = useState<string>("");
 
     useEffect(() => {
         fetchQuestions();
@@ -77,42 +80,45 @@ export default function AdminMatching() {
 
     const handleAdd = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!newQuestion.left_text || (!newQuestion.right_text && !selectedImage)) {
+        if ((!newQuestion.left_text && !selectedLeftImage) || (!newQuestion.right_text && !selectedRightImage)) {
             toast.error("يجب إدخال السؤال والجواب (نص أو صورة)");
             return;
         }
 
         setIsSubmitting(true);
         try {
-            let imageUrl = "";
+            let rightImageUrl = "";
+            let leftImageUrl = "";
 
-            // Upload image if selected
-            if (selectedImage) {
-                const fileExt = selectedImage.name.split('.').pop();
-                const fileName = `${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`;
-                const filePath = `${fileName}`;
+            // Upload Right Image
+            if (selectedRightImage) {
+                const fileExt = selectedRightImage.name.split('.').pop();
+                const fileName = `matching-right-${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`;
+                const { error: uploadError } = await supabase.storage.from('question-images').upload(fileName, selectedRightImage);
 
-                const { error: uploadError } = await supabase.storage
-                    .from('question-images')
-                    .upload(filePath, selectedImage);
-
-                if (uploadError) {
-                    console.error("Upload error:", uploadError);
-                    throw new Error("فشل رفع الصورة");
+                if (!uploadError) {
+                    const { data } = supabase.storage.from('question-images').getPublicUrl(fileName);
+                    rightImageUrl = data.publicUrl;
                 }
+            }
 
-                // Get public URL
-                const { data: { publicUrl } } = supabase.storage
-                    .from('question-images')
-                    .getPublicUrl(filePath);
+            // Upload Left Image
+            if (selectedLeftImage) {
+                const fileExt = selectedLeftImage.name.split('.').pop();
+                const fileName = `matching-left-${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`;
+                const { error: uploadError } = await supabase.storage.from('question-images').upload(fileName, selectedLeftImage);
 
-                imageUrl = publicUrl;
+                if (!uploadError) {
+                    const { data } = supabase.storage.from('question-images').getPublicUrl(fileName);
+                    leftImageUrl = data.publicUrl;
+                }
             }
 
             const { error } = await supabase.from("matching_game_questions").insert({
-                left_text: newQuestion.left_text,
+                left_text: newQuestion.left_text || "",
                 right_text: newQuestion.right_text || "",
-                right_image_url: imageUrl || null,
+                right_image_url: rightImageUrl || null,
+                left_image_url: leftImageUrl || null,
                 level: newQuestion.level,
                 stage: "default",
                 is_active: true
@@ -122,8 +128,10 @@ export default function AdminMatching() {
 
             toast.success("تمت الإضافة بنجاح");
             setNewQuestion({ left_text: "", right_text: "", level: 1 });
-            setSelectedImage(null);
-            setImagePreview("");
+            setSelectedRightImage(null);
+            setRightImagePreview("");
+            setSelectedLeftImage(null);
+            setLeftImagePreview("");
             fetchQuestions();
         } catch (err: any) {
             console.error(err);
@@ -133,15 +141,30 @@ export default function AdminMatching() {
         }
     };
 
-    const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleImageSelect = (side: 'left' | 'right', e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            setSelectedImage(file);
             const reader = new FileReader();
             reader.onloadend = () => {
-                setImagePreview(reader.result as string);
+                if (side === 'left') {
+                    setSelectedLeftImage(file);
+                    setLeftImagePreview(reader.result as string);
+                } else {
+                    setSelectedRightImage(file);
+                    setRightImagePreview(reader.result as string);
+                }
             };
             reader.readAsDataURL(file);
+        }
+    };
+
+    const clearImage = (side: 'left' | 'right') => {
+        if (side === 'left') {
+            setSelectedLeftImage(null);
+            setLeftImagePreview("");
+        } else {
+            setSelectedRightImage(null);
+            setRightImagePreview("");
         }
     };
 
@@ -309,8 +332,44 @@ export default function AdminMatching() {
                                     value={newQuestion.left_text}
                                     onChange={e => setNewQuestion({ ...newQuestion, left_text: e.target.value })}
                                     placeholder="اكتب السؤال أو العنصر هنا..."
-                                    className="p-3 text-base md:p-6 md:text-lg"
+                                    className="p-3 text-base md:p-6 md:text-lg border-blue-200 focus-visible:ring-blue-500"
+                                    disabled={!!selectedLeftImage}
                                 />
+                                <div className="space-y-2 pt-2">
+                                    <div className="flex flex-col sm:flex-row gap-2 items-start">
+                                        <Input
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={(e) => handleImageSelect('left', e)}
+                                            className="hidden"
+                                            id="left-img-upload"
+                                        />
+                                        {!leftImagePreview ? (
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                onClick={() => document.getElementById("left-img-upload")?.click()}
+                                                className="w-full gap-2 text-blue-700"
+                                            >
+                                                <ImageIcon className="w-4 h-4 ml-2" />
+                                                أو اختر صورة للسؤال
+                                            </Button>
+                                        ) : (
+                                            <div className="relative w-full border rounded-lg p-2 bg-white flex justify-center">
+                                                <img src={leftImagePreview} alt="معاينة" className="max-h-32 object-contain" />
+                                                <Button
+                                                    type="button"
+                                                    variant="destructive"
+                                                    size="icon"
+                                                    className="absolute top-2 right-2 h-6 w-6 rounded-full"
+                                                    onClick={() => clearImage('left')}
+                                                >
+                                                    <Trash2 className="w-3 h-3" />
+                                                </Button>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
 
                             <div className="flex justify-center">
@@ -325,38 +384,43 @@ export default function AdminMatching() {
                                     onChange={e => setNewQuestion({ ...newQuestion, right_text: e.target.value })}
                                     placeholder="اكتب الإجابة أو الرمز هنا... (اختياري إذا اخترت صورة)"
                                     className="p-3 text-base md:p-6 md:text-lg border-green-200 focus-visible:ring-green-500"
-                                    disabled={!!selectedImage}
+                                    disabled={!!selectedRightImage}
                                 />
 
                                 <div className="space-y-2 pt-2">
-                                    <label className="text-sm font-medium text-gray-600">أو اختر صورة للإجابة</label>
                                     <div className="flex flex-col sm:flex-row gap-2 items-start">
                                         <Input
                                             type="file"
                                             accept="image/*"
-                                            onChange={handleImageSelect}
-                                            className="flex-1 w-full"
+                                            onChange={(e) => handleImageSelect('right', e)}
+                                            className="hidden"
+                                            id="right-img-upload"
                                         />
-                                        {selectedImage && (
+                                        {!rightImagePreview ? (
                                             <Button
                                                 type="button"
                                                 variant="outline"
-                                                size="sm"
-                                                onClick={() => {
-                                                    setSelectedImage(null);
-                                                    setImagePreview("");
-                                                }}
-                                                className="w-full sm:w-auto"
+                                                onClick={() => document.getElementById("right-img-upload")?.click()}
+                                                className="w-full gap-2 text-green-700"
                                             >
-                                                إلغاء
+                                                <ImageIcon className="w-4 h-4 ml-2" />
+                                                أو اختر صورة للإجابة
                                             </Button>
+                                        ) : (
+                                            <div className="relative w-full border rounded-lg p-2 bg-white flex justify-center">
+                                                <img src={rightImagePreview} alt="معاينة" className="max-h-32 object-contain" />
+                                                <Button
+                                                    type="button"
+                                                    variant="destructive"
+                                                    size="icon"
+                                                    className="absolute top-2 right-2 h-6 w-6 rounded-full"
+                                                    onClick={() => clearImage('right')}
+                                                >
+                                                    <Trash2 className="w-3 h-3" />
+                                                </Button>
+                                            </div>
                                         )}
                                     </div>
-                                    {imagePreview && (
-                                        <div className="border rounded-lg p-2 bg-white">
-                                            <img src={imagePreview} alt="معاينة" className="max-h-32 mx-auto" />
-                                        </div>
-                                    )}
                                 </div>
                             </div>
 
@@ -440,12 +504,21 @@ export default function AdminMatching() {
                                                     onCheckedChange={() => toggleSelect(q.id)}
                                                 />
                                             </TableCell>
-                                            <TableCell className="font-medium">{q.left_text}</TableCell>
+                                            <TableCell>
+                                                {q.left_image_url ? (
+                                                    <div className="flex items-center gap-2">
+                                                        <ImageIcon className="w-4 h-4 text-purple-500" />
+                                                        <img src={q.left_image_url} alt="question" className="h-10 w-auto rounded border bg-white" />
+                                                    </div>
+                                                ) : (
+                                                    q.left_text
+                                                )}
+                                            </TableCell>
                                             <TableCell>
                                                 {q.right_image_url ? (
                                                     <div className="flex items-center gap-2">
-                                                        <ImageIcon className="w-4 h-4 text-blue-500" />
-                                                        <img src={q.right_image_url} alt="answer" className="h-10 w-auto rounded" />
+                                                        <ImageIcon className="w-4 h-4 text-green-500" />
+                                                        <img src={q.right_image_url} alt="answer" className="h-10 w-auto rounded border bg-white" />
                                                     </div>
                                                 ) : (
                                                     q.right_text

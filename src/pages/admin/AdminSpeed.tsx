@@ -51,6 +51,14 @@ export default function AdminSpeed() {
         correct_choice_index: 1
     });
 
+    // Image State
+    const [questionImage, setQuestionImage] = useState<File | null>(null);
+    const [questionImagePreview, setQuestionImagePreview] = useState<string>("");
+
+    // 0=Correct, 1=Wrong1, 2=Wrong2, 3=Wrong3
+    const [choiceImages, setChoiceImages] = useState<(File | null)[]>([null, null, null, null]);
+    const [choiceImagePreviews, setChoiceImagePreviews] = useState<string[]>(["", "", "", ""]);
+
     useEffect(() => {
         fetchQuestions();
     }, []);
@@ -66,49 +74,114 @@ export default function AdminSpeed() {
             if (error) throw error;
             setQuestions(data || []);
         } catch (err: any) {
-            if (err.message?.includes('does not exist')) {
-                console.warn("Table speed_challenge_questions does not exist yet.");
-            } else {
-                console.error(err);
-                toast.error("فشل تحميل البيانات");
-            }
+            console.error(err);
+            toast.error("فشل تحميل البيانات");
         } finally {
             setIsLoading(false);
         }
     };
 
+    const handleImageSelect = (file: File, isQuestion: boolean, index?: number) => {
+        const preview = URL.createObjectURL(file);
+        if (isQuestion) {
+            setQuestionImage(file);
+            setQuestionImagePreview(preview);
+        } else if (index !== undefined) {
+            const newImages = [...choiceImages];
+            newImages[index] = file;
+            setChoiceImages(newImages);
+
+            const newPreviews = [...choiceImagePreviews];
+            newPreviews[index] = preview;
+            setChoiceImagePreviews(newPreviews);
+        }
+    };
+
+    const clearImage = (isQuestion: boolean, index?: number) => {
+        if (isQuestion) {
+            setQuestionImage(null);
+            setQuestionImagePreview("");
+        } else if (index !== undefined) {
+            const newImages = [...choiceImages];
+            newImages[index] = null;
+            setChoiceImages(newImages);
+
+            const newPreviews = [...choiceImagePreviews];
+            newPreviews[index] = "";
+            setChoiceImagePreviews(newPreviews);
+        }
+    };
+
+    const uploadImage = async (file: File) => {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Math.random()}.${fileExt}`;
+        const filePath = `${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+            .from('question-images')
+            .upload(filePath, file);
+
+        if (uploadError) {
+            throw uploadError;
+        }
+
+        const { data } = supabase.storage
+            .from('question-images')
+            .getPublicUrl(filePath);
+
+        return data.publicUrl;
+    };
+
     const handleAdd = async (e: React.FormEvent) => {
         e.preventDefault();
-        // choice1 is treated as "Correct Answer" in the form
-        // choice2, choice3, choice4 are "Wrong Answers"
         if (!newQuestion.question_text || !newQuestion.choice1 || !newQuestion.choice2) return;
 
         setIsSubmitting(true);
         try {
-            // Prepare answers array: [Correct, Wrong1, Wrong2, Wrong3]
-            const correctAnswer = newQuestion.choice1;
-            const answers = [
-                newQuestion.choice1,
-                newQuestion.choice2,
-                newQuestion.choice3,
-                newQuestion.choice4
-            ].filter(a => a); // Filter empty if any
-
-            // Shuffle answers
-            for (let i = answers.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [answers[i], answers[j]] = [answers[j], answers[i]];
+            // 1. Upload Question Image
+            let questionImageUrl = "";
+            if (questionImage) {
+                questionImageUrl = await uploadImage(questionImage);
             }
 
-            // Find new index of correct answer (1-based)
-            const correctIndex = answers.indexOf(correctAnswer) + 1;
+            // 2. Upload Choice Images
+            const choiceImageUrls: string[] = ["", "", "", ""];
+            for (let i = 0; i < 4; i++) {
+                if (choiceImages[i]) {
+                    choiceImageUrls[i] = await uploadImage(choiceImages[i]!);
+                }
+            }
+
+            // Prepare answers bundle: [Correct, Wrong1, Wrong2, Wrong3]
+            // Structure: { text, imageUrl, isOriginalCorrect }
+            const originalAnswers = [
+                { text: newQuestion.choice1, imageUrl: choiceImageUrls[0], isCorrect: true },
+                { text: newQuestion.choice2, imageUrl: choiceImageUrls[1], isCorrect: false },
+                { text: newQuestion.choice3, imageUrl: choiceImageUrls[2], isCorrect: false },
+                { text: newQuestion.choice4, imageUrl: choiceImageUrls[3], isCorrect: false },
+            ].filter(a => a.text); // Filter empty text
+
+            // Shuffle
+            const shuffled = [...originalAnswers];
+            for (let i = shuffled.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            }
+
+            // Find new correct index (1-based)
+            const correctIndex = shuffled.findIndex(a => a.isCorrect) + 1;
 
             const { error } = await supabase.from("speed_challenge_questions").insert({
                 question_text: newQuestion.question_text,
-                choice1: answers[0] || "",
-                choice2: answers[1] || "",
-                choice3: answers[2] || "",
-                choice4: answers[3] || "",
+                question_image_url: questionImageUrl,
+                choice1: shuffled[0]?.text || "",
+                choice1_image_url: shuffled[0]?.imageUrl || "",
+                choice2: shuffled[1]?.text || "",
+                choice2_image_url: shuffled[1]?.imageUrl || "",
+                choice3: shuffled[2]?.text || "",
+                choice3_image_url: shuffled[2]?.imageUrl || "",
+                choice4: shuffled[3]?.text || "",
+                choice4_image_url: shuffled[3]?.imageUrl || "",
                 correct_choice_index: correctIndex,
                 is_active: true,
                 stage: "default"
@@ -120,11 +193,18 @@ export default function AdminSpeed() {
             }
 
             toast.success("تمت الإضافة بنجاح");
+
+            // Reset Form
             setNewQuestion({
                 question_text: "",
                 choice1: "", choice2: "", choice3: "", choice4: "",
                 correct_choice_index: 1
             });
+            setQuestionImage(null);
+            setQuestionImagePreview("");
+            setChoiceImages([null, null, null, null]);
+            setChoiceImagePreviews(["", "", "", ""]);
+
             fetchQuestions();
         } catch (err) {
             console.error(err);
@@ -302,13 +382,48 @@ export default function AdminSpeed() {
                 </CardHeader>
                 <CardContent>
                     <form onSubmit={handleAdd} className="space-y-4">
-                        <div className="space-y-2">
+                        <div className="space-y-4 border p-4 rounded-lg bg-gray-50/50">
                             <label className="text-sm font-medium">نص السؤال</label>
                             <Input
                                 value={newQuestion.question_text}
                                 onChange={e => setNewQuestion({ ...newQuestion, question_text: e.target.value })}
                                 placeholder="أدخل السؤال هنا..."
                             />
+                            {/* Question Image */}
+                            <div className="flex items-center gap-4">
+                                <div className="relative">
+                                    <Input
+                                        type="file"
+                                        accept="image/*"
+                                        className="hidden"
+                                        id="question-img-upload"
+                                        onChange={(e) => {
+                                            if (e.target.files?.[0]) handleImageSelect(e.target.files[0], true);
+                                        }}
+                                    />
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => document.getElementById("question-img-upload")?.click()}
+                                    >
+                                        <Upload className="w-4 h-4 ml-2" />
+                                        صورة للسؤال (اختياري)
+                                    </Button>
+                                </div>
+                                {questionImagePreview && (
+                                    <div className="relative w-16 h-16 border rounded bg-white">
+                                        <img src={questionImagePreview} alt="Preview" className="w-full h-full object-contain" />
+                                        <button
+                                            type="button"
+                                            onClick={() => clearImage(true)}
+                                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-0.5"
+                                        >
+                                            <Trash2 className="w-3 h-3" />
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
                         </div>
 
 
@@ -316,42 +431,155 @@ export default function AdminSpeed() {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-green-50 p-4 rounded-lg border border-green-100">
                             <div className="space-y-2 md:col-span-2">
                                 <label className="text-sm font-bold text-green-700">الإجابة الصحيحة</label>
-                                <Input
-                                    value={newQuestion.choice1} // Using choice1 state for Correct Answer temporally
-                                    onChange={e => setNewQuestion({ ...newQuestion, choice1: e.target.value })}
-                                    placeholder="الإجابة الصحيحة هنا"
-                                    className="border-green-300 focus-visible:ring-green-500 p-3 h-10"
-                                />
+                                <div className="flex gap-2">
+                                    <Input
+                                        value={newQuestion.choice1} // Using choice1 state for Correct Answer temporally
+                                        onChange={e => setNewQuestion({ ...newQuestion, choice1: e.target.value })}
+                                        placeholder="الإجابة الصحيحة هنا"
+                                        className="border-green-300 focus-visible:ring-green-500 md:flex-1"
+                                    />
+                                    {/* Choice 1 Image (Correct) */}
+                                    <div className="relative shrink-0">
+                                        <Input
+                                            type="file"
+                                            accept="image/*"
+                                            className="hidden"
+                                            id="c1-img"
+                                            onChange={(e) => e.target.files?.[0] && handleImageSelect(e.target.files[0], false, 0)}
+                                        />
+                                        {!choiceImagePreviews[0] ? (
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => document.getElementById("c1-img")?.click()}
+                                                className="text-green-700 hover:bg-green-100 gap-1 px-2 shrink-0"
+                                            >
+                                                <Upload className="w-3 h-3" />
+                                                <span className="text-xs">صورة</span>
+                                            </Button>
+                                        ) : (
+                                            <div className="relative w-10 h-10 border border-green-200 rounded bg-white">
+                                                <img src={choiceImagePreviews[0]} className="w-full h-full object-contain" />
+                                                <button type="button" onClick={() => clearImage(false, 0)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-[1px]"><Trash2 className="w-2 h-2" /></button>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-red-50 p-4 rounded-lg border border-red-100">
                             <div className="space-y-2">
                                 <label className="text-sm font-medium text-red-700">اختيار خاطئ 1</label>
-                                <Input
-                                    value={newQuestion.choice2}
-                                    onChange={e => setNewQuestion({ ...newQuestion, choice2: e.target.value })}
-                                    placeholder="خطأ 1"
-                                    className="border-red-200"
-                                />
+                                <div className="flex gap-2">
+                                    <Input
+                                        value={newQuestion.choice2}
+                                        onChange={e => setNewQuestion({ ...newQuestion, choice2: e.target.value })}
+                                        placeholder="خطأ 1"
+                                        className="border-red-200"
+                                    />
+                                    <div className="relative shrink-0">
+                                        <Input
+                                            type="file"
+                                            accept="image/*"
+                                            className="hidden"
+                                            id="c2-img"
+                                            onChange={(e) => e.target.files?.[0] && handleImageSelect(e.target.files[0], false, 1)}
+                                        />
+                                        {!choiceImagePreviews[1] ? (
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => document.getElementById("c2-img")?.click()}
+                                                className="text-red-700 hover:bg-red-100 gap-1 px-2 shrink-0"
+                                            >
+                                                <Upload className="w-3 h-3" />
+                                                <span className="text-xs">صورة</span>
+                                            </Button>
+                                        ) : (
+                                            <div className="relative w-10 h-10 border border-red-200 rounded bg-white">
+                                                <img src={choiceImagePreviews[1]} className="w-full h-full object-contain" />
+                                                <button type="button" onClick={() => clearImage(false, 1)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-[1px]"><Trash2 className="w-2 h-2" /></button>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
                             <div className="space-y-2">
                                 <label className="text-sm font-medium text-red-700">اختيار خاطئ 2</label>
-                                <Input
-                                    value={newQuestion.choice3}
-                                    onChange={e => setNewQuestion({ ...newQuestion, choice3: e.target.value })}
-                                    placeholder="خطأ 2"
-                                    className="border-red-200"
-                                />
+                                <div className="flex gap-2">
+                                    <Input
+                                        value={newQuestion.choice3}
+                                        onChange={e => setNewQuestion({ ...newQuestion, choice3: e.target.value })}
+                                        placeholder="خطأ 2"
+                                        className="border-red-200"
+                                    />
+                                    <div className="relative shrink-0">
+                                        <Input
+                                            type="file"
+                                            accept="image/*"
+                                            className="hidden"
+                                            id="c3-img"
+                                            onChange={(e) => e.target.files?.[0] && handleImageSelect(e.target.files[0], false, 2)}
+                                        />
+                                        {!choiceImagePreviews[2] ? (
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => document.getElementById("c3-img")?.click()}
+                                                className="text-red-700 hover:bg-red-100 gap-1 px-2 shrink-0"
+                                            >
+                                                <Upload className="w-3 h-3" />
+                                                <span className="text-xs">صورة</span>
+                                            </Button>
+                                        ) : (
+                                            <div className="relative w-10 h-10 border border-red-200 rounded bg-white">
+                                                <img src={choiceImagePreviews[2]} className="w-full h-full object-contain" />
+                                                <button type="button" onClick={() => clearImage(false, 2)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-[1px]"><Trash2 className="w-2 h-2" /></button>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
                             <div className="space-y-2">
                                 <label className="text-sm font-medium text-red-700">اختيار خاطئ 3</label>
-                                <Input
-                                    value={newQuestion.choice4}
-                                    onChange={e => setNewQuestion({ ...newQuestion, choice4: e.target.value })}
-                                    placeholder="خطأ 3"
-                                    className="border-red-200"
-                                />
+                                <div className="flex gap-2">
+                                    <Input
+                                        value={newQuestion.choice4}
+                                        onChange={e => setNewQuestion({ ...newQuestion, choice4: e.target.value })}
+                                        placeholder="خطأ 3"
+                                        className="border-red-200"
+                                    />
+                                    <div className="relative shrink-0">
+                                        <Input
+                                            type="file"
+                                            accept="image/*"
+                                            className="hidden"
+                                            id="c4-img"
+                                            onChange={(e) => e.target.files?.[0] && handleImageSelect(e.target.files[0], false, 3)}
+                                        />
+                                        {!choiceImagePreviews[3] ? (
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => document.getElementById("c4-img")?.click()}
+                                                className="text-red-700 hover:bg-red-100 gap-1 px-2 shrink-0"
+                                            >
+                                                <Upload className="w-3 h-3" />
+                                                <span className="text-xs">صورة</span>
+                                            </Button>
+                                        ) : (
+                                            <div className="relative w-10 h-10 border border-red-200 rounded bg-white">
+                                                <img src={choiceImagePreviews[3]} className="w-full h-full object-contain" />
+                                                <button type="button" onClick={() => clearImage(false, 3)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-[1px]"><Trash2 className="w-2 h-2" /></button>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
                         </div>
 

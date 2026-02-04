@@ -69,7 +69,7 @@ export default function AdminQuestions() {
     try {
       let query = supabase
         .from("questions")
-        .select("*", { count: "exact" })
+        .select("*, image_url", { count: "exact" })
         .order("created_at", { ascending: false })
         .range(currentPage * pageSize, (currentPage + 1) * pageSize - 1);
 

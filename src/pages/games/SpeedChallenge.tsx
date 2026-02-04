@@ -12,10 +12,15 @@ import { audioManager } from "@/lib/audio";
 interface Question {
     id: string;
     question_text: string;
+    question_image_url?: string;
     choice1: string;
+    choice1_image_url?: string;
     choice2: string;
+    choice2_image_url?: string;
     choice3: string;
+    choice3_image_url?: string;
     choice4: string;
+    choice4_image_url?: string;
     correct_choice_index: number;
 }
 
@@ -315,21 +320,39 @@ export default function SpeedChallenge() {
                     </Card>
                 ) : questions.length > 0 ? (
                     <div className="w-full space-y-8 animate-fade-in">
-                        <div className="text-center mb-8">
+                        <div className="text-center mb-8 space-y-4">
+                            {questions[currentIndex].question_image_url && (
+                                <img
+                                    src={questions[currentIndex].question_image_url}
+                                    alt="Question Illustration"
+                                    className="max-h-60 mx-auto rounded-xl shadow-sm border border-slate-200 object-contain bg-white"
+                                />
+                            )}
                             <h2 className="text-3xl font-bold leading-tight">{questions[currentIndex].question_text}</h2>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {[1, 2, 3, 4].map((idx) => {
                                 const choiceKey = `choice${idx}` as keyof Question;
+                                const choiceImageKey = `choice${idx}_image_url` as keyof Question;
+
+                                const text = questions[currentIndex][choiceKey];
+                                const imageUrl = questions[currentIndex][choiceImageKey];
+
+                                // Skip rendering if both text and image are missing? 
+                                // Ideally choices always have at least text.
+
                                 return (
                                     <Button
                                         key={idx}
                                         variant="outline"
-                                        className="h-20 text-xl font-semibold hover:bg-primary hover:text-white transition-all transform hover:scale-105"
+                                        className={`h-auto min-h-[5rem] p-4 text-xl font-semibold hover:bg-primary hover:text-white transition-all transform hover:scale-105 whitespace-normal flex flex-col gap-2 items-center justify-center ${!imageUrl ? 'h-24' : ''}`}
                                         onClick={() => handleAnswer(idx)}
                                     >
-                                        {questions[currentIndex][choiceKey]}
+                                        {imageUrl && (
+                                            <img src={(imageUrl as string)} alt={`Choice ${idx}`} className="h-24 w-auto object-contain bg-white rounded-md mix-blend-multiply" />
+                                        )}
+                                        {text && <span>{text}</span>}
                                     </Button>
                                 );
                             })}

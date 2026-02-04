@@ -7,22 +7,27 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
-import { Plus, Trash2, Loader2 } from "lucide-react";
+import { Plus, Trash2, Loader2, Upload, ImageIcon } from "lucide-react";
 
 interface Choice {
   id?: string;
   text: string;
   is_correct: boolean;
+  image_url?: string;
+  file?: File; // For new uploads
 }
 
 interface QuestionFormProps {
-  question?: { id: string; text: string; active: boolean } | null;
+  question?: { id: string; text: string; active: boolean; image_url?: string } | null;
   onComplete: () => void;
 }
 
 export function QuestionForm({ question, onComplete }: QuestionFormProps) {
   const [text, setText] = useState("");
   const [active, setActive] = useState(true);
+  const [questionImage, setQuestionImage] = useState<File | null>(null);
+  const [questionImageUrl, setQuestionImageUrl] = useState<string | null>(null);
+
   const [choices, setChoices] = useState<Choice[]>([
     { text: "", is_correct: true },
     { text: "", is_correct: false },
@@ -36,6 +41,7 @@ export function QuestionForm({ question, onComplete }: QuestionFormProps) {
     if (question) {
       setText(question.text);
       setActive(question.active);
+      setQuestionImageUrl(question.image_url || null);
       fetchChoices(question.id);
     }
   }, [question]);
@@ -56,6 +62,7 @@ export function QuestionForm({ question, onComplete }: QuestionFormProps) {
           id: c.id,
           text: c.text,
           is_correct: c.is_correct ?? false,
+          image_url: c.image_url || undefined
         })));
       }
     } catch (err) {
@@ -92,6 +99,12 @@ export function QuestionForm({ question, onComplete }: QuestionFormProps) {
     setChoices(newChoices);
   };
 
+  const handleChoiceFileChange = (index: number, file: File) => {
+    const newChoices = [...choices];
+    newChoices[index].file = file;
+    setChoices(newChoices);
+  };
+
   const handleCorrectChange = (index: number) => {
     const newChoices = choices.map((c, i) => ({
       ...c,
@@ -100,16 +113,36 @@ export function QuestionForm({ question, onComplete }: QuestionFormProps) {
     setChoices(newChoices);
   };
 
+  const uploadFile = async (file: File) => {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Math.random()}.${fileExt}`;
+    const filePath = `${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('question-images')
+      .upload(filePath, file);
+
+    if (uploadError) throw uploadError;
+
+    const { data } = supabase.storage
+      .from('question-images')
+      .getPublicUrl(filePath);
+
+    return data.publicUrl;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     // Validation
-    if (!text.trim()) {
-      toast.error("يرجى إدخال نص السؤال");
-      return;
+    if (!text.trim() && !questionImage && !questionImageUrl) {
+      toast.error("يرجى إدخال نص السؤال أو صورة");
+      // Note: allow strictly image questions if desired, but usually text is good. 
+      // Let's keep enforcing text for accessibility/search unless requested otherwise.
+      if (!text.trim()) return;
     }
 
-    const filledChoices = choices.filter(c => c.text.trim());
+    const filledChoices = choices.filter(c => c.text.trim() || c.file || c.image_url);
     if (filledChoices.length < 2) {
       toast.error("يجب إدخال خيارين على الأقل");
       return;
@@ -124,53 +157,69 @@ export function QuestionForm({ question, onComplete }: QuestionFormProps) {
     setIsLoading(true);
 
     try {
+      // Upload Question Image
+      let finalQuestionImageUrl = questionImageUrl;
+      if (questionImage) {
+        finalQuestionImageUrl = await uploadFile(questionImage);
+      }
+
+      let qId = question?.id;
+
       if (question) {
         // Update existing question
         const { error: questionError } = await supabase
           .from("questions")
-          .update({ text, active })
+          .update({
+            text,
+            active,
+            image_url: finalQuestionImageUrl
+          })
           .eq("id", question.id);
 
         if (questionError) throw questionError;
 
         // Delete old choices and insert new ones
+        // Wait! We are deleting old choices, so we lose their image usage?
+        // Actually, the new choices state has the image_url preserved, so we just re-insert it.
         await supabase.from("choices").delete().eq("question_id", question.id);
 
-        const { error: choicesError } = await supabase.from("choices").insert(
-          filledChoices.map(c => ({
-            question_id: question.id,
-            text: c.text,
-            is_correct: c.is_correct,
-          }))
-        );
-
-        if (choicesError) throw choicesError;
-
-        toast.success("تم تحديث السؤال بنجاح");
       } else {
         // Create new question
         const { data: newQuestion, error: questionError } = await supabase
           .from("questions")
-          .insert({ text, active })
+          .insert({
+            text,
+            active,
+            image_url: finalQuestionImageUrl
+          })
           .select()
           .single();
 
         if (questionError) throw questionError;
-
-        const { error: choicesError } = await supabase.from("choices").insert(
-          filledChoices.map(c => ({
-            question_id: newQuestion.id,
-            text: c.text,
-            is_correct: c.is_correct,
-          }))
-        );
-
-        if (choicesError) throw choicesError;
-
-        toast.success("تم إضافة السؤال بنجاح");
+        qId = newQuestion.id;
       }
 
+      // Upload Choice Images & Insert Choices
+      const choicesToInsert = await Promise.all(filledChoices.map(async (c) => {
+        let cImageUrl = c.image_url;
+        if (c.file) {
+          cImageUrl = await uploadFile(c.file);
+        }
+        return {
+          question_id: qId,
+          text: c.text,
+          is_correct: c.is_correct,
+          image_url: cImageUrl
+        };
+      }));
+
+      const { error: choicesError } = await supabase.from("choices").insert(choicesToInsert);
+
+      if (choicesError) throw choicesError;
+
+      toast.success(question ? "تم تحديث السؤال بنجاح" : "تم إضافة السؤال بنجاح");
       onComplete();
+
     } catch (err) {
       console.error("Error saving question:", err);
       toast.error("حدث خطأ أثناء حفظ السؤال");
@@ -189,19 +238,64 @@ export function QuestionForm({ question, onComplete }: QuestionFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Question Text */}
-      <div className="space-y-2">
-        <Label htmlFor="question-text" className="text-base font-medium">
-          نص السؤال
-        </Label>
-        <Textarea
-          id="question-text"
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          placeholder="أدخل نص السؤال هنا..."
-          className="min-h-24 resize-none"
-          required
-        />
+      {/* Question Text & Image */}
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="question-text" className="text-base font-medium">
+            نص السؤال
+          </Label>
+          <Textarea
+            id="question-text"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder="أدخل نص السؤال هنا..."
+            className="min-h-24 resize-none"
+            required={!questionImage && !questionImageUrl}
+          />
+        </div>
+
+        <div className="flex items-center gap-4">
+          <div className="relative">
+            <Input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              id="q-image-upload"
+              onChange={(e) => {
+                if (e.target.files?.[0]) setQuestionImage(e.target.files[0]);
+              }}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => document.getElementById("q-image-upload")?.click()}
+              className="gap-2"
+            >
+              <ImageIcon className="w-4 h-4" />
+              {questionImage || questionImageUrl ? "تغيير الصورة" : "إضافة صورة توضيحية"}
+            </Button>
+          </div>
+
+          {(questionImage || questionImageUrl) && (
+            <div className="relative w-16 h-16 border rounded-lg bg-slate-50 overflow-hidden">
+              <img
+                src={questionImage ? URL.createObjectURL(questionImage) : questionImageUrl!}
+                alt="Preview"
+                className="w-full h-full object-contain"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  setQuestionImage(null);
+                  setQuestionImageUrl(null);
+                }}
+                className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 hover:bg-red-600"
+              >
+                <Trash2 className="w-3 h-3" />
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Active Status */}
@@ -245,22 +339,59 @@ export function QuestionForm({ question, onComplete }: QuestionFormProps) {
             {choices.map((choice, index) => (
               <div
                 key={index}
-                className="flex items-center gap-3 p-3 rounded-xl border border-border"
+                className="flex items-start gap-3 p-3 rounded-xl border border-border bg-card"
               >
-                <RadioGroupItem value={index.toString()} id={`choice-${index}`} />
-                <Input
-                  value={choice.text}
-                  onChange={(e) => handleChoiceTextChange(index, e.target.value)}
-                  placeholder={`الخيار ${index + 1}`}
-                  className="flex-1"
-                />
+                <div className="pt-3">
+                  <RadioGroupItem value={index.toString()} id={`choice-${index}`} />
+                </div>
+
+                <div className="flex-1 space-y-2">
+                  <Input
+                    value={choice.text}
+                    onChange={(e) => handleChoiceTextChange(index, e.target.value)}
+                    placeholder={`الخيار ${index + 1}`}
+                    className="flex-1"
+                  />
+
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      id={`choice-img-${index}`}
+                      onChange={(e) => {
+                        if (e.target.files?.[0]) handleChoiceFileChange(index, e.target.files[0]);
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => document.getElementById(`choice-img-${index}`)?.click()}
+                      className="text-muted-foreground h-8"
+                    >
+                      <ImageIcon className="w-3 h-3 mr-1" />
+                      {choice.file || choice.image_url ? "تغيير الصورة" : "صورة"}
+                    </Button>
+
+                    {(choice.file || choice.image_url) && (
+                      <div className="relative w-8 h-8 border rounded overflow-hidden bg-white">
+                        <img
+                          src={choice.file ? URL.createObjectURL(choice.file) : choice.image_url}
+                          className="w-full h-full object-contain"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+
                 {choices.length > 2 && (
                   <Button
                     type="button"
                     variant="ghost"
                     size="icon"
                     onClick={() => handleRemoveChoice(index)}
-                    className="text-destructive hover:text-destructive"
+                    className="text-destructive hover:text-destructive mt-1"
                   >
                     <Trash2 className="w-4 h-4" />
                   </Button>

@@ -14,6 +14,7 @@ const corsHeaders = {
 interface Question {
   id: string;
   text: string;
+  image_url?: string;
 }
 
 interface Choice {
@@ -21,6 +22,7 @@ interface Choice {
   question_id: string;
   text: string;
   is_correct?: boolean;
+  image_url?: string;
 }
 
 serve(async (req: Request) => {
@@ -45,12 +47,7 @@ serve(async (req: Request) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Parallel Fetch 1: Settings and Questions (via RPC)
-    // We fetch settings first to know N, then RPC. 
-    // Actually, we can just fetch settings then RPC. Parallel if possible? 
-    // Settings is fast. Let's do sequential for clarity or Promise.all if we can.
-    // We need N for the RPC. So we must fetch settings first.
-
+    // Fetch Settings
     const { data: settings, error: settingsError } = await supabase
       .from("settings")
       .select("exam_question_count")
@@ -76,9 +73,6 @@ serve(async (req: Request) => {
     if (questionsError || !selectedQuestions) throw new Error("Failed to fetch questions via RPC");
 
     if (selectedQuestions.length < N) {
-      // Logic decision: If fewer questions exist than N, should we error or proceed?
-      // The original code errored. Let's stick to that but maybe with a clear message.
-      // Actually usually it's fine to just take what we have, but let's error to be safe as per original logic.
       return new Response(
         JSON.stringify({ error: `لا يوجد عدد كافٍ من الأسئلة النشطة. المطلوب: ${N}, المتاح: ${selectedQuestions.length}` }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -88,7 +82,7 @@ serve(async (req: Request) => {
     // Parallel Step 2: Create Attempt and Fetch Choices
     const questionIds = selectedQuestions.map((q: Question) => q.id);
 
-    // We start the attempt creation. We don't await choices yet, but we can start fetching them.
+    // Create attempt
     const attemptPromise = supabase
       .from("attempts")
       .insert({
@@ -100,9 +94,10 @@ serve(async (req: Request) => {
       .select()
       .single();
 
+    // Fetch choices with image_url
     const choicesPromise = supabase
       .from("choices")
-      .select("id, question_id, text, is_correct") // Added is_correct
+      .select("id, question_id, text, is_correct, image_url")
       .in("question_id", questionIds);
 
     const [attemptResult, choicesResult] = await Promise.all([attemptPromise, choicesPromise]);
@@ -113,7 +108,7 @@ serve(async (req: Request) => {
     if (attemptError || !attempt) throw new Error("Failed to create attempt");
     if (choicesError) throw new Error("Failed to fetch choices");
 
-    // Insert attempt_questions (Fire and forget? No, best to await to ensure integrity, but it's fast)
+    // Insert attempt_questions
     const attemptQuestionsToInsert = selectedQuestions.map((q: Question, index: number) => ({
       attempt_id: attempt.id,
       question_id: q.id,
@@ -130,10 +125,16 @@ serve(async (req: Request) => {
     const questionsWithChoices = selectedQuestions.map((q: Question, index: number) => ({
       id: q.id,
       text: q.text,
+      image_url: q.image_url,
       order_index: index,
       choices: (allChoices as Choice[] || [])
         .filter((c: Choice) => c.question_id === q.id)
-        .map((c: Choice) => ({ id: c.id, text: c.text, is_correct: c.is_correct })),
+        .map((c: Choice) => ({
+          id: c.id,
+          text: c.text,
+          is_correct: c.is_correct,
+          image_url: c.image_url
+        })),
     }));
 
     return new Response(

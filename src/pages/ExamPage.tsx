@@ -89,6 +89,65 @@ export default function ExamPage() {
     loadExam();
   }, [attemptId, navigate]);
 
+  // Separate effect to hydrate images if they are missing (Fallback for outdated Edge Function)
+  useEffect(() => {
+    const hydrateImages = async () => {
+      if (!examData || examData.questions.some(q => q.image_url)) return;
+
+      console.log("💧 Hydrating images from client-side...");
+      const qIds = examData.questions.map(q => q.id);
+
+      try {
+        // Fetch Question Images
+        const { data: questionsData } = await supabase
+          .from("questions")
+          .select("id, image_url")
+          .in("id", qIds);
+
+        // Fetch Choice Images
+        const { data: choicesData } = await supabase
+          .from("choices")
+          .select("id, image_url")
+          .in("question_id", qIds);
+
+        if (questionsData || choicesData) {
+          setExamData(prev => {
+            if (!prev) return null;
+
+            const updatedQuestions = prev.questions.map(q => {
+              const qImg = questionsData?.find(dbQ => dbQ.id === q.id)?.image_url;
+
+              const updatedChoices = q.choices.map(c => {
+                const cImg = choicesData?.find(dbC => dbC.id === c.id)?.image_url;
+                return cImg ? { ...c, image_url: cImg } : c;
+              });
+
+              return {
+                ...q,
+                image_url: qImg || q.image_url,
+                choices: updatedChoices
+              };
+            });
+
+            const newData = { ...prev, questions: updatedQuestions };
+
+            // Update Cache
+            if (attemptId) {
+              sessionStorage.setItem(`exam_${attemptId}`, JSON.stringify(newData));
+            }
+
+            return newData;
+          });
+          console.log("✅ Images hydrated successfully");
+        }
+      } catch (e) {
+        console.error("Error hydrating images:", e);
+      }
+    };
+
+    hydrateImages();
+  }, [examData?.questions.length, attemptId]); // Run once when questions are loaded
+
   const finishExam = useCallback(async () => {
     if (!attemptId || !examData) return;
 

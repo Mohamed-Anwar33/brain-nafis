@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Trash2, Plus, Loader2, Upload, CheckSquare, Square, AlertTriangle } from "lucide-react";
+import { Trash2, Plus, Loader2, Upload, CheckSquare, Square, AlertTriangle, Eye } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -20,14 +20,25 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
 
 interface SpeedQuestion {
     id: string;
     question_text: string;
+    question_image_url?: string;
     choice1: string;
+    choice1_image_url?: string;
     choice2: string;
+    choice2_image_url?: string;
     choice3: string;
+    choice3_image_url?: string;
     choice4: string;
+    choice4_image_url?: string;
     correct_choice_index: number;
     is_active: boolean;
 }
@@ -40,6 +51,10 @@ export default function AdminSpeed() {
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [itemToDelete, setItemToDelete] = useState<string | null>(null);
     const [isBulkDelete, setIsBulkDelete] = useState(false);
+
+    // Preview Dialog State
+    const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
+    const [previewQuestion, setPreviewQuestion] = useState<SpeedQuestion | null>(null);
 
     // Form State
     const [newQuestion, setNewQuestion] = useState({
@@ -113,15 +128,19 @@ export default function AdminSpeed() {
     };
 
     const uploadImage = async (file: File) => {
+        console.log("📤 uploadImage called with file:", file.name, file.size, "bytes");
         const fileExt = file.name.split('.').pop();
         const fileName = `${Math.random()}.${fileExt}`;
         const filePath = `${fileName}`;
 
+        console.log("🔄 Uploading to path:", filePath);
         const { error: uploadError } = await supabase.storage
             .from('question-images')
             .upload(filePath, file);
 
         if (uploadError) {
+            console.error("❌ Upload error:", uploadError);
+            toast.error(`فشل رفع الصورة: ${uploadError.message}`);
             throw uploadError;
         }
 
@@ -129,26 +148,46 @@ export default function AdminSpeed() {
             .from('question-images')
             .getPublicUrl(filePath);
 
+        console.log("✅ Image uploaded successfully:", data.publicUrl);
         return data.publicUrl;
     };
 
     const handleAdd = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!newQuestion.question_text || !newQuestion.choice1 || !newQuestion.choice2) return;
+        console.log("🚀 handleAdd triggered!");
+        console.log("📝 Form Data:", newQuestion);
+
+        if (!newQuestion.question_text || !newQuestion.choice1 || !newQuestion.choice2) {
+            console.warn("⚠️ Validation Failed! Missing fields:", {
+                text: !newQuestion.question_text,
+                choice1: !newQuestion.choice1,
+                choice2: !newQuestion.choice2
+            });
+            toast.error("يرجى ملء السؤال والإجابة الصحيحة وخيار خاطئ واحد على الأقل");
+            return;
+        }
 
         setIsSubmitting(true);
         try {
             // 1. Upload Question Image
+            console.log("🎯 handleAdd - questionImage state:", questionImage);
             let questionImageUrl = "";
             if (questionImage) {
+                console.log("📤 Uploading question image...");
                 questionImageUrl = await uploadImage(questionImage);
+                console.log("✅ Question image URL:", questionImageUrl);
+            } else {
+                console.log("ℹ️ No question image selected");
             }
 
             // 2. Upload Choice Images
+            console.log("🎯 choiceImages state:", choiceImages.map((img, i) => img ? `Choice ${i + 1}: ${img.name}` : `Choice ${i + 1}: null`));
             const choiceImageUrls: string[] = ["", "", "", ""];
             for (let i = 0; i < 4; i++) {
                 if (choiceImages[i]) {
+                    console.log(`📤 Uploading choice ${i + 1} image...`);
                     choiceImageUrls[i] = await uploadImage(choiceImages[i]!);
+                    console.log(`✅ Choice ${i + 1} URL:`, choiceImageUrls[i]);
                 }
             }
 
@@ -647,7 +686,7 @@ export default function AdminSpeed() {
                                         <TableHead className="min-w-[150px]">الإجابات</TableHead>
                                         <TableHead className="min-w-[100px]">الصحيحة</TableHead>
                                         <TableHead className="min-w-[100px]">الحالة</TableHead>
-                                        <TableHead className="w-[100px]">إجراءات</TableHead>
+                                        <TableHead className="w-[150px]">إجراءات</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -678,13 +717,33 @@ export default function AdminSpeed() {
                                             </TableCell>
                                             <TableCell>
                                                 <Badge variant={q.is_active ? "default" : "secondary"}>
-                                                    {q.is_active ? "نشط" : "معطل"}
+                                                    {q.is_active ? "نشط" : "غير نشط"}
                                                 </Badge>
                                             </TableCell>
                                             <TableCell>
-                                                <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10" onClick={() => confirmDelete(q.id)}>
-                                                    <Trash2 className="w-4 h-4" />
-                                                </Button>
+                                                <div className="flex gap-1">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => {
+                                                            setPreviewQuestion(q);
+                                                            setPreviewDialogOpen(true);
+                                                        }}
+                                                        className="h-8 w-8 p-0"
+                                                        title="معاينة"
+                                                    >
+                                                        <Eye className="w-4 h-4" />
+                                                    </Button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => confirmDelete(q.id)}
+                                                        className="h-8 w-8 p-0"
+                                                        title="حذف"
+                                                    >
+                                                        <Trash2 className="w-4 h-4 text-destructive" />
+                                                    </Button>
+                                                </div>
                                             </TableCell>
                                         </TableRow>
                                     ))}
@@ -717,6 +776,57 @@ export default function AdminSpeed() {
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+
+            {/* Preview Dialog */}
+            <Dialog open={previewDialogOpen} onOpenChange={setPreviewDialogOpen}>
+                <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle>معاينة السؤال (كما يراه الطالب)</DialogTitle>
+                    </DialogHeader>
+                    {previewQuestion && (
+                        <div className="space-y-6 p-4">
+                            {/* Question */}
+                            <div className="text-center space-y-4">
+                                {previewQuestion.question_image_url && (
+                                    <img
+                                        src={previewQuestion.question_image_url}
+                                        alt="Question Illustration"
+                                        className="max-h-60 mx-auto rounded-xl shadow-sm border border-slate-200 object-contain bg-white"
+                                    />
+                                )}
+                                <h2 className="text-2xl font-bold leading-tight">{previewQuestion.question_text}</h2>
+                            </div>
+
+                            {/* Choices */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {[1, 2, 3, 4].map((idx) => {
+                                    const choiceKey = `choice${idx}` as keyof SpeedQuestion;
+                                    const choiceImageKey = `choice${idx}_image_url` as keyof SpeedQuestion;
+                                    const text = previewQuestion[choiceKey] as string;
+                                    const imageUrl = previewQuestion[choiceImageKey] as string | undefined;
+                                    const isCorrect = previewQuestion.correct_choice_index === idx;
+
+                                    return (
+                                        <div
+                                            key={idx}
+                                            className={`h-auto min-h-[5rem] p-4 text-xl font-semibold rounded-lg border-2 flex flex-col gap-2 items-center justify-center ${isCorrect ? 'border-green-500 bg-green-50' : 'border-slate-200 bg-white'
+                                                }`}
+                                        >
+                                            {imageUrl && (
+                                                <img src={imageUrl} alt={`Choice ${idx}`} className="h-24 w-auto object-contain bg-white rounded-md" />
+                                            )}
+                                            {text && <span className="text-center">{text}</span>}
+                                            {isCorrect && (
+                                                <Badge variant="default" className="bg-green-600">الإجابة الصحيحة</Badge>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
+                </DialogContent>
+            </Dialog>
         </div >
     );
 }

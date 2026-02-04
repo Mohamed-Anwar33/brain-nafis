@@ -39,7 +39,10 @@ import {
   Upload,
   ChevronRight,
   ChevronLeft,
-  CheckSquare
+  CheckSquare,
+  Eye,
+  CheckCircle,
+  XCircle
 } from "lucide-react";
 import { QuestionForm } from "@/components/admin/QuestionForm";
 import { CSVImport } from "@/components/admin/CSVImport";
@@ -49,6 +52,14 @@ interface Question {
   text: string;
   active: boolean;
   created_at: string;
+  image_url?: string;
+}
+
+interface Choice {
+  id: string;
+  text: string;
+  is_correct: boolean;
+  image_url?: string;
 }
 
 export default function AdminQuestions() {
@@ -63,6 +74,31 @@ export default function AdminQuestions() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
   const [isCSVOpen, setIsCSVOpen] = useState(false);
+
+  // Preview State
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [previewQuestion, setPreviewQuestion] = useState<Question | null>(null);
+  const [previewChoices, setPreviewChoices] = useState<Choice[]>([]);
+  const [isLoadingChoices, setIsLoadingChoices] = useState(false);
+
+  const handlePreview = async (question: Question) => {
+    setPreviewQuestion(question);
+    setIsPreviewOpen(true);
+    setIsLoadingChoices(true);
+    try {
+      const { data } = await supabase
+        .from("choices")
+        .select("*")
+        .eq("question_id", question.id)
+        .order("created_at");
+      setPreviewChoices(data || []);
+    } catch (e) {
+      console.error(e);
+      toast.error("فشل تحميل الاختيارات");
+    } finally {
+      setIsLoadingChoices(false);
+    }
+  };
 
   const fetchQuestions = useCallback(async () => {
     setIsLoading(true);
@@ -200,7 +236,7 @@ export default function AdminQuestions() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">الأسئلة</h1>
+          <h1 className="text-3xl font-bold text-foreground">الأسئلة (تلقائي)</h1>
           <p className="text-muted-foreground mt-1">
             إجمالي: {totalCount} سؤال
           </p>
@@ -377,7 +413,16 @@ export default function AdminQuestions() {
                           <Button
                             variant="ghost"
                             size="icon"
+                            onClick={() => handlePreview(question)}
+                            title="معاينة"
+                          >
+                            <Eye className="w-4 h-4 text-blue-500" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
                             onClick={() => handleEdit(question)}
+                            title="تعديل"
                           >
                             <Edit className="w-4 h-4" />
                           </Button>
@@ -422,6 +467,67 @@ export default function AdminQuestions() {
           </CardHeader>
         )}
       </Card>
+
+      {/* Preview Dialog */}
+      <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>معاينة السؤال</DialogTitle>
+          </DialogHeader>
+          {previewQuestion && (
+            <div className="space-y-6 p-4">
+              {/* Question Content */}
+              <div className="flex flex-col items-center gap-4 text-center">
+                <h2 className="text-xl font-bold">{previewQuestion.text}</h2>
+                {previewQuestion.image_url && (
+                  <img
+                    src={previewQuestion.image_url}
+                    alt="Question"
+                    className="max-h-60 rounded-lg border shadow-sm"
+                  />
+                )}
+              </div>
+
+              <div className="border-t my-4" />
+
+              {/* Choices Content */}
+              {isLoadingChoices ? (
+                <div className="flex justify-center p-8">
+                  <Loader2 className="animate-spin" />
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {previewChoices.map((choice, idx) => (
+                    <div
+                      key={idx}
+                      className={`relative p-4 rounded-xl border-2 flex flex-col items-center gap-3 transition-all
+                                        ${choice.is_correct
+                          ? 'border-green-500 bg-green-50'
+                          : 'border-slate-200 bg-slate-50'
+                        }`}
+                    >
+                      {choice.is_correct && (
+                        <div className="absolute top-2 right-2 text-green-600">
+                          <CheckCircle className="w-5 h-5" />
+                        </div>
+                      )}
+
+                      <span className="font-semibold text-lg">{choice.text}</span>
+
+                      {choice.image_url && (
+                        <img
+                          src={choice.image_url}
+                          className="h-32 object-contain rounded bg-white border p-1"
+                        />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

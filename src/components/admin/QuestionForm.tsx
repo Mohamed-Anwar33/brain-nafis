@@ -158,9 +158,15 @@ export function QuestionForm({ question, onComplete }: QuestionFormProps) {
 
     try {
       // Upload Question Image
+      console.log("🚀 Submitting Form...");
       let finalQuestionImageUrl = questionImageUrl;
+
       if (questionImage) {
+        console.log("📤 Uploading question image:", questionImage.name);
         finalQuestionImageUrl = await uploadFile(questionImage);
+        console.log("✅ Question image uploaded:", finalQuestionImageUrl);
+      } else {
+        console.log("ℹ️ No new question image selected. Current URL:", questionImageUrl);
       }
 
       let qId = question?.id;
@@ -200,10 +206,12 @@ export function QuestionForm({ question, onComplete }: QuestionFormProps) {
       }
 
       // Upload Choice Images & Insert Choices
-      const choicesToInsert = await Promise.all(filledChoices.map(async (c) => {
+      const choicesToInsert = await Promise.all(filledChoices.map(async (c, i) => {
         let cImageUrl = c.image_url;
         if (c.file) {
+          console.log(`📤 Uploading image for choice ${i}:`, c.file.name);
           cImageUrl = await uploadFile(c.file);
+          console.log(`✅ Choice ${i} image uploaded:`, cImageUrl);
         }
         return {
           question_id: qId,

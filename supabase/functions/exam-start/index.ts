@@ -33,11 +33,11 @@ serve(async (req: Request) => {
   try {
     const { student_name } = await req.json();
 
-    // Validate student name (at least 4 words)
+    // Validate student name (at least 3 words)
     const words = (student_name || "").trim().split(/\s+/).filter((w: string) => w.length > 0);
-    if (words.length < 4) {
+    if (words.length < 3) {
       return new Response(
-        JSON.stringify({ error: "يرجى إدخال الاسم الرباعي كاملاً (4 كلمات على الأقل)" }),
+        JSON.stringify({ error: "يرجى إدخال الاسم الثلاثي كاملاً (3 كلمات على الأقل)" }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }

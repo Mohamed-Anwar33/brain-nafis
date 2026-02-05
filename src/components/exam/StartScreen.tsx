@@ -16,8 +16,8 @@ export function StartScreen({ onStart, isLoading }: StartScreenProps) {
 
   const validateName = (name: string): boolean => {
     const words = name.trim().split(/\s+/).filter(w => w.length > 0);
-    if (words.length < 4) {
-      setError("يرجى إدخال الاسم الرباعي كاملاً (4 كلمات على الأقل)");
+    if (words.length < 3) {
+      setError("يرجى إدخال الاسم الثلاثي كاملاً (3 كلمات على الأقل)");
       return false;
     }
     setError("");
@@ -82,14 +82,14 @@ export function StartScreen({ onStart, isLoading }: StartScreenProps) {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="studentName" className="text-base font-medium">
-                الاسم الرباعي
+                الاسم الثلاثي
               </Label>
               <Input
                 id="studentName"
                 type="text"
                 value={studentName}
                 onChange={(e) => setStudentName(e.target.value)}
-                placeholder="أحمد محمد علي حسن"
+                placeholder="أحمد محمد علي"
                 className="h-14 text-lg rounded-xl border-2 focus:border-primary transition-colors"
                 dir="rtl"
               />

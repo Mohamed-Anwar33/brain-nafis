@@ -123,7 +123,7 @@ serve(async (req: Request) => {
       const { data: settings, error: settingsError } = await supabase
         .from("app_settings")
         .select("key, value")
-        .in("key", ["admin_email", "resend_api_key"]);
+        .in("key", ["admin_email", "resend_api_key", "sender_email"]);
 
       console.log("[exam-finish] Settings fetched:", settings?.map((s: { key: string }) => s.key));
 
@@ -136,11 +136,15 @@ serve(async (req: Request) => {
       // Recipient email (changeable by admin)
       const recipientEmail = settings?.find((s: any) => s.key === "admin_email")?.value;
 
+      // Sender email (optional, for verified domains)
+      const senderEmail = settings?.find((s: any) => s.key === "sender_email")?.value;
+
       // Resend API Key
       const resendApiKey = settings?.find((s: any) => s.key === "resend_api_key")?.value;
 
       // Log configuration (masked for security)
       console.log("[exam-finish] Recipient (TO):", recipientEmail ? `${recipientEmail.substring(0, 3)}***` : "NOT SET");
+      console.log("[exam-finish] Sender (FROM):", senderEmail || "DEFAULT (delivered@resend.dev)");
       console.log("[exam-finish] Resend API Key:", resendApiKey ? `SET (${resendApiKey.substring(0, 4)}***)` : "NOT SET");
 
       if (!recipientEmail) {
@@ -217,6 +221,11 @@ serve(async (req: Request) => {
           console.log("[exam-finish] Recipient:", recipientEmail);
           console.log("[exam-finish] Subject:", subject);
 
+          // Determine Sender Address
+          const fromAddress = senderEmail
+            ? `TestWise <${senderEmail}>`
+            : `TestWise <delivered@resend.dev>`;
+
           try {
             const response = await fetch("https://api.resend.com/emails", {
               method: "POST",
@@ -225,7 +234,7 @@ serve(async (req: Request) => {
                 "Authorization": `Bearer ${resendApiKey}`,
               },
               body: JSON.stringify({
-                from: `TestWise <delivered@resend.dev>`,
+                from: fromAddress,
                 to: [recipientEmail],
                 subject: subject,
                 html: htmlBody,

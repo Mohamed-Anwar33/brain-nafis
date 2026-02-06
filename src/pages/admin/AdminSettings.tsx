@@ -24,6 +24,12 @@ export default function AdminSettings() {
   const [isSaving, setIsSaving] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
 
+  /* New Sender Email State */
+  const [senderEmail, setSenderEmail] = useState("");
+  const [resendApiKey, setResendApiKey] = useState("");
+
+  /* ... */
+
   useEffect(() => {
     const fetchSettings = async () => {
       try {
@@ -42,19 +48,16 @@ export default function AdminSettings() {
 
         if (appSettings) {
           appSettings.forEach(setting => {
-            if (setting.key === 'admin_email') setNotificationEmail(setting.value);
+            if (setting.key === 'admin_email') setNotificationEmail(setting.value || "");
+            if (setting.key === 'sender_email') setSenderEmail(setting.value || "");
+            if (setting.key === 'resend_api_key') setResendApiKey(setting.value || ""); // Fetch API Key
             if (setting.key === 'matching_pairs_count') setMatchingPairs(parseInt(setting.value) || 6);
             if (setting.key === 'speed_challenge_duration') setSpeedDuration(parseInt(setting.value) || 60);
             if (setting.key === 'ordering_questions_limit') setOrderingLimit(parseInt(setting.value) || 10);
           });
         }
 
-        // Fetch counts
-        const { count: qCount } = await supabase.from("questions").select("*", { count: "exact", head: true }).eq("active", true);
-        setActiveQuestionsCount(qCount || 0);
-
-        const { count: oCount } = await supabase.from("ordering_game_questions").select("*", { count: "exact", head: true }).eq("is_active", true);
-        setActiveOrderingCount(oCount || 0);
+        /* ... */
 
       } catch (err) {
         console.error("Error fetching settings:", err);
@@ -88,7 +91,8 @@ export default function AdminSettings() {
 
       // 2. Save app_settings keys
       // Robust strategy: Delete potentially duplicate keys first, then insert fresh.
-      const keysToUpdate = ["admin_email", "matching_pairs_count", "speed_challenge_duration", "ordering_questions_limit"];
+      // Note: "resend_api_key" is excluded from deletion/update here to preserve the manually set key while hiding it from UI.
+      const keysToUpdate = ["admin_email", "sender_email", "matching_pairs_count", "speed_challenge_duration", "ordering_questions_limit"];
 
       const { error: deleteError } = await supabase
         .from("app_settings")
@@ -99,6 +103,8 @@ export default function AdminSettings() {
 
       const upsertData = [
         { key: "admin_email", value: notificationEmail },
+        { key: "sender_email", value: senderEmail },
+        // { key: "resend_api_key", value: resendApiKey }, // Preserved silently
         { key: "matching_pairs_count", value: matchingPairs.toString() },
         { key: "speed_challenge_duration", value: speedDuration.toString() },
         { key: "ordering_questions_limit", value: orderingLimit.toString() }
@@ -353,8 +359,44 @@ export default function AdminSettings() {
               </div>
             </CardHeader>
             <CardContent className="space-y-6">
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
+                <div className="flex gap-3">
+                  <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                  <div className="space-y-2">
+                    <h4 className="font-bold text-amber-800 text-sm">ملاحظة هامة حول خدمة Resend</h4>
+                    <p className="text-xs text-amber-700 leading-relaxed">
+                      إذا كنت تستخدم الباقة المجانية (Testing)، يمكنك الإرسال فقط إلى بريدك الإلكتروني المسجل.
+                      لإرسال النتائج إلى بريد آخر، يجب عليك إثبات ملكية نطاق (Domain Verification) في لوحة تحكم Resend.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
               <div className="space-y-3">
-                <Label>البريد الإلكتروني للمسؤول</Label>
+                <Label>بريد المرسل (From Email)</Label>
+                <div className="relative">
+                  <Mail className="absolute right-3 top-3 w-5 h-5 text-slate-400" />
+                  <Input
+                    value={senderEmail}
+                    onChange={(e) => setSenderEmail(e.target.value)}
+                    className="pr-10 h-12"
+                    placeholder="e.g. notifications@yourdomain.com"
+                    dir="ltr"
+                  />
+                </div>
+                <p className="text-xs text-slate-500">
+                  اتركه فارغاً لاستخدام البريد الافتراضي (delivered@resend.dev) - يعمل فقط للاختبار.
+                  <br />
+                  إذا كان لديك نطاق موثق، ادخل بريداً ينتهي بهذا النطاق.
+                </p>
+              </div>
+
+              {/* Resend API Key hidden for security */}
+
+
+
+              <div className="space-y-3 pt-4 border-t">
+                <Label>البريد الإلكتروني للمسؤول (المستقبل)</Label>
                 <div className="relative">
                   <Mail className="absolute right-3 top-3 w-5 h-5 text-slate-400" />
                   <Input
@@ -362,6 +404,7 @@ export default function AdminSettings() {
                     onChange={(e) => setNotificationEmail(e.target.value)}
                     className="pr-10 h-12"
                     placeholder="example@school.com"
+                    dir="ltr"
                   />
                 </div>
                 <p className="text-xs text-slate-500">سيتم إرسال نتيجة كل طالب فور انتهائه من الاختبار إلى هذا البريد.</p>

@@ -39,6 +39,7 @@ export default function ExamPage() {
   // Track score and penalties at the start of the current stage to calculate delta
   const [stageStartScore, setStageStartScore] = useState(0);
   const [stagePenaltiesStart, setStagePenaltiesStart] = useState(0);
+  const [stageTitlesMap, setStageTitlesMap] = useState<Record<number, string>>({});
 
   const handleNextStage = () => {
     setShowStageTransition(false);
@@ -57,16 +58,53 @@ export default function ExamPage() {
 
       setIsLoading(true);
       try {
+        // Fetch stage settings (active stages + display order)
+        const { data: stageTitlesData } = await supabase
+          .from("stage_titles")
+          .select("*")
+          .order("display_order");
+
+        // Build maps
+        const titlesMap: Record<number, string> = {};
+        const activeStages: Set<number> = new Set();
+        const displayOrderMap: Record<number, number> = {};
+
+        if (stageTitlesData) {
+          stageTitlesData.forEach(st => {
+            titlesMap[st.stage_number] = st.title;
+            displayOrderMap[st.stage_number] = st.display_order || st.stage_number;
+            if (st.is_active !== false) {
+              activeStages.add(st.stage_number);
+            }
+          });
+          setStageTitlesMap(titlesMap);
+        }
+
         // 1. Fetch ALL active questions
         const { data: questionsData, error: questionsError } = await supabase
           .from("questions")
           .select("*, choices(*)")
           .eq("active", true)
-          .order("created_at", { ascending: true }); // Order by creation time (stages logic)
+          .order("stage_number", { ascending: true })
+          .order("created_at", { ascending: true });
 
         if (questionsError) throw questionsError;
 
-        if (!questionsData || questionsData.length === 0) {
+        // Filter only questions from active stages, then sort by display_order
+        let filteredQuestions = questionsData || [];
+        if (stageTitlesData && stageTitlesData.length > 0) {
+          // Always filter by active stages (if all are hidden, no questions will show)
+          filteredQuestions = filteredQuestions.filter(q => activeStages.has(q.stage_number || 1));
+        }
+        // Sort by display_order
+        filteredQuestions.sort((a, b) => {
+          const orderA = displayOrderMap[a.stage_number || 1] || (a.stage_number || 1);
+          const orderB = displayOrderMap[b.stage_number || 1] || (b.stage_number || 1);
+          if (orderA !== orderB) return orderA - orderB;
+          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        });
+
+        if (!filteredQuestions || filteredQuestions.length === 0) {
           toast.error("لا توجد أسئلة متاحة حالياً");
           navigate("/student/dashboard");
           return;
@@ -100,7 +138,7 @@ export default function ExamPage() {
         }
 
         // Transform data to match ExamQuestion interface
-        const transformedQuestions: ExamQuestionType[] = questionsData.map((q, index) => ({
+        const transformedQuestions: ExamQuestionType[] = filteredQuestions.map((q, index) => ({
           id: q.id,
           text: q.text,
           image_url: q.image_url,
@@ -381,6 +419,7 @@ export default function ExamPage() {
         totalQuestions={currentStageTotalQuestions}
         onNext={handleNextStage}
         onFinishEarly={finishExam}
+        stageTitle={stageTitlesMap[currentStage]}
       />
     );
   }

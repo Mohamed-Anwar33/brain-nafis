@@ -12,6 +12,7 @@ interface StageTransitionProps {
     totalQuestions: number;
     onNext: () => void;
     onFinishEarly?: () => void;
+    stageTitle?: string;
     totalStages?: number;
 }
 
@@ -92,7 +93,7 @@ const renderStars = (percentage: number) => {
     );
 };
 
-export function StageTransition({ stage, score, totalQuestions, onNext, onFinishEarly }: StageTransitionProps) {
+export function StageTransition({ stage, score, totalQuestions, onNext, onFinishEarly, stageTitle }: StageTransitionProps) {
     const percentage = Math.round((score / totalQuestions) * 100);
     const badge = getPerformanceBadge(percentage);
     const BadgeIcon = badge.icon;
@@ -201,6 +202,9 @@ export function StageTransition({ stage, score, totalQuestions, onNext, onFinish
                         <h2 className={`text-4xl font-black bg-gradient-to-r ${badge.color} bg-clip-text text-transparent drop-shadow-sm`}>
                             اكتملت المرحلة {stage}
                         </h2>
+                        {stageTitle && (
+                            <p className="text-lg font-bold text-slate-500">{stageTitle}</p>
+                        )}
                         <div className={`inline-block px-4 py-1 bg-gradient-to-r ${badge.color} text-white text-sm font-bold rounded-full shadow-lg`}>
                             {badge.label}
                         </div>
@@ -250,8 +254,8 @@ export function StageTransition({ stage, score, totalQuestions, onNext, onFinish
                                 variant="outline"
                                 size="lg"
                                 className={`w-full text-base font-bold h-12 rounded-xl gap-2 transition-all ${showConfirmExit
-                                        ? 'border-red-500 bg-red-50 text-red-600 hover:bg-red-100 animate-pulse'
-                                        : 'border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100'
+                                    ? 'border-red-500 bg-red-50 text-red-600 hover:bg-red-100 animate-pulse'
+                                    : 'border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100'
                                     }`}
                             >
                                 <LogOut className="w-5 h-5" />

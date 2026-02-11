@@ -96,18 +96,11 @@ export default function AdminDashboard() {
 
   const statCards = [
     {
-      title: "إجمالي الأسئلة",
+      title: "بنك الأسئلة",
       value: stats.totalQuestions,
       icon: FileQuestion,
       color: "text-primary",
       bg: "bg-primary/10",
-    },
-    {
-      title: "الأسئلة النشطة",
-      value: stats.activeQuestions,
-      icon: CheckCircle,
-      color: "text-success",
-      bg: "bg-success/10",
     },
     {
       title: "عدد المحاولات",

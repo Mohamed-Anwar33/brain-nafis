@@ -6,6 +6,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import { Plus, Trash2, Loader2, Upload, ImageIcon } from "lucide-react";
 
@@ -18,13 +25,16 @@ interface Choice {
 }
 
 interface QuestionFormProps {
-  question?: { id: string; text: string; active: boolean; image_url?: string } | null;
+  question?: { id: string; text: string; active: boolean; image_url?: string; stage_number?: number } | null;
   onComplete: () => void;
+  defaultStage?: number;
 }
 
-export function QuestionForm({ question, onComplete }: QuestionFormProps) {
+export function QuestionForm({ question, onComplete, defaultStage }: QuestionFormProps) {
   const [text, setText] = useState("");
   const [active, setActive] = useState(true);
+  const [stageNumber, setStageNumber] = useState<number>(defaultStage || 1);
+  const [maxStage, setMaxStage] = useState(10);
   const [questionImage, setQuestionImage] = useState<File | null>(null);
   const [questionImageUrl, setQuestionImageUrl] = useState<string | null>(null);
 
@@ -41,10 +51,24 @@ export function QuestionForm({ question, onComplete }: QuestionFormProps) {
     if (question) {
       setText(question.text);
       setActive(question.active);
+      setStageNumber(question.stage_number || defaultStage || 1);
       setQuestionImageUrl(question.image_url || null);
       fetchChoices(question.id);
     }
   }, [question]);
+
+  // Auto-calculate stages: total questions / 20
+  useEffect(() => {
+    const fetchTotalStages = async () => {
+      const { count } = await supabase
+        .from("questions")
+        .select("*", { count: "exact", head: true });
+      if (count !== null) {
+        setMaxStage(Math.ceil(count / 20));
+      }
+    };
+    fetchTotalStages();
+  }, []);
 
   const fetchChoices = async (questionId: string) => {
     setIsFetching(true);
@@ -178,7 +202,8 @@ export function QuestionForm({ question, onComplete }: QuestionFormProps) {
           .update({
             text,
             active,
-            image_url: finalQuestionImageUrl
+            image_url: finalQuestionImageUrl,
+            stage_number: stageNumber
           })
           .eq("id", question.id);
 
@@ -196,7 +221,8 @@ export function QuestionForm({ question, onComplete }: QuestionFormProps) {
           .insert({
             text,
             active,
-            image_url: finalQuestionImageUrl
+            image_url: finalQuestionImageUrl,
+            stage_number: stageNumber
           })
           .select()
           .single();
@@ -304,6 +330,22 @@ export function QuestionForm({ question, onComplete }: QuestionFormProps) {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Stage Number */}
+      <div className="space-y-2">
+        <Label className="text-base font-medium">رقم المرحلة</Label>
+        <Select value={stageNumber.toString()} onValueChange={(v) => setStageNumber(parseInt(v))}>
+          <SelectTrigger>
+            <SelectValue placeholder="اختر المرحلة" />
+          </SelectTrigger>
+          <SelectContent>
+            {Array.from({ length: maxStage }, (_, i) => i + 1).map(num => (
+              <SelectItem key={num} value={num.toString()}>المرحلة {num}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <p className="text-xs text-muted-foreground">حدد المرحلة التي ينتمي لها السؤال</p>
       </div>
 
       {/* Active Status */}

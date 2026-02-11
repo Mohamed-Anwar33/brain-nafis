@@ -80,7 +80,7 @@ export default function AdminLayout() {
 
   const navItems = [
     { path: "/admin", icon: LayoutDashboard, label: "لوحة التحكم" },
-    { path: "/admin/questions", icon: FileQuestion, label: "الأسئلة (تلقائي)" },
+    { path: "/admin/questions", icon: FileQuestion, label: "بنك الأسئلة" },
     { path: "/admin/matching", icon: Gamepad2, label: "لعبة المطابقة" },
     { path: "/admin/ordering", icon: Puzzle, label: "لغز الترتيب" },
     { path: "/admin/speed", icon: Timer, label: "تحدي السرعة" },

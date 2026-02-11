@@ -44,6 +44,10 @@ class AudioManager {
       this.wrongSound.play().catch(() => { });
     }
   }
+
+  playSuccess() {
+    this.playCorrect();
+  }
 }
 
 export const audioManager = new AudioManager();

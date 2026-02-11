@@ -75,6 +75,9 @@ export default function AdminQuestions() {
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
   const [isCSVOpen, setIsCSVOpen] = useState(false);
 
+  // Sorting State
+  const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest"); // 'oldest' matches Exam Order
+
   // Preview State
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewQuestion, setPreviewQuestion] = useState<Question | null>(null);
@@ -106,7 +109,8 @@ export default function AdminQuestions() {
       let query = supabase
         .from("questions")
         .select("*, image_url", { count: "exact" })
-        .order("created_at", { ascending: false })
+        // Sort based on selection: 'oldest' = Ascending (Exam Order), 'newest' = Descending
+        .order("created_at", { ascending: sortOrder === "oldest" })
         .range(currentPage * pageSize, (currentPage + 1) * pageSize - 1);
 
       if (searchQuery) {
@@ -131,7 +135,7 @@ export default function AdminQuestions() {
     } finally {
       setIsLoading(false);
     }
-  }, [currentPage, pageSize, searchQuery, filterStatus]);
+  }, [currentPage, pageSize, searchQuery, filterStatus, sortOrder]);
 
   useEffect(() => {
     fetchQuestions();
@@ -140,7 +144,7 @@ export default function AdminQuestions() {
   // Reset to first page when filters change
   useEffect(() => {
     setCurrentPage(0);
-  }, [searchQuery, filterStatus, pageSize]);
+  }, [searchQuery, filterStatus, pageSize, sortOrder]);
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
@@ -287,6 +291,15 @@ export default function AdminQuestions() {
                 className="pr-10"
               />
             </div>
+            <Select value={sortOrder} onValueChange={(v: "newest" | "oldest") => setSortOrder(v)}>
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="الترتيب" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="newest">الأحدث (افتراضي)</SelectItem>
+                <SelectItem value="oldest">ترتيب الاختبار (المراحل)</SelectItem>
+              </SelectContent>
+            </Select>
             <Select value={filterStatus} onValueChange={(v) => setFilterStatus(v as typeof filterStatus)}>
               <SelectTrigger className="w-40">
                 <SelectValue placeholder="الحالة" />
@@ -387,49 +400,62 @@ export default function AdminQuestions() {
                       />
                     </TableHead>
                     <TableHead>السؤال</TableHead>
+                    {sortOrder === "oldest" && <TableHead className="w-24">المرحلة</TableHead>}
                     <TableHead className="w-24">الحالة</TableHead>
                     <TableHead className="w-32">الإجراءات</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {questions.map((question) => (
-                    <TableRow key={question.id}>
-                      <TableCell>
-                        <Checkbox
-                          checked={selectedIds.has(question.id)}
-                          onCheckedChange={(checked) => handleSelectOne(question.id, checked as boolean)}
-                        />
-                      </TableCell>
-                      <TableCell className="max-w-md">
-                        <p className="line-clamp-2">{question.text}</p>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={question.active ? "default" : "secondary"}>
-                          {question.active ? "نشط" : "غير نشط"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handlePreview(question)}
-                            title="معاينة"
-                          >
-                            <Eye className="w-4 h-4 text-blue-500" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleEdit(question)}
-                            title="تعديل"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {questions.map((question, index) => {
+                    const absoluteIndex = currentPage * pageSize + index;
+                    const stageNumber = Math.floor(absoluteIndex / 20) + 1;
+
+                    return (
+                      <TableRow key={question.id}>
+                        <TableCell>
+                          <Checkbox
+                            checked={selectedIds.has(question.id)}
+                            onCheckedChange={(checked) => handleSelectOne(question.id, checked as boolean)}
+                          />
+                        </TableCell>
+                        <TableCell className="max-w-md">
+                          <p className="line-clamp-2">{question.text}</p>
+                        </TableCell>
+                        {sortOrder === "oldest" && (
+                          <TableCell>
+                            <Badge variant="outline" className="whitespace-nowrap">
+                              مرحلة {stageNumber}
+                            </Badge>
+                          </TableCell>
+                        )}
+                        <TableCell>
+                          <Badge variant={question.active ? "default" : "secondary"}>
+                            {question.active ? "نشط" : "غير نشط"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handlePreview(question)}
+                              title="معاينة"
+                            >
+                              <Eye className="w-4 h-4 text-blue-500" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleEdit(question)}
+                              title="تعديل"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>

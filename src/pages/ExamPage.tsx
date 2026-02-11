@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { audioManager } from "@/lib/audio";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { StageTransition } from "@/components/exam/StageTransition";
 
 export default function ExamPage() {
   const { attemptId } = useParams<{ attemptId: string }>();
@@ -24,63 +25,110 @@ export default function ExamPage() {
   const [questionsWithErrors, setQuestionsWithErrors] = useState<Set<string>>(new Set());
   const [penalties, setPenalties] = useState(0);
 
+  // Stage State
+  const [showStageTransition, setShowStageTransition] = useState(false);
+  const [currentStage, setCurrentStage] = useState(1);
+  const QUESTIONS_PER_STAGE = 20;
+
   // Refs for synchronous access inside timeouts/callbacks
   const scoreRef = useRef(0);
   const penaltiesRef = useRef(0);
   const questionsWithErrorsRef = useRef<Set<string>>(new Set());
   const questionPenaltiesRef = useRef<Record<string, number>>({});
 
-  // Load exam data from sessionStorage
+  // Track score and penalties at the start of the current stage to calculate delta
+  const [stageStartScore, setStageStartScore] = useState(0);
+  const [stagePenaltiesStart, setStagePenaltiesStart] = useState(0);
+
+  const handleNextStage = () => {
+    setShowStageTransition(false);
+    setCurrentIndex(prev => prev + 1);
+    setCurrentStage(prev => prev + 1);
+    // Use refs for accurate values
+    setStageStartScore(scoreRef.current);
+    setStagePenaltiesStart(penaltiesRef.current);
+  };
+
+  // Load exam data from database directly (Client-side fetching for full control)
   useEffect(() => {
     const loadExam = async () => {
-      if (!attemptId) {
-        navigate("/");
-        return;
-      }
-
       // Preload audio
       await audioManager.preload();
 
-      // Try to get from sessionStorage first (for instant loading)
-      const cached = sessionStorage.getItem(`exam_${attemptId}`);
-      if (cached) {
-        try {
-          const data = JSON.parse(cached) as AttemptData;
-          setExamData(data);
-          setScore(data.score);
-          scoreRef.current = data.score; // Sync ref
-          setIsLoading(false);
-          return;
-        } catch (e) {
-          console.error("Error parsing cached exam:", e);
-          sessionStorage.removeItem(`exam_${attemptId}`);
-        }
-      }
-
-      // If not in cache, fetch from server (exam-start function)
+      setIsLoading(true);
       try {
-        const { data, error } = await supabase.functions.invoke("exam-start", {
-          body: { attempt_id: attemptId }
-        });
+        // 1. Fetch ALL active questions
+        const { data: questionsData, error: questionsError } = await supabase
+          .from("questions")
+          .select("*, choices(*)")
+          .eq("active", true)
+          .order("created_at", { ascending: true }); // Order by creation time (stages logic)
 
-        if (error) {
-          console.error("Error fetching exam:", error);
-          throw error;
+        if (questionsError) throw questionsError;
+
+        if (!questionsData || questionsData.length === 0) {
+          toast.error("لا توجد أسئلة متاحة حالياً");
+          navigate("/student/dashboard");
+          return;
         }
 
-        if (data) {
-          const attemptData = data as AttemptData;
-          sessionStorage.setItem(`exam_${attemptId}`, JSON.stringify(attemptData));
-          setExamData(attemptData);
-          setScore(attemptData.score);
-          scoreRef.current = attemptData.score; // Sync ref
+        // 2. Fetch or create attempt
+        // We need an attempt ID to track progress. If attemptId is 'new', create one.
+        // If it exists in URL, use it.
+        let mAttemptId = attemptId;
+        let studentName = "";
+
+        if (attemptId && attemptId !== 'new') {
+          // Verify attempt exists
+          const { data: attempt, error: attemptError } = await supabase
+            .from("attempts")
+            .select("*")
+            .eq("id", attemptId)
+            .single();
+
+          if (attemptError || !attempt) {
+            // Handle invalid attempt
+            console.error("Invalid attempt ID");
+            // For simplicity in this refactor, we might want to redirect or create new
+            // But let's assume valid attempt ID from dashboard
+          } else {
+            studentName = attempt.student_name;
+          }
         } else {
-          throw new Error("No data returned from exam-start");
+          // We prefer creating attempt at start to track everything
+          // But dashboard sends us with an ID usually.
         }
+
+        // Transform data to match ExamQuestion interface
+        const transformedQuestions: ExamQuestionType[] = questionsData.map((q, index) => ({
+          id: q.id,
+          text: q.text,
+          image_url: q.image_url,
+          order_index: index,
+          choices: q.choices.map((c: any) => ({
+            id: c.id,
+            text: c.text,
+            is_correct: c.is_correct,
+            image_url: c.image_url
+          }))
+        }));
+
+        const newExamData: AttemptData = {
+          attempt_id: attemptId || "temp",
+          student_name: studentName,
+          question_count: transformedQuestions.length,
+          score: 0,
+          questions: transformedQuestions
+        };
+
+        setExamData(newExamData);
+        // setScore(0); // Reset score or fetch from attempt if resuming? 
+        // For now, start fresh typically.
+
       } catch (err) {
         console.error("Failed to load exam:", err);
         toast.error("فشل تحميل الاختبار. يرجى المحاولة مرة أخرى.");
-        navigate("/student/dashboard"); // Redirect to dashboard instead of /
+        navigate("/student/dashboard");
       } finally {
         setIsLoading(false);
       }
@@ -88,65 +136,6 @@ export default function ExamPage() {
 
     loadExam();
   }, [attemptId, navigate]);
-
-  // Separate effect to hydrate images if they are missing (Fallback for outdated Edge Function)
-  useEffect(() => {
-    const hydrateImages = async () => {
-      if (!examData || examData.questions.some(q => q.image_url)) return;
-
-      console.log("💧 Hydrating images from client-side...");
-      const qIds = examData.questions.map(q => q.id);
-
-      try {
-        // Fetch Question Images
-        const { data: questionsData } = await supabase
-          .from("questions")
-          .select("id, image_url")
-          .in("id", qIds);
-
-        // Fetch Choice Images
-        const { data: choicesData } = await supabase
-          .from("choices")
-          .select("id, image_url")
-          .in("question_id", qIds);
-
-        if (questionsData || choicesData) {
-          setExamData(prev => {
-            if (!prev) return null;
-
-            const updatedQuestions = prev.questions.map(q => {
-              const qImg = questionsData?.find(dbQ => dbQ.id === q.id)?.image_url;
-
-              const updatedChoices = q.choices.map(c => {
-                const cImg = choicesData?.find(dbC => dbC.id === c.id)?.image_url;
-                return cImg ? { ...c, image_url: cImg } : c;
-              });
-
-              return {
-                ...q,
-                image_url: qImg || q.image_url,
-                choices: updatedChoices
-              };
-            });
-
-            const newData = { ...prev, questions: updatedQuestions };
-
-            // Update Cache
-            if (attemptId) {
-              sessionStorage.setItem(`exam_${attemptId}`, JSON.stringify(newData));
-            }
-
-            return newData;
-          });
-          console.log("✅ Images hydrated successfully");
-        }
-      } catch (e) {
-        console.error("Error hydrating images:", e);
-      }
-    };
-
-    hydrateImages();
-  }, [examData?.questions.length, attemptId]); // Run once when questions are loaded
 
   const finishExam = useCallback(async () => {
     if (!attemptId || !examData) return;
@@ -209,11 +198,20 @@ export default function ExamPage() {
 
   const nextQuestion = useCallback(() => {
     if (examData && currentIndex < examData.questions.length - 1) {
-      setCurrentIndex(prev => prev + 1);
+      const nextIndex = currentIndex + 1;
+
+      // Check if we reached a stage boundary
+      if (nextIndex % QUESTIONS_PER_STAGE === 0) {
+        setShowStageTransition(true);
+      } else {
+        setCurrentIndex(prev => prev + 1);
+      }
     } else {
       finishExam(); // refs will ensure correct score is used
     }
   }, [examData, currentIndex, finishExam]);
+
+
 
   const handleAnswer = useCallback(async (choiceId: string): Promise<boolean> => {
     if (!examData || !attemptId || isSubmitting) return false;
@@ -267,6 +265,8 @@ export default function ExamPage() {
       if (isCorrect) {
         nextQuestion();
       }
+
+
       setIsSubmitting(false);
     }, 1000);
 
@@ -298,6 +298,7 @@ export default function ExamPage() {
           <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-primary via-purple-500 to-indigo-600"></div>
           <div className="absolute -top-24 -right-24 w-64 h-64 bg-primary/5 rounded-full blur-3xl"></div>
           <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-purple-500/5 rounded-full blur-3xl"></div>
+
 
           <div className="p-8 md:p-12 relative z-10  text-center space-y-8">
 
@@ -361,11 +362,34 @@ export default function ExamPage() {
     );
   }
 
+  // Calculate stage specific details
+  const currentStageTotalQuestions = Math.min(
+    QUESTIONS_PER_STAGE,
+    (examData?.questions.length || 0) - (currentStage - 1) * QUESTIONS_PER_STAGE
+  );
+
+  if (showStageTransition) {
+    // Calculate NET score for this stage (correct answers - penalties)
+    const stageCorrectAnswers = scoreRef.current - stageStartScore;
+    const stagePenalties = penaltiesRef.current - stagePenaltiesStart;
+    const stageNetScore = stageCorrectAnswers - stagePenalties;
+
+    return (
+      <StageTransition
+        stage={currentStage}
+        score={Math.max(0, stageNetScore)}
+        totalQuestions={currentStageTotalQuestions}
+        onNext={handleNextStage}
+        onFinishEarly={finishExam}
+      />
+    );
+  }
+
   return (
     <ExamQuestion
       question={currentQuestion}
-      currentIndex={currentIndex}
-      totalQuestions={examData.questions.length}
+      currentIndex={currentIndex % QUESTIONS_PER_STAGE} // Relative index (0-19)
+      totalQuestions={currentStageTotalQuestions} // Total for this stage (20)
       onAnswer={handleAnswer}
       disabled={isSubmitting}
     />

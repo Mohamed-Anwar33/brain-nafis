@@ -84,7 +84,7 @@ export default function AdminLayout() {
     { path: "/admin/matching", icon: Gamepad2, label: "لعبة المطابقة" },
     { path: "/admin/ordering", icon: Puzzle, label: "لغز الترتيب" },
     { path: "/admin/speed", icon: Timer, label: "تحدي السرعة" },
-    { path: "/admin/settings", icon: Settings, label: "الإعدادات" },
+    // Settings page hidden - accessible only via direct URL
   ];
 
   return (

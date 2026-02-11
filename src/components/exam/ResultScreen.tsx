@@ -16,11 +16,11 @@ export function ResultScreen({ result }: ResultScreenProps) {
   const percentage = Math.round((result.score / result.question_count) * 100);
 
   const getGradeInfo = () => {
-    if (percentage >= 90) return { label: "إسطوري!", color: "text-yellow-500", bg: "bg-yellow-500/10", border: "border-yellow-500/20", emoji: "👑" };
-    if (percentage >= 75) return { label: "ممتاز", color: "text-green-500", bg: "bg-green-500/10", border: "border-green-500/20", emoji: "🌟" };
-    if (percentage >= 60) return { label: "جيد جداً", color: "text-blue-500", bg: "bg-blue-500/10", border: "border-blue-500/20", emoji: "👍" };
-    if (percentage >= 50) return { label: "جيد", color: "text-orange-500", bg: "bg-orange-500/10", border: "border-orange-500/20", emoji: "💪" };
-    return { label: "حاول مرة أخرى", color: "text-red-500", bg: "bg-red-500/10", border: "border-red-500/20", emoji: "📚" };
+    if (percentage >= 90) return { label: "كفو يا بطل! أسطوري", color: "text-yellow-500", bg: "bg-yellow-500/10", border: "border-yellow-500/20", emoji: "👑" };
+    if (percentage >= 75) return { label: "ممتاز، استمر مبدع!", color: "text-green-500", bg: "bg-green-500/10", border: "border-green-500/20", emoji: "🌟" };
+    if (percentage >= 60) return { label: "شغل عالي، بس نبي أكثر", color: "text-blue-500", bg: "bg-blue-500/10", border: "border-blue-500/20", emoji: "👍" };
+    if (percentage >= 50) return { label: "زين، بس تقدر تجيب أحسن", color: "text-orange-500", bg: "bg-orange-500/10", border: "border-orange-500/20", emoji: "💪" };
+    return { label: "معوض خير، الجايات أحسن", color: "text-red-500", bg: "bg-red-500/10", border: "border-red-500/20", emoji: "📚" };
   };
 
   const grade = getGradeInfo();
@@ -64,10 +64,10 @@ export function ResultScreen({ result }: ResultScreenProps) {
               <span className="text-6xl filter drop-shadow-md">{grade.emoji}</span>
             </div>
 
-            <h1 className={`text-4xl md:text-5xl font-black mb-2 tracking-tight ${grade.color}`}>
+            <h1 className={`text-4xl md:text-5xl font-black mb-2 tracking-normal ${grade.color}`}>
               {grade.label}
             </h1>
-            <p className="text-slate-500 font-medium">نتيجة الإختبار النهائي</p>
+            <p className="text-slate-500 font-medium">نتيجتك في التحدي</p>
           </div>
 
           {/* Stats Grid - Overlapping the Header */}
@@ -80,7 +80,7 @@ export function ResultScreen({ result }: ResultScreenProps) {
                   <span className={`text-2xl font-bold ${grade.color}`}>{percentage}%</span>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm text-slate-400 font-bold mb-1">الدرجة النهائية</p>
+                  <p className="text-sm text-slate-400 font-bold mb-1">الدرجة المستحقة</p>
                   <p className="text-3xl font-black text-slate-800">{result.score}<span className="text-lg text-slate-400 font-medium">/{result.question_count}</span></p>
                 </div>
               </div>
@@ -118,14 +118,14 @@ export function ResultScreen({ result }: ResultScreenProps) {
                   {result.student_name.charAt(0)}
                 </div>
                 <div>
-                  <p className="text-sm text-slate-400 font-bold">الطالب</p>
+                  <p className="text-sm text-slate-400 font-bold">البطل</p>
                   <p className="font-bold text-slate-800">{result.student_name}</p>
                 </div>
               </div>
               <div className="text-left">
                 <p className="text-sm text-slate-400 font-bold">الوقت</p>
-                <p className="font-bold text-slate-800 dir-ltr font-mono text-sm">
-                  {format(new Date(result.finished_at), "hh:mm a")}
+                <p className="font-bold text-slate-800 font-mono text-sm">
+                  {format(new Date(result.finished_at), "hh:mm a", { locale: ar })}
                 </p>
               </div>
             </div>

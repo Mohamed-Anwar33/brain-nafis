@@ -20,6 +20,7 @@ import SpeedChallenge from "@/pages/games/SpeedChallenge";
 import AdminMatching from "./pages/admin/AdminMatching";
 import AdminOrdering from "./pages/admin/AdminOrdering";
 import AdminSpeed from "./pages/admin/AdminSpeed";
+import { Footer } from "@/components/layout/Footer";
 
 const queryClient = new QueryClient();
 
@@ -29,33 +30,36 @@ const App = () => (
       <Toaster />
       <Sonner position="top-center" dir="rtl" />
       <BrowserRouter>
-        <Routes>
-          {/* Student Routes */}
-          <Route path="/" element={<Index />} />
-          <Route path="/student/dashboard" element={<StudentDashboard />} />
+        <div className="flex flex-col min-h-screen">
+          <Routes>
+            {/* Student Routes */}
+            <Route path="/" element={<Index />} />
+            <Route path="/student/dashboard" element={<StudentDashboard />} />
 
-          <Route path="/exam/:attemptId" element={<ExamPage />} />
-          <Route path="/result/:attemptId" element={<ResultPage />} />
+            <Route path="/exam/:attemptId" element={<ExamPage />} />
+            <Route path="/result/:attemptId" element={<ResultPage />} />
 
-          {/* Games Routes */}
-          <Route path="/games/matching" element={<MatchingGame />} />
-          <Route path="/games/ordering" element={<OrderingGame />} />
-          <Route path="/games/speed" element={<SpeedChallenge />} />
+            {/* Games Routes */}
+            <Route path="/games/matching" element={<MatchingGame />} />
+            <Route path="/games/ordering" element={<OrderingGame />} />
+            <Route path="/games/speed" element={<SpeedChallenge />} />
 
-          {/* Admin Routes */}
-          <Route path="/admin/login" element={<AdminLogin />} />
-          <Route path="/admin" element={<AdminLayout />}>
-            <Route index element={<AdminDashboard />} />
-            <Route path="questions" element={<AdminQuestions />} />
-            <Route path="matching" element={<AdminMatching />} />
-            <Route path="ordering" element={<AdminOrdering />} />
-            <Route path="speed" element={<AdminSpeed />} />
-            <Route path="settings" element={<AdminSettings />} />
-          </Route>
+            {/* Admin Routes */}
+            <Route path="/admin/login" element={<AdminLogin />} />
+            <Route path="/admin" element={<AdminLayout />}>
+              <Route index element={<AdminDashboard />} />
+              <Route path="questions" element={<AdminQuestions />} />
+              <Route path="matching" element={<AdminMatching />} />
+              <Route path="ordering" element={<AdminOrdering />} />
+              <Route path="speed" element={<AdminSpeed />} />
+              <Route path="settings" element={<AdminSettings />} />
+            </Route>
 
-          {/* Catch-all */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+            {/* Catch-all */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+          <Footer />
+        </div>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

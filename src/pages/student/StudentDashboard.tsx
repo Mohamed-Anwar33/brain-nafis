@@ -2,13 +2,21 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Zap, Puzzle, Gamepad2, Timer, LogOut, GraduationCap, ChevronLeft, Star } from "lucide-react";
+import { Zap, Puzzle, Gamepad2, Timer, LogOut, GraduationCap, ChevronLeft, Star, Calendar } from "lucide-react";
 import { toast } from "sonner";
+import { SaudiLoader } from "@/components/ui/SaudiLoader";
 
 export default function StudentDashboard() {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
     const [studentName, setStudentName] = useState<string | null>(null);
+
+    // Format Hijri Date
+    const hijriDate = new Intl.DateTimeFormat('ar-SA-u-ca-islamic-umalqura', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+    }).format(new Date());
 
     useEffect(() => {
         checkUser();
@@ -131,7 +139,7 @@ export default function StudentDashboard() {
             const { data: attempt, error: attemptError } = await supabase
                 .from("attempts")
                 .insert({
-                    student_name: studentName || "Student",
+                    student_name: studentName || "طالب",
                     score: 0,
                     question_count: orderedQuestions.length
                 })
@@ -165,7 +173,7 @@ export default function StudentDashboard() {
 
             const attemptData = {
                 attempt_id: attempt.id,
-                student_name: studentName || "Student",
+                student_name: studentName || "طالب",
                 question_count: examQuestions.length,
                 score: 0,
                 questions: examQuestions
@@ -226,8 +234,8 @@ export default function StudentDashboard() {
 
     if (loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-slate-50">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+            <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+                <SaudiLoader text="جاري تجهيز لوحة الطالب..." />
             </div>
         );
     }
@@ -239,24 +247,34 @@ export default function StudentDashboard() {
             <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-blue-500/5 rounded-full blur-3xl translate-y-1/3 -translate-x-1/4 pointer-events-none"></div>
 
             {/* Header */}
+            {/* Header */}
             <header className="relative z-10 bg-white/80 backdrop-blur-md border-b sticky top-0">
-                <div className="container mx-auto px-6 py-4 flex justify-between items-center">
-                    <div className="flex items-center gap-4">
+                <div className="container mx-auto px-6 py-3 flex justify-between items-center relative">
+                    {/* Right Side: User Info */}
+                    <div className="flex items-center gap-3 shrink-0">
                         <div className="relative">
-                            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary to-primary/80 text-white flex items-center justify-center font-bold text-xl shadow-lg shadow-primary/20">
-                                {studentName ? studentName[0] : "S"}
+                            <div className="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-gradient-to-br from-primary to-primary/80 text-white flex items-center justify-center font-bold text-lg md:text-xl shadow-lg shadow-primary/20">
+                                {studentName ? studentName[0] : "ط"}
                             </div>
-                            <div className="absolute -bottom-1 -right-1 bg-green-500 w-4 h-4 rounded-full border-2 border-white"></div>
+                            <div className="absolute -bottom-1 -right-1 bg-green-500 w-3 h-3 md:w-4 md:h-4 rounded-full border-2 border-white"></div>
                         </div>
-                        <div>
-                            <h1 className="font-bold text-lg text-slate-800 flex items-center gap-2">
-                                أهلاً، {studentName || "يا بطل"} <span className="text-xl">👋</span>
+                        <div className="hidden sm:block">
+                            <h1 className="font-bold text-sm md:text-lg text-slate-800 flex items-center gap-2">
+                                أهلاً، {studentName || "يا بطل"} <span className="text-lg md:text-xl">👋</span>
                             </h1>
-                            <p className="text-xs font-medium text-slate-500">لوحة التحكم</p>
+                            <p className="text-[10px] md:text-xs font-medium text-slate-500">لوحة التحكم</p>
                         </div>
                     </div>
-                    <Button variant="ghost" size="sm" onClick={handleLogout} className="text-slate-500 hover:text-red-500 hover:bg-red-50 transition-colors">
-                        <LogOut className="w-4 h-4 ml-2" />
+
+                    {/* Center: Hijri Date (Flex Centered with Glass Effect) */}
+                    <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-2 bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5 px-6 py-2 rounded-full border border-primary/10 shadow-sm backdrop-blur-sm">
+                        <Calendar className="w-4 h-4 md:w-5 md:h-5 text-primary animate-pulse" />
+                        <span className="text-xs md:text-sm font-bold text-primary font-mono tracking-wider">{hijriDate}</span>
+                    </div>
+
+                    {/* Left Side: Logout Button */}
+                    <Button variant="ghost" size="sm" onClick={handleLogout} className="text-slate-500 hover:text-red-500 hover:bg-red-50 transition-colors shrink-0">
+                        <LogOut className="w-4 h-4 ml-1 md:ml-2" />
                         <span className="hidden sm:inline">تسجيل خروج</span>
                     </Button>
                 </div>
@@ -268,7 +286,7 @@ export default function StudentDashboard() {
                         <span className="bg-primary/10 text-primary text-xs font-bold px-3 py-1 rounded-full">الأنشطة التعليمية</span>
                         <span className="text-xs text-slate-500 px-3">تحديات جديدة بإنتظارك</span>
                     </div>
-                    <h2 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tight">
+                    <h2 className="text-4xl md:text-5xl font-black text-slate-900 tracking-normal">
                         اختر <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-blue-600">تحديك</span> التالي
                     </h2>
                     <p className="text-lg text-slate-500">
@@ -301,7 +319,7 @@ export default function StudentDashboard() {
 
                             {/* Content */}
                             <h3 className="text-xl font-bold text-slate-800 mb-1">{game.title}</h3>
-                            <p className="text-xs font-bold text-primary uppercase tracking-wider mb-3">{game.subtitle}</p>
+                            <p className="text-xs font-bold text-primary uppercase tracking-normal mb-3">{game.subtitle}</p>
 
                             <p className="text-sm text-slate-500 leading-relaxed mb-6 line-clamp-2">
                                 {game.description}

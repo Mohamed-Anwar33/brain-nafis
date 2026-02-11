@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { StartScreen } from "@/components/exam/StartScreen";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { SaudiLoader } from "@/components/ui/SaudiLoader";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -15,13 +16,23 @@ const Index = () => {
 
   async function checkSession() {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
+      const { data, error } = await supabase.auth.getSession();
+
+      if (error) {
+        // If the refresh token is invalid, sign out to clear it
+        if (error.message.includes("Invalid Refresh Token") || error.message.includes("Refresh Token Not Found")) {
+          console.log("Stale session detected, clearing...");
+          await supabase.auth.signOut();
+        }
+        return;
+      }
+
+      if (data.session) {
         // Check if profile exists
         const { data: profile } = await supabase
           .from("student_profiles")
           .select("full_name")
-          .eq("id", session.user.id)
+          .eq("id", data.session.user.id)
           .single();
 
         if (profile) {
@@ -30,6 +41,8 @@ const Index = () => {
       }
     } catch (error) {
       console.error("Session check error:", error);
+      // Failsafe: try to sign out if completely broken
+      await supabase.auth.signOut().catch(() => { });
     } finally {
       setIsLoading(false);
     }
@@ -45,9 +58,15 @@ const Index = () => {
       console.log("Starting anonymous login flow...");
 
       // 1. Ensure Auth Session (Anonymous)
-      let { data: { session } } = await supabase.auth.getSession();
+      let { data, error: sessionError } = await supabase.auth.getSession();
 
-      if (!session) {
+      // Handle invalid session state before trying to sign in
+      if (sessionError) {
+        await supabase.auth.signOut();
+        data.session = null;
+      }
+
+      if (!data.session) {
         console.log("No active session, signing in anonymously...");
         const { data: authData, error: authErr } = await supabase.auth.signInAnonymously();
 
@@ -60,16 +79,16 @@ const Index = () => {
           }
           throw authErr;
         }
-        session = authData.session;
+        data.session = authData.session;
       }
 
-      if (!session?.user) throw new Error("فشل إنشاء جلسة للمستخدم");
+      if (!data.session?.user) throw new Error("فشل إنشاء جلسة للمستخدم");
 
       // 2. Create/Update Profile with Name
       const { error: profileError } = await supabase
         .from("student_profiles")
         .upsert({
-          id: session.user.id,
+          id: data.session.user.id,
           full_name: studentName,
           stage: 'default',
           created_at: new Date().toISOString()
@@ -124,13 +143,12 @@ const Index = () => {
 
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 flex-col gap-4">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-        <p className="text-gray-500 animate-pulse">جاري الاتصال...</p>
+        <SaudiLoader text="جاري تجهيز التحدي..." />
         <button
           onClick={() => window.location.reload()}
-          className="text-sm text-blue-500 hover:underline mt-4"
+          className="text-sm text-blue-500 hover:underline mt-4 bg-transparent border-none cursor-pointer"
         >
-          تحديث الصفحة في حال استغراق وقت طويل
+          تحديث الصفحة إذا تأخر التحميل
         </button>
       </div>
     );

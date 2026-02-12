@@ -204,8 +204,11 @@ export default function AdminQuestions() {
     setCurrentPage(0);
   }, [searchQuery, filterStatus, pageSize, sortOrder, activeStage]);
 
-  // Get unique stage numbers from counts
-  const stageNumbers = Object.keys(stageCounts).map(Number).sort((a, b) => a - b);
+  // Get stage numbers from stage_titles (manual), merged with any in questions
+  const stageNumbers = Array.from(new Set([
+    ...stageTitles.map(st => st.stage_number),
+    ...Object.keys(stageCounts).map(Number)
+  ])).sort((a, b) => a - b);
   const getStageTitle = (sn: number) => {
     const found = stageTitles.find(st => st.stage_number === sn);
     return found?.title || `المرحلة ${sn}`;
@@ -276,11 +279,45 @@ export default function AdminQuestions() {
           display_order: newOrder,
         }, { onConflict: "stage_number" });
       if (error) throw error;
-      toast.success(`تم تحديث ترتيب المرحلة ${stageNum}`);
+
+      // Check for duplicate after saving
+      const updatedTitles = stageTitles.map(st =>
+        st.stage_number === stageNum ? { ...st, display_order: newOrder } : st
+      );
+      const duplicate = updatedTitles.find(st => st.display_order === newOrder && st.stage_number !== stageNum);
+      if (duplicate) {
+        toast.error(
+          `⚠️ تنبيه: المرحلة ${duplicate.stage_number} (${getStageTitle(duplicate.stage_number)}) لها نفس الترتيب (${newOrder}) — عدّل أحدهما!`,
+          { id: 'duplicate-order', duration: Infinity, style: { background: '#FEF2F2', border: '2px solid #F87171', color: '#991B1B', fontWeight: 'bold', fontSize: '14px' } }
+        );
+      } else {
+        toast.dismiss('duplicate-order');
+        toast.success(`تم تحديث ترتيب المرحلة ${stageNum}`);
+      }
       fetchStageMeta();
     } catch (err) {
       console.error(err);
       toast.error("حدث خطأ في تحديث الترتيب");
+    }
+  };
+
+  const handleAddStage = async () => {
+    const nextStageNum = stageNumbers.length > 0 ? Math.max(...stageNumbers) + 1 : 1;
+    try {
+      const { error } = await supabase
+        .from("stage_titles")
+        .insert({
+          stage_number: nextStageNum,
+          title: `المرحلة ${nextStageNum}`,
+          is_active: true,
+          display_order: nextStageNum,
+        });
+      if (error) throw error;
+      toast.success(`✅ تمت إضافة المرحلة ${nextStageNum}`);
+      fetchStageMeta();
+    } catch (err) {
+      console.error(err);
+      toast.error("حدث خطأ في إضافة المرحلة");
     }
   };
 
@@ -473,6 +510,14 @@ export default function AdminQuestions() {
                 </div>
               );
             })}
+            {/* Add Stage Button */}
+            <button
+              onClick={handleAddStage}
+              className="px-3 py-2 rounded-xl text-sm font-bold transition-all bg-emerald-50 hover:bg-emerald-100 text-emerald-600 border-2 border-dashed border-emerald-300 hover:border-emerald-400"
+              title="إضافة مرحلة جديدة"
+            >
+              + مرحلة
+            </button>
           </div>
 
           {/* Stage Settings when selected */}

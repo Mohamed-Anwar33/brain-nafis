@@ -34,7 +34,7 @@ export function QuestionForm({ question, onComplete, defaultStage }: QuestionFor
   const [text, setText] = useState("");
   const [active, setActive] = useState(true);
   const [stageNumber, setStageNumber] = useState<number>(defaultStage || 1);
-  const [maxStage, setMaxStage] = useState(10);
+  const [stagesList, setStagesList] = useState<{ stage_number: number; title: string }[]>([]);
   const [questionImage, setQuestionImage] = useState<File | null>(null);
   const [questionImageUrl, setQuestionImageUrl] = useState<string | null>(null);
 
@@ -57,17 +57,21 @@ export function QuestionForm({ question, onComplete, defaultStage }: QuestionFor
     }
   }, [question]);
 
-  // Auto-calculate stages: total questions / 20
+  // Fetch stages from stage_titles table
   useEffect(() => {
-    const fetchTotalStages = async () => {
-      const { count } = await supabase
-        .from("questions")
-        .select("*", { count: "exact", head: true });
-      if (count !== null) {
-        setMaxStage(Math.ceil(count / 20));
+    const fetchStages = async () => {
+      const { data } = await supabase
+        .from("stage_titles")
+        .select("stage_number, title")
+        .order("stage_number");
+      if (data && data.length > 0) {
+        setStagesList(data);
+      } else {
+        // Fallback if no stages exist
+        setStagesList([{ stage_number: 1, title: "المرحلة 1" }]);
       }
     };
-    fetchTotalStages();
+    fetchStages();
   }, []);
 
   const fetchChoices = async (questionId: string) => {
@@ -340,8 +344,10 @@ export function QuestionForm({ question, onComplete, defaultStage }: QuestionFor
             <SelectValue placeholder="اختر المرحلة" />
           </SelectTrigger>
           <SelectContent>
-            {Array.from({ length: maxStage }, (_, i) => i + 1).map(num => (
-              <SelectItem key={num} value={num.toString()}>المرحلة {num}</SelectItem>
+            {stagesList.map(stage => (
+              <SelectItem key={stage.stage_number} value={stage.stage_number.toString()}>
+                {stage.title} (م{stage.stage_number})
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>

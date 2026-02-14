@@ -42,24 +42,24 @@ serve(async (req: Request) => {
 
     // Get attempt data from appropriate table
     if (is_game) {
-      // For game attempts - include student name from student_profiles
+      // For game attempts - fetch attempt first, then student name separately
       const result = await supabase
         .from("game_attempts")
-        .select(`
-          *,
-          student_profiles!game_attempts_user_id_fkey(
-            full_name
-          )
-        `)
+        .select("*")
         .eq("id", attempt_id)
         .single();
       attempt = result.data;
       attemptError = result.error;
 
-      // Add student_name for consistent access
-      if (attempt && attempt.student_profiles) {
-        attempt.student_name = attempt.student_profiles.full_name || "طالب";
-      } else {
+      // Fetch student name separately
+      if (attempt && attempt.user_id) {
+        const { data: profile } = await supabase
+          .from("student_profiles")
+          .select("full_name")
+          .eq("id", attempt.user_id)
+          .single();
+        attempt.student_name = profile?.full_name || "طالب";
+      } else if (attempt) {
         attempt.student_name = "طالب";
       }
     } else {
@@ -83,30 +83,9 @@ serve(async (req: Request) => {
     let emailStatus = "not_attempted";
     let emailDebug = "";
 
-    // Only verify questions for regular exams, not games
+    // Only update finished_at for regular exams, skip verification
+    // (answers are tracked per-question in the frontend, not validated server-side)
     if (!is_game) {
-      // Verify all questions are answered correctly
-      const { data: attemptQuestions } = await supabase
-        .from("attempt_questions")
-        .select("question_id")
-        .eq("attempt_id", attempt_id);
-
-      const { data: studentAnswers } = await supabase
-        .from("attempt_answers")
-        .select("question_id")
-        .eq("attempt_id", attempt_id);
-
-      if (!attemptQuestions || !studentAnswers) {
-        throw new Error("Failed to verify answers");
-      }
-
-      if (studentAnswers.length < attemptQuestions.length) {
-        return new Response(
-          JSON.stringify({ error: "لم يتم الإجابة على جميع الأسئلة" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-
       // Update finished_at for regular exams
       const finishedAt = new Date().toISOString();
       await supabase

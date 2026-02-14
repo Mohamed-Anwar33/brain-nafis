@@ -204,7 +204,8 @@ export default function ExamPage() {
         .from("attempts")
         .update({
           score: finalScore,
-          total_penalty: finalPenalty
+          total_penalty: finalPenalty,
+          finished_at: new Date().toISOString()
         })
         .eq("id", attemptId);
 

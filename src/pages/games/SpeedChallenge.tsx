@@ -1,5 +1,5 @@
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -49,6 +49,11 @@ export default function SpeedChallenge() {
 
     const [initialTime, setInitialTime] = useState(60);
     const [questionsWithErrors, setQuestionsWithErrors] = useState<Set<string>>(new Set());
+
+    // Refs to always have latest values for async saves
+    const scoreRef = useRef(0);
+    const correctCountRef = useRef(0);
+    const answeringCountRef = useRef(0);
 
     const timerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -208,11 +213,17 @@ export default function SpeedChallenge() {
         if (isCorrect) {
             audioManager.playCorrect();
             toast.success("صح!", { duration: 500, position: 'top-center' });
+            const newScore = gameState.score + 1;
+            const newCorrect = gameState.correctCount + 1;
+            const newAnswering = gameState.answeringCount + 1;
+            scoreRef.current = newScore;
+            correctCountRef.current = newCorrect;
+            answeringCountRef.current = newAnswering;
             setGameState(prev => ({
                 ...prev,
-                score: prev.score + 1,
-                correctCount: prev.correctCount + 1,
-                answeringCount: prev.answeringCount + 1
+                score: newScore,
+                correctCount: newCorrect,
+                answeringCount: newAnswering
             }));
 
             // Only move to next question if correct
@@ -227,19 +238,25 @@ export default function SpeedChallenge() {
 
             // Only deduct score if this question hasn't been answered wrong before
             if (!questionsWithErrors.has(currentQ.id)) {
+                const newScore = Math.max(0, gameState.score - 1);
+                const newAnswering = gameState.answeringCount + 1;
+                scoreRef.current = newScore;
+                answeringCountRef.current = newAnswering;
                 setGameState(prev => ({
                     ...prev,
-                    score: Math.max(0, prev.score - 1),
-                    answeringCount: prev.answeringCount + 1
+                    score: newScore,
+                    answeringCount: newAnswering
                 }));
 
                 // Mark this question as having at least one error
                 setQuestionsWithErrors(prev => new Set(prev).add(currentQ.id));
             } else {
                 // Still count the attempt even if no penalty
+                const newAnswering = gameState.answeringCount + 1;
+                answeringCountRef.current = newAnswering;
                 setGameState(prev => ({
                     ...prev,
-                    answeringCount: prev.answeringCount + 1
+                    answeringCount: newAnswering
                 }));
             }
             // Do NOT move to next question
@@ -253,9 +270,9 @@ export default function SpeedChallenge() {
                 const { data: attemptData, error: insertError } = await supabase.from("game_attempts").insert({
                     user_id: user.id,
                     game_type: "speed",
-                    score: gameState.score,
-                    correct_count: gameState.correctCount,
-                    total_questions: gameState.answeringCount,
+                    score: scoreRef.current,
+                    correct_count: correctCountRef.current,
+                    total_questions: answeringCountRef.current,
                     duration_seconds: initialTime - timeLeft
                 }).select().single();
 
@@ -267,7 +284,7 @@ export default function SpeedChallenge() {
                     });
                 }
 
-                if (gameState.score > 0) {
+                if (scoreRef.current > 0) {
                     confetti({ particleCount: 150, spread: 80 });
                 }
             }

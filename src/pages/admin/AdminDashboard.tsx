@@ -102,20 +102,6 @@ export default function AdminDashboard() {
       color: "text-primary",
       bg: "bg-primary/10",
     },
-    {
-      title: "عدد المحاولات",
-      value: stats.totalAttempts,
-      icon: Users,
-      color: "text-accent",
-      bg: "bg-accent/10",
-    },
-    {
-      title: "متوسط النتائج",
-      value: `${stats.averageScore}%`,
-      icon: TrendingUp,
-      color: "text-primary",
-      bg: "bg-primary/10",
-    },
   ];
 
   return (

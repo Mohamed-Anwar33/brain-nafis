@@ -168,6 +168,7 @@ export default function OrderingGame() {
     const [isCorrect, setIsCorrect] = useState(false);
     const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null);
     const [activeItem, setActiveItem] = useState<GameItem | null>(null);
+    const [startTime] = useState(() => Date.now());
 
     // Sensors configuration
     const sensors = useSensors(
@@ -345,8 +346,9 @@ export default function OrderingGame() {
             toast.success("ترتيب صحيح! أحسنت");
             setIsCorrect(true);
             confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
-            setGameState(prev => ({ ...prev, score: prev.score + 1 }));
-            saveAttempt();
+            const newScore = gameState.score + 1;
+            setGameState(prev => ({ ...prev, score: newScore }));
+            saveAttempt(newScore);
         } else {
             audioManager.playWrong();
             toast.error("ترتيب خاطئ (-1 نقطة)، حاول مرة أخرى");
@@ -372,16 +374,18 @@ export default function OrderingGame() {
         loadQuestion(questions[currentQuestionIndex]);
     };
 
-    const saveAttempt = async () => {
+    const saveAttempt = async (finalScore: number) => {
         try {
             const { data: { user } } = await supabase.auth.getUser();
             if (user) {
+                const durationSeconds = Math.floor((Date.now() - startTime) / 1000);
                 const { data: attemptData, error: insertError } = await supabase.from("game_attempts").insert({
                     user_id: user.id,
                     game_type: "ordering",
-                    score: gameState.score,
+                    score: finalScore,
                     correct_count: 1,
                     total_questions: questions.length,
+                    duration_seconds: durationSeconds,
                 }).select().single();
 
                 if (attemptData && !insertError) {

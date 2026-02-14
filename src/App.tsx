@@ -10,6 +10,7 @@ import AdminLogin from "./pages/admin/AdminLogin";
 import AdminLayout from "./pages/admin/AdminLayout";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminQuestions from "./pages/admin/AdminQuestions";
+import AdminResults from "./pages/admin/AdminResults";
 import AdminSettings from "./pages/admin/AdminSettings";
 import NotFound from "./pages/NotFound";
 import StudentDashboard from "./pages/student/StudentDashboard";
@@ -52,6 +53,7 @@ const App = () => (
               <Route path="matching" element={<AdminMatching />} />
               <Route path="ordering" element={<AdminOrdering />} />
               <Route path="speed" element={<AdminSpeed />} />
+              <Route path="results" element={<AdminResults />} />
               <Route path="settings" element={<AdminSettings />} />
             </Route>
 

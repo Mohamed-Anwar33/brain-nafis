@@ -12,7 +12,8 @@ import {
   GraduationCap,
   Gamepad2,
   Puzzle,
-  Timer
+  Timer,
+  Trophy
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -81,6 +82,7 @@ export default function AdminLayout() {
   const navItems = [
     { path: "/admin", icon: LayoutDashboard, label: "لوحة التحكم" },
     { path: "/admin/questions", icon: FileQuestion, label: "بنك الأسئلة" },
+    { path: "/admin/results", icon: Trophy, label: "نتائج الطلاب" },
     { path: "/admin/matching", icon: Gamepad2, label: "لعبة المطابقة" },
     { path: "/admin/ordering", icon: Puzzle, label: "لغز الترتيب" },
     { path: "/admin/speed", icon: Timer, label: "تحدي السرعة" },

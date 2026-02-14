@@ -40,6 +40,7 @@ export default function MatchingGame() {
     });
 
     const [attempts, setAttempts] = useState(0);
+    const [startTime] = useState(() => Date.now());
 
     useEffect(() => {
         audioManager.preload();
@@ -186,10 +187,13 @@ export default function MatchingGame() {
                 setLeftItems(prev => prev.map(item => item.id === leftId ? { ...item, matched: true } : item));
                 setRightItems(prev => prev.map(item => item.id === rightId ? { ...item, matched: true } : item));
 
+                const newScore = gameState.score + 1;
+                const newCorrect = gameState.correctAnswers + 1;
+
                 setGameState(prev => ({
                     ...prev,
-                    score: prev.score + 1,
-                    correctAnswers: prev.correctAnswers + 1
+                    score: newScore,
+                    correctAnswers: newCorrect
                 }));
 
                 // Reset selection
@@ -197,8 +201,8 @@ export default function MatchingGame() {
                 setSelectedRight(null);
 
                 // Check win condition
-                if (gameState.correctAnswers + 1 === questions.length) {
-                    handleWin();
+                if (newCorrect === questions.length) {
+                    handleWin(newScore, newCorrect);
                 }
 
             } else {
@@ -217,28 +221,30 @@ export default function MatchingGame() {
         }
     };
 
-    const handleWin = () => {
+    const handleWin = (finalScore: number, finalCorrect: number) => {
         confetti({
             particleCount: 100,
             spread: 70,
             origin: { y: 0.6 }
         });
 
-        // Save attempt
-        saveAttempt();
+        // Save attempt with the actual final values
+        saveAttempt(finalScore, finalCorrect);
     };
 
-    const saveAttempt = async () => {
+    const saveAttempt = async (finalScore: number, finalCorrect: number) => {
         try {
             const { data: { user } } = await supabase.auth.getUser();
             if (user) {
+                const durationSeconds = Math.floor((Date.now() - startTime) / 1000);
                 const { data: attemptData, error: insertError } = await supabase.from("game_attempts").insert({
                     user_id: user.id,
                     game_type: "matching",
                     level: gameState.level,
-                    score: gameState.score, // Use current score which already includes the last point
-                    correct_count: gameState.correctAnswers,
+                    score: finalScore,
+                    correct_count: finalCorrect,
                     total_questions: questions.length,
+                    duration_seconds: durationSeconds,
                 }).select().single();
 
                 // Send email notification

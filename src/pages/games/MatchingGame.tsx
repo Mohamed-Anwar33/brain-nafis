@@ -4,7 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ArrowRight, RefreshCw, Trophy } from "lucide-react";
+import { ArrowRight, RefreshCw, Trophy, Sparkles, Zap, Target, Gamepad2 } from "lucide-react";
 import { toast } from "sonner";
 import confetti from "canvas-confetti";
 import { audioManager } from "@/lib/audio";
@@ -237,6 +237,12 @@ export default function MatchingGame() {
             const { data: { user } } = await supabase.auth.getUser();
             if (user) {
                 const durationSeconds = Math.floor((Date.now() - startTime) / 1000);
+                const { data: profile } = await supabase
+                    .from("student_profiles")
+                    .select("full_name")
+                    .eq("id", user.id)
+                    .maybeSingle();
+                const resolvedStudentName = profile?.full_name || "طالب";
                 const { data: attemptData, error: insertError } = await supabase.from("game_attempts").insert({
                     user_id: user.id,
                     game_type: "matching",
@@ -245,6 +251,10 @@ export default function MatchingGame() {
                     correct_count: finalCorrect,
                     total_questions: questions.length,
                     duration_seconds: durationSeconds,
+                    metadata: {
+                        student_name: resolvedStudentName,
+                        game_name: "لعبة المطابقة"
+                    }
                 }).select().single();
 
                 // Send email notification
@@ -261,72 +271,112 @@ export default function MatchingGame() {
     };
 
     return (
-        <div className="min-h-screen bg-slate-50 flex flex-col" dir="rtl">
+        <div className="min-h-screen bg-gradient-to-br from-violet-100 via-fuchsia-50 to-blue-100 flex flex-col" dir="rtl">
+            {/* Floating Background Elements */}
+            <div className="fixed inset-0 overflow-hidden pointer-events-none">
+                <div className="absolute top-10 left-10 w-64 h-64 bg-purple-300/30 rounded-full blur-3xl animate-pulse"></div>
+                <div className="absolute bottom-10 right-10 w-80 h-80 bg-pink-300/20 rounded-full blur-3xl animate-pulse delay-500"></div>
+                <div className="absolute top-1/3 right-1/4 w-48 h-48 bg-blue-300/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
+                
+                {[...Array(10)].map((_, i) => (
+                    <div
+                        key={i}
+                        className="absolute rounded-full animate-pulse"
+                        style={{
+                            left: `${Math.random() * 100}%`,
+                            top: `${Math.random() * 100}%`,
+                            width: `${15 + Math.random() * 25}px`,
+                            height: `${15 + Math.random() * 25}px`,
+                            background: ['#fbbf24', '#f472b6', '#60a5fa', '#34d399', '#a78bfa'][Math.floor(Math.random() * 5)],
+                            animationDelay: `${Math.random() * 3}s`,
+                            opacity: 0.15,
+                            filter: 'blur(1px)'
+                        }}
+                    />
+                ))}
+            </div>
+
             {/* Header */}
-            <div className="bg-white border-b py-4 px-6 shadow-sm sticky top-0 z-10">
+            <div className="relative z-20 bg-white/80 backdrop-blur-xl border-b border-white/50 py-4 px-6 sticky top-0">
                 <div className="max-w-5xl mx-auto flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                        <Button variant="ghost" size="sm" asChild className="rounded-full">
+                        <Button variant="ghost" size="sm" asChild className="rounded-full hover:bg-white/80">
                             <Link to="/student/dashboard">
                                 <ArrowRight className="w-5 h-5 ml-1" />
-                                الخروج
+                                <span className="font-bold">العودة</span>
                             </Link>
                         </Button>
-                        <h1 className="text-xl font-bold text-primary hidden md:block">لعبة المطابقة</h1>
+                        <div className="flex items-center gap-2">
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-lg shadow-purple-500/30">
+                                <Gamepad2 className="w-5 h-5 text-white" />
+                            </div>
+                            <h1 className="text-xl font-black text-slate-800 hidden md:block">لعبة المطابقة</h1>
+                        </div>
                     </div>
 
-                    <div className="flex items-center gap-4 md:gap-8 bg-slate-100 px-4 py-2 rounded-full">
+                    <div className="flex items-center gap-3 bg-white/80 backdrop-blur px-4 py-2 rounded-full shadow-lg border border-white/50">
                         <div className="flex flex-col items-center">
-                            <span className="text-xs text-muted-foreground uppercase font-bold">المستوى</span>
-                            <span className="font-bold text-lg leading-none text-primary">{gameState.level}</span>
+                            <span className="text-[10px] text-slate-500 font-bold">المستوى</span>
+                            <span className="font-black text-lg leading-none text-violet-600">{gameState.level}</span>
                         </div>
-                        <div className="w-px h-8 bg-slate-300"></div>
+                        <div className="w-px h-8 bg-slate-200"></div>
                         <div className="flex flex-col items-center">
-                            <span className="text-xs text-muted-foreground uppercase font-bold">النقاط</span>
-                            <span className="font-bold text-lg leading-none text-green-600">{gameState.score}</span>
+                            <span className="text-[10px] text-slate-500 font-bold">النقاط</span>
+                            <span className="font-black text-lg leading-none text-emerald-600">{gameState.score}</span>
                         </div>
-                        <div className="w-px h-8 bg-slate-300"></div>
+                        <div className="w-px h-8 bg-slate-200"></div>
                         <div className="flex flex-col items-center">
-                            <span className="text-xs text-muted-foreground uppercase font-bold">متبقي</span>
-                            <span className="font-bold text-lg leading-none text-blue-600">{questions.length - gameState.correctAnswers}</span>
+                            <span className="text-[10px] text-slate-500 font-bold">متبقي</span>
+                            <span className="font-black text-lg leading-none text-blue-600">{questions.length - gameState.correctAnswers}</span>
                         </div>
                     </div>
                 </div>
             </div>
 
             {/* Game Area */}
-            <main className="flex-1 container max-w-5xl mx-auto p-4 md:p-8 flex items-center justify-center">
+            <main className="flex-1 container max-w-5xl mx-auto p-4 md:p-8 flex items-center justify-center relative z-10">
                 {loading ? (
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-                ) : questions.length === 0 ? (
                     <div className="text-center">
-                        <p>لا توجد أسئلة متاحة حالياً.</p>
-                        <Button onClick={fetchQuestions} className="mt-4">تحديث</Button>
+                        <div className="w-16 h-16 border-4 border-violet-300 border-t-violet-600 rounded-full animate-spin mx-auto mb-4"></div>
+                        <p className="text-violet-600 font-bold">جاري التحميل...</p>
                     </div>
+                ) : questions.length === 0 ? (
+                    <Card className="p-8 text-center bg-white/90 backdrop-blur-xl border-0 shadow-2xl">
+                        <p className="text-slate-600 text-lg mb-4">لا توجد أسئلة متاحة حالياً.</p>
+                        <Button onClick={fetchQuestions} className="bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white font-bold px-8">تحديث</Button>
+                    </Card>
                 ) : gameState.correctAnswers === questions.length ? (
-                    <Card className="p-8 text-center space-y-6 max-w-md w-full animate-bounce-in">
-                        <div className="w-20 h-20 bg-yellow-100 rounded-full flex items-center justify-center mx-auto">
-                            <Trophy className="w-10 h-10 text-yellow-500" />
+                    <Card className="p-10 text-center space-y-6 max-w-md w-full bg-white/90 backdrop-blur-xl border-0 shadow-2xl shadow-purple-500/20">
+                        <div className="relative inline-block">
+                            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-yellow-400 via-amber-500 to-orange-500 flex items-center justify-center shadow-xl shadow-orange-500/30">
+                                <Trophy className="w-12 h-12 text-white" />
+                            </div>
+                            <div className="absolute -top-2 -right-2 text-2xl animate-bounce">✨</div>
+                            <div className="absolute -bottom-1 -left-2 text-xl animate-bounce delay-100">⭐</div>
                         </div>
+                        
                         <div>
-                            <h2 className="text-3xl font-bold mb-2">أحسنت!</h2>
-                            <p className="text-muted-foreground">أكملت المستوى بنجاح.</p>
+                            <h2 className="text-3xl font-black bg-gradient-to-r from-violet-600 to-fuchsia-600 bg-clip-text text-transparent mb-2">أحسنت!</h2>
+                            <p className="text-slate-500">أكملت المستوى بنجاح.</p>
                         </div>
-                        <div className="text-4xl font-bold text-primary">
-                            {gameState.score} <span className="text-lg text-muted-foreground">نقطة</span>
+                        
+                        <div className="text-5xl font-black bg-gradient-to-r from-violet-600 via-fuchsia-600 to-pink-600 bg-clip-text text-transparent">
+                            {gameState.score}
                         </div>
-                        <div className="flex flex-col gap-2">
-                            <Button onClick={() => window.location.reload()} variant="outline" className="w-full">
-                                <RefreshCw className="w-4 h-4 ml-2" />
+                        <p className="text-slate-400">نقطة</p>
+                        
+                        <div className="flex flex-col gap-3">
+                            <Button onClick={() => window.location.reload()} variant="outline" className="w-full h-12 font-bold rounded-xl border-2">
+                                <RefreshCw className="w-5 h-5 ml-2" />
                                 إعادة اللعب
                             </Button>
-                            <Button asChild className="w-full">
+                            <Button asChild className="w-full h-12 font-bold rounded-xl bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:opacity-90">
                                 <Link to="/student/dashboard">العودة للقائمة</Link>
                             </Button>
                         </div>
                     </Card>
                 ) : (
-                    <div className={`grid gap-4 md:gap-12 w-full transition-all ${questions.length > 8 ? 'grid-cols-2 max-w-6xl' : 'grid-cols-2'}`}>
+                    <div className={`grid gap-4 md:gap-8 w-full transition-all ${questions.length > 8 ? 'grid-cols-2 max-w-6xl' : 'grid-cols-2'}`}>
                         {/* Left Column */}
                         <div className={`grid gap-3 md:gap-4 ${questions.length > 8 ? 'grid-cols-2' : 'grid-cols-1'}`}>
                             {leftItems.map((item) => (
@@ -334,22 +384,24 @@ export default function MatchingGame() {
                                     key={item.id}
                                     onClick={() => handleSelectLeft(item.id)}
                                     className={`
-                                        p-4 text-center cursor-pointer transition-all duration-200
-                                        ${item.matched ? "opacity-0 pointer-events-none" : "hover:scale-105 hover:shadow-md"}
-                                        ${selectedLeft === item.id ? "bg-primary text-white border-primary ring-2 ring-primary ring-offset-2" : "bg-white hover:bg-slate-50"}
-                                        ${questions.length > 8 ? 'text-base p-2' : 'text-lg md:text-xl md:p-6'} 
+                                        p-4 text-center cursor-pointer transition-all duration-300 border-0 shadow-lg
+                                        ${item.matched ? "opacity-0 pointer-events-none" : "hover:scale-105 hover:shadow-xl hover:-translate-y-1"}
+                                        ${selectedLeft === item.id 
+                                            ? "bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white shadow-xl shadow-purple-500/30 scale-105" 
+                                            : "bg-white/90 backdrop-blur hover:bg-white"}
+                                        ${questions.length > 8 ? 'text-base p-3' : 'text-lg md:text-xl md:p-6'} 
                                     `}
                                 >
                                     {item.imageUrl ? (
-                                        <div className="w-full h-full flex items-center justify-center min-h-[120px] md:min-h-[160px]">
+                                        <div className="w-full h-full flex items-center justify-center min-h-[100px] md:min-h-[140px]">
                                             <img
                                                 src={item.imageUrl}
                                                 alt="question"
-                                                className="w-full h-full object-contain max-h-40 md:max-h-64 mix-blend-multiply transition-transform hover:scale-110 duration-300"
+                                                className="w-full h-full object-contain max-h-32 md:max-h-48 mix-blend-multiply transition-transform hover:scale-110 duration-300"
                                             />
                                         </div>
                                     ) : (
-                                        <span className="font-semibold">{item.text}</span>
+                                        <span className="font-bold">{item.text}</span>
                                     )}
                                 </Card>
                             ))}
@@ -362,22 +414,24 @@ export default function MatchingGame() {
                                     key={item.id}
                                     onClick={() => handleSelectRight(item.id)}
                                     className={`
-                                        p-4 text-center cursor-pointer transition-all duration-200
-                                        ${item.matched ? "opacity-0 pointer-events-none" : "hover:scale-105 hover:shadow-md"}
-                                        ${selectedRight === item.id ? "bg-primary text-white border-primary ring-2 ring-primary ring-offset-2" : "bg-white hover:bg-slate-50"}
-                                        ${questions.length > 8 ? 'text-base p-2' : 'text-lg md:text-xl md:p-6'} 
+                                        p-4 text-center cursor-pointer transition-all duration-300 border-0 shadow-lg
+                                        ${item.matched ? "opacity-0 pointer-events-none" : "hover:scale-105 hover:shadow-xl hover:-translate-y-1"}
+                                        ${selectedRight === item.id 
+                                            ? "bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white shadow-xl shadow-purple-500/30 scale-105" 
+                                            : "bg-white/90 backdrop-blur hover:bg-white"}
+                                        ${questions.length > 8 ? 'text-base p-3' : 'text-lg md:text-xl md:p-6'} 
                                     `}
                                 >
                                     {item.imageUrl ? (
-                                        <div className="w-full h-full flex items-center justify-center min-h-[120px] md:min-h-[160px]">
+                                        <div className="w-full h-full flex items-center justify-center min-h-[100px] md:min-h-[140px]">
                                             <img
                                                 src={item.imageUrl}
                                                 alt="answer"
-                                                className="w-full h-full object-contain max-h-40 md:max-h-64 mix-blend-multiply transition-transform hover:scale-110 duration-300"
+                                                className="w-full h-full object-contain max-h-32 md:max-h-48 mix-blend-multiply transition-transform hover:scale-110 duration-300"
                                             />
                                         </div>
                                     ) : (
-                                        <span className="font-semibold">{item.text}</span>
+                                        <span className="font-bold">{item.text}</span>
                                     )}
                                 </Card>
                             ))}

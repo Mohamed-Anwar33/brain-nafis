@@ -14,14 +14,28 @@ import AdminResults from "./pages/admin/AdminResults";
 import AdminSettings from "./pages/admin/AdminSettings";
 import NotFound from "./pages/NotFound";
 import StudentDashboard from "./pages/student/StudentDashboard";
-// Game placeholders - created in next steps
+// Game imports
 import MatchingGame from "@/pages/games/MatchingGame";
 import OrderingGame from "@/pages/games/OrderingGame";
 import SpeedChallenge from "@/pages/games/SpeedChallenge";
+import WheelGame from "@/pages/games/WheelGame";
+import StagesGame from "@/pages/games/StagesGame";
+
+// Admin imports
 import AdminMatching from "./pages/admin/AdminMatching";
 import AdminOrdering from "./pages/admin/AdminOrdering";
 import AdminSpeed from "./pages/admin/AdminSpeed";
+import AdminWheel from "./pages/admin/AdminWheel";
+import AdminStages from "./pages/admin/AdminStages";
 import { Footer } from "@/components/layout/Footer";
+import AdminCentralExamLayout from "./pages/admin/central-exam/AdminCentralExamLayout";
+import AdminCentralExamSettings from "./pages/admin/central-exam/AdminCentralExamSettings";
+import AdminCentralExamQuestions from "./pages/admin/central-exam/AdminCentralExamQuestions";
+
+// Central Exam imports
+import CentralExamIntro from "./pages/student/central-exam/CentralExamIntro";
+import CentralExamPlay from "./pages/student/central-exam/CentralExamPlay";
+import ChallengeGames from "./pages/student/central-exam/ChallengeGames";
 
 const queryClient = new QueryClient();
 
@@ -44,6 +58,13 @@ const App = () => (
             <Route path="/games/matching" element={<MatchingGame />} />
             <Route path="/games/ordering" element={<OrderingGame />} />
             <Route path="/games/speed" element={<SpeedChallenge />} />
+            <Route path="/games/wheel" element={<WheelGame />} />
+            <Route path="/games/stages" element={<StagesGame />} />
+
+            {/* Central Exam Routes */}
+            <Route path="/central-exam" element={<CentralExamIntro />} />
+            <Route path="/central-exam/play" element={<CentralExamPlay />} />
+            <Route path="/central-exam/games" element={<ChallengeGames />} />
 
             {/* Admin Routes */}
             <Route path="/admin/login" element={<AdminLogin />} />
@@ -55,6 +76,13 @@ const App = () => (
               <Route path="speed" element={<AdminSpeed />} />
               <Route path="results" element={<AdminResults />} />
               <Route path="settings" element={<AdminSettings />} />
+              
+              <Route path="central-exam" element={<AdminCentralExamLayout />}>
+                <Route path="settings" element={<AdminCentralExamSettings />} />
+                <Route path="questions" element={<AdminCentralExamQuestions />} />
+                <Route path="wheel" element={<AdminWheel />} />
+                <Route path="stages" element={<AdminStages />} />
+              </Route>
             </Route>
 
             {/* Catch-all */}

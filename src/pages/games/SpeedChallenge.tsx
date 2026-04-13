@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ArrowRight, Clock, Trophy, RefreshCw } from "lucide-react";
+import { ArrowRight, Clock, Trophy, RefreshCw, Zap, Sparkles, Target } from "lucide-react";
 import { toast } from "sonner";
 import confetti from "canvas-confetti";
 import { audioManager } from "@/lib/audio";
@@ -213,8 +213,13 @@ export default function SpeedChallenge() {
         if (isCorrect) {
             audioManager.playCorrect();
             toast.success("صح!", { duration: 500, position: 'top-center' });
-            const newScore = gameState.score + 1;
-            const newCorrect = gameState.correctCount + 1;
+            
+            // Check if previously answered wrong
+            const wasPreviouslyWrong = questionsWithErrors.has(currentQ.id);
+            
+            // Only count as correct if FIRST TIME correct (not after wrong)
+            const newScore = wasPreviouslyWrong ? gameState.score : gameState.score + 1;
+            const newCorrect = wasPreviouslyWrong ? gameState.correctCount : gameState.correctCount + 1;
             const newAnswering = gameState.answeringCount + 1;
             scoreRef.current = newScore;
             correctCountRef.current = newCorrect;
@@ -267,13 +272,23 @@ export default function SpeedChallenge() {
         try {
             const { data: { user } } = await supabase.auth.getUser();
             if (user) {
+                const { data: profile } = await supabase
+                    .from("student_profiles")
+                    .select("full_name")
+                    .eq("id", user.id)
+                    .maybeSingle();
+                const resolvedStudentName = profile?.full_name || "طالب";
                 const { data: attemptData, error: insertError } = await supabase.from("game_attempts").insert({
                     user_id: user.id,
                     game_type: "speed",
                     score: scoreRef.current,
                     correct_count: correctCountRef.current,
                     total_questions: answeringCountRef.current,
-                    duration_seconds: initialTime - timeLeft
+                    duration_seconds: initialTime - timeLeft,
+                    metadata: {
+                        student_name: resolvedStudentName,
+                        game_name: "تحدي السرعة"
+                    }
                 }).select().single();
 
                 // Send email notification
@@ -294,74 +309,134 @@ export default function SpeedChallenge() {
     };
 
     return (
-        <div className="min-h-screen bg-slate-50 flex flex-col" dir="rtl">
-            <div className="bg-white border-b py-4 px-6 shadow-sm sticky top-0 z-10">
+        <div className="min-h-screen bg-gradient-to-br from-orange-100 via-amber-50 to-yellow-100 flex flex-col" dir="rtl">
+            {/* Floating Background Elements */}
+            <div className="fixed inset-0 overflow-hidden pointer-events-none">
+                <div className="absolute top-10 left-10 w-64 h-64 bg-orange-300/30 rounded-full blur-3xl animate-pulse"></div>
+                <div className="absolute bottom-10 right-10 w-80 h-80 bg-amber-300/20 rounded-full blur-3xl animate-pulse delay-500"></div>
+                <div className="absolute top-1/3 right-1/4 w-48 h-48 bg-yellow-300/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
+                
+                {[...Array(8)].map((_, i) => (
+                    <div
+                        key={i}
+                        className="absolute rounded-full animate-pulse"
+                        style={{
+                            left: `${Math.random() * 100}%`,
+                            top: `${Math.random() * 100}%`,
+                            width: `${15 + Math.random() * 25}px`,
+                            height: `${15 + Math.random() * 25}px`,
+                            background: ['#fbbf24', '#f97316', '#eab308', '#f472b6', '#60a5fa'][Math.floor(Math.random() * 5)],
+                            animationDelay: `${Math.random() * 3}s`,
+                            opacity: 0.15,
+                            filter: 'blur(1px)'
+                        }}
+                    />
+                ))}
+            </div>
+
+            {/* Header */}
+            <div className="relative z-20 bg-white/80 backdrop-blur-xl border-b border-white/50 py-4 px-6 sticky top-0">
                 <div className="max-w-4xl mx-auto flex items-center justify-between">
-                    <Button variant="ghost" size="sm" asChild className="rounded-full">
+                    <Button variant="ghost" size="sm" asChild className="rounded-full hover:bg-white/80">
                         <Link to="/student/dashboard">
                             <ArrowRight className="w-5 h-5 ml-1" />
-                            الخروج
+                            <span className="font-bold">العودة</span>
                         </Link>
                     </Button>
+                    
                     <div className="flex items-center gap-2">
-                        <div className="text-xl font-bold text-red-500 flex items-center gap-2">
-                            <Clock className="w-6 h-6 animate-pulse" />
-                            {timeLeft} ثانية
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center shadow-lg shadow-orange-500/30">
+                            <Zap className="w-5 h-5 text-white" />
+                        </div>
+                        <h1 className="text-xl font-black text-slate-800 hidden md:block">تحدي السرعة</h1>
+                    </div>
+                    
+                    <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-2 bg-gradient-to-r from-red-100 to-orange-100 px-4 py-2 rounded-full border border-red-200">
+                            <Clock className="w-5 h-5 text-red-500 animate-pulse" />
+                            <span className="font-black text-xl text-red-600">{timeLeft}</span>
+                            <span className="text-xs text-red-500 font-bold">ث</span>
+                        </div>
+                        <div className="hidden sm:flex items-center gap-2 bg-gradient-to-r from-emerald-100 to-green-100 px-4 py-2 rounded-full border border-emerald-200">
+                            <span className="font-black text-xl text-emerald-600">{gameState.score}</span>
+                            <span className="text-xs text-emerald-500 font-bold">نقطة</span>
                         </div>
                     </div>
-                    <div className="font-bold text-lg text-green-600">{gameState.score} نقطة</div>
                 </div>
             </div>
 
-            <main className="flex-1 container max-w-3xl mx-auto p-4 md:p-8 flex flex-col items-center justify-center">
+            <main className="flex-1 container max-w-3xl mx-auto p-4 md:p-8 flex flex-col items-center justify-center relative z-10">
                 {loading ? (
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+                    <div className="text-center">
+                        <div className="w-16 h-16 border-4 border-orange-300 border-t-orange-600 rounded-full animate-spin mx-auto mb-4"></div>
+                        <p className="text-orange-600 font-bold">جاري التحميل...</p>
+                    </div>
                 ) : isGameOver ? (
-                    <Card className="p-8 text-center space-y-6 max-w-md w-full animate-bounce-in">
-                        <div className="w-20 h-20 bg-yellow-100 rounded-full flex items-center justify-center mx-auto">
-                            <Trophy className="w-10 h-10 text-yellow-500" />
+                    <Card className="p-10 text-center space-y-6 max-w-md w-full bg-white/90 backdrop-blur-xl border-0 shadow-2xl shadow-orange-500/20">
+                        <div className="relative inline-block">
+                            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-yellow-400 via-amber-500 to-orange-500 flex items-center justify-center shadow-xl shadow-orange-500/30">
+                                <Trophy className="w-12 h-12 text-white" />
+                            </div>
+                            <div className="absolute -top-2 -right-2 text-2xl animate-bounce">✨</div>
+                            <div className="absolute -bottom-1 -left-2 text-xl animate-bounce delay-100">⭐</div>
                         </div>
+                        
                         <div>
-                            <h2 className="text-3xl font-bold mb-2">انتهى التحدي!</h2>
-                            <p className="text-muted-foreground">أجبت على {gameState.answeringCount} أسئلة.</p>
+                            <h2 className="text-3xl font-black bg-gradient-to-r from-orange-600 to-amber-600 bg-clip-text text-transparent mb-2">انتهى التحدي!</h2>
+                            <p className="text-slate-500">أجبت على {gameState.answeringCount} أسئلة.</p>
                         </div>
-                        <div className="text-4xl font-bold text-primary">
-                            {gameState.score} <span className="text-lg text-muted-foreground">نقطة</span>
+                        
+                        <div className="text-5xl font-black bg-gradient-to-r from-orange-600 via-amber-600 to-yellow-600 bg-clip-text text-transparent">
+                            {gameState.score}
                         </div>
-                        <div className="bg-slate-50 p-4 rounded-xl flex justify-around">
-                            <div className="text-center">
-                                <div className="text-2xl font-bold text-green-600">{gameState.correctCount}</div>
-                                <div className="text-xs text-muted-foreground">إجابة صحيحة</div>
-                            </div>
-                            <div className="w-px bg-slate-200"></div>
-                            <div className="text-center">
-                                <div className="text-2xl font-bold text-red-600">{gameState.answeringCount - gameState.correctCount}</div>
-                                <div className="text-xs text-muted-foreground">إجابة خاطئة</div>
-                            </div>
+                        <p className="text-slate-400">نقطة</p>
+                        
+                        <div className="grid grid-cols-2 gap-4">
+                            <Card className="p-4 bg-gradient-to-br from-emerald-50 to-green-50 border-emerald-200">
+                                <div className="text-2xl font-black text-emerald-600">{gameState.correctCount}</div>
+                                <div className="text-xs text-slate-500 font-bold">صحيحة</div>
+                            </Card>
+                            <Card className="p-4 bg-gradient-to-br from-rose-50 to-red-50 border-rose-200">
+                                <div className="text-2xl font-black text-rose-600">{gameState.answeringCount - gameState.correctCount}</div>
+                                <div className="text-xs text-slate-500 font-bold">خاطئة</div>
+                            </Card>
                         </div>
-                        <div className="flex flex-col gap-2">
-                            <Button onClick={fetchQuestions} variant="outline" className="w-full">
-                                <RefreshCw className="w-4 h-4 ml-2" />
+                        
+                        <div className="flex flex-col gap-3">
+                            <Button onClick={fetchQuestions} variant="outline" className="w-full h-12 font-bold rounded-xl border-2">
+                                <RefreshCw className="w-5 h-5 ml-2" />
                                 إعادة اللعب
                             </Button>
-                            <Button asChild className="w-full">
+                            <Button asChild className="w-full h-12 font-bold rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:opacity-90">
                                 <Link to="/student/dashboard">العودة للقائمة</Link>
                             </Button>
                         </div>
                     </Card>
                 ) : questions.length > 0 ? (
                     <div className="w-full space-y-8 animate-fade-in">
-                        <div className="text-center mb-8 space-y-4">
+                        {/* Question Card */}
+                        <Card className="p-6 md:p-8 bg-white/90 backdrop-blur-xl border-0 shadow-2xl">
                             {questions[currentIndex].question_image_url && (
-                                <img
-                                    src={questions[currentIndex].question_image_url}
-                                    alt="Question Illustration"
-                                    className="max-h-60 mx-auto rounded-xl shadow-sm border border-slate-200 object-contain bg-white"
-                                />
+                                <div className="flex justify-center mb-6">
+                                    <img
+                                        src={questions[currentIndex].question_image_url}
+                                        alt="Question Illustration"
+                                        className="max-h-48 rounded-xl shadow-md object-contain bg-white"
+                                    />
+                                </div>
                             )}
-                            <h2 className="text-3xl font-bold leading-tight">{questions[currentIndex].question_text}</h2>
-                        </div>
+                            
+                            <div className="text-center">
+                                <span className="inline-block px-4 py-1 rounded-full bg-gradient-to-r from-orange-100 to-amber-100 text-orange-700 font-bold text-sm mb-4">
+                                    سؤال {currentIndex + 1} / {questions.length}
+                                </span>
+                                <h2 className="text-2xl md:text-3xl font-black text-slate-800 leading-relaxed">
+                                    {questions[currentIndex].question_text}
+                                </h2>
+                            </div>
+                        </Card>
 
+                        {/* Choices Grid */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {[1, 2, 3, 4].map((idx) => {
                                 const choiceKey = `choice${idx}` as keyof Question;
@@ -370,29 +445,25 @@ export default function SpeedChallenge() {
                                 const text = questions[currentIndex][choiceKey];
                                 const imageUrl = questions[currentIndex][choiceImageKey];
 
-                                // Skip rendering if both text and image are missing? 
-                                // Ideally choices always have at least text.
-
                                 return (
-                                    <Button
+                                    <Card
                                         key={idx}
-                                        variant="outline"
-                                        className={`h-auto min-h-[5rem] p-4 text-xl font-semibold hover:bg-primary hover:text-white transition-all transform hover:scale-105 whitespace-normal flex flex-col gap-2 items-center justify-center ${!imageUrl ? 'h-24' : ''}`}
                                         onClick={() => handleAnswer(idx)}
+                                        className="cursor-pointer p-4 md:p-6 bg-white/90 backdrop-blur border-0 shadow-lg hover:shadow-2xl hover:scale-105 hover:-translate-y-1 transition-all duration-300 flex flex-col gap-3 items-center justify-center min-h-[120px]"
                                     >
                                         {imageUrl && (
-                                            <img src={(imageUrl as string)} alt={`Choice ${idx}`} className="h-24 w-auto object-contain bg-white rounded-md mix-blend-multiply" />
+                                            <img src={(imageUrl as string)} alt={`Choice ${idx}`} className="h-24 w-auto object-contain bg-white rounded-lg" />
                                         )}
-                                        {text && <span>{text}</span>}
-                                    </Button>
+                                        {text && <span className="text-xl font-bold text-slate-700">{text}</span>}
+                                    </Card>
                                 );
                             })}
                         </div>
                     </div>
                 ) : (
-                    <div className="text-center">
-                        <p>لا توجد أسئلة.</p>
-                    </div>
+                    <Card className="p-8 text-center bg-white/90 backdrop-blur-xl border-0 shadow-2xl">
+                        <p className="text-slate-600 text-lg">لا توجد أسئلة.</p>
+                    </Card>
                 )}
             </main>
         </div>

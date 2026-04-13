@@ -9,8 +9,8 @@ import {
 } from "@/components/ui/table";
 import {
     Trophy, Search, Users, Gamepad2, FileQuestion, Clock,
-    ChevronRight, ChevronLeft, Star, Zap, Target, Puzzle, Timer, Trash2,
-    CheckCircle2, XCircle, AlertCircle,
+    ChevronRight, ChevronLeft, Zap, Target, Puzzle, Timer, Trash2,
+    CheckCircle2, XCircle, Sparkles, LayoutList,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -18,7 +18,9 @@ interface UnifiedResult {
     id: string;
     type: "exam" | "game";
     student_name: string;
-    game_type?: string;
+    game_type?: string | null;
+    game_label?: string | null;
+    section_label?: string | null;
     score: number;
     total: number;
     correct_answers: number;
@@ -38,6 +40,7 @@ export default function AdminResults() {
     const [currentPage, setCurrentPage] = useState(0);
     const [totalExams, setTotalExams] = useState(0);
     const [totalGames, setTotalGames] = useState(0);
+    const [filteredCount, setFilteredCount] = useState(0);
     const pageSize = 25;
 
     const formatDate = (dateStr: string) => {
@@ -54,6 +57,13 @@ export default function AdminResults() {
         if (diff < 0) return "—";
         const mins = Math.floor(diff / 60000);
         const secs = Math.floor((diff % 60000) / 1000);
+        return `${mins}د ${secs}ث`;
+    };
+
+    const formatGameDuration = (seconds?: number | null) => {
+        if (!seconds && seconds !== 0) return "—";
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
         return `${mins}د ${secs}ث`;
     };
 
@@ -144,21 +154,33 @@ export default function AdminResults() {
             if (games) {
                 setTotalGames(games.length);
                 games.forEach(g => {
-                    const name = profileMap[g.user_id] || "طالب";
-                    const timeTaken = g.duration_seconds
-                        ? `${Math.floor(g.duration_seconds / 60)}د ${g.duration_seconds % 60}ث`
-                        : "—";
+                    // Get name from metadata first, then fallback to profile map, then "طالب"
+                    const metadata = g.metadata && typeof g.metadata === "object" ? g.metadata : {};
+                    const nameFromMetadata =
+                        typeof metadata.student_name === "string" ? metadata.student_name : "";
+                    const name = nameFromMetadata || profileMap[g.user_id] || "طالب";
+                    const gameName =
+                        typeof metadata.game_name === "string" ? metadata.game_name : null;
+                    const sectionLabel =
+                        typeof metadata.section_name === "string"
+                            ? metadata.section_name
+                            : typeof metadata.sections_count === "number" && typeof metadata.total_sections === "number"
+                                ? `${metadata.sections_count}/${metadata.total_sections} أقسام`
+                                : null;
+                    
                     unified.push({
                         id: g.id,
                         type: "game",
                         student_name: name,
-                        game_type: g.game_type,
+                        game_type: g.game_type || null,
+                        game_label: gameName,
+                        section_label: sectionLabel,
                         score: g.score || 0,
                         total: g.total_questions || 0,
                         correct_answers: g.correct_count || 0,
                         answered_count: g.total_questions || 0,
                         penalty: 0,
-                        duration: timeTaken,
+                        duration: formatGameDuration(g.duration_seconds),
                         date: formatDate(g.created_at),
                         raw_date: g.created_at || "",
                         email_sent: g.teacher_email_sent || false,
@@ -180,6 +202,7 @@ export default function AdminResults() {
 
             // Paginate
             const start = currentPage * pageSize;
+            setFilteredCount(filtered.length);
             setResults(filtered.slice(start, start + pageSize));
         } catch (err) {
             console.error("Error fetching results:", err);
@@ -197,7 +220,7 @@ export default function AdminResults() {
     }, [searchQuery]);
 
     const totalCount = totalExams + totalGames;
-    const totalPages = Math.ceil(totalCount / pageSize);
+    const totalPages = Math.ceil(filteredCount / pageSize);
 
     const getScoreBadge = (score: number, total: number) => {
         if (total === 0) return { color: "bg-slate-100 text-slate-600", label: "—" };
@@ -210,11 +233,47 @@ export default function AdminResults() {
 
     const getTypeLabel = (r: UnifiedResult) => {
         if (r.type === "exam") return { label: "الاختبار السريع", icon: <FileQuestion className="w-3.5 h-3.5" />, color: "bg-blue-100 text-blue-700" };
+        
+        // Handle central exam
+        if (r.game_type === "central_exam" || r.game_type?.includes("اختبار")) {
+            return { label: "الاختبار التفاعلي", icon: <Target className="w-3.5 h-3.5" />, color: "bg-indigo-100 text-indigo-700" };
+        }
+        
+        // Use game_type directly if it's a full name (like "عجلة العلوم الدوارة")
+        if (r.game_type && r.game_type.includes("عجلة")) {
+            return { label: r.game_type, icon: <Sparkles className="w-3.5 h-3.5" />, color: "bg-rose-100 text-rose-700" };
+        }
+        
+        // Legacy game types
         switch (r.game_type) {
+            case "wheel_science": return { label: "عجلة العلوم", icon: <Sparkles className="w-3.5 h-3.5" />, color: "bg-rose-100 text-rose-700" };
             case "speed": return { label: "تحدي السرعة", icon: <Timer className="w-3.5 h-3.5" />, color: "bg-amber-100 text-amber-700" };
             case "matching": return { label: "لعبة المطابقة", icon: <Gamepad2 className="w-3.5 h-3.5" />, color: "bg-purple-100 text-purple-700" };
             case "ordering": return { label: "لغز الترتيب", icon: <Puzzle className="w-3.5 h-3.5" />, color: "bg-cyan-100 text-cyan-700" };
-            default: return { label: "لعبة", icon: <Gamepad2 className="w-3.5 h-3.5" />, color: "bg-slate-100 text-slate-600" };
+            default: return { label: r.game_type || "لعبة", icon: <Gamepad2 className="w-3.5 h-3.5" />, color: "bg-slate-100 text-slate-600" };
+        }
+    };
+
+    const getResultTypeLabel = (r: UnifiedResult) => {
+        if (r.type === "exam") {
+            return { label: "الاختبار السريع", icon: <FileQuestion className="w-3.5 h-3.5" />, color: "bg-blue-100 text-blue-700" };
+        }
+
+        switch (r.game_type) {
+            case "central_exam":
+                return { label: r.game_label || "الاختبار المركزي الشامل", icon: <Target className="w-3.5 h-3.5" />, color: "bg-indigo-100 text-indigo-700" };
+            case "wheel_science":
+                return { label: r.game_label || "عجلة العلوم الدوارة", icon: <Sparkles className="w-3.5 h-3.5" />, color: "bg-rose-100 text-rose-700" };
+            case "stages":
+                return { label: r.game_label || "لعبة ترتيب المراحل", icon: <LayoutList className="w-3.5 h-3.5" />, color: "bg-sky-100 text-sky-700" };
+            case "speed":
+                return { label: r.game_label || "تحدي السرعة", icon: <Timer className="w-3.5 h-3.5" />, color: "bg-amber-100 text-amber-700" };
+            case "matching":
+                return { label: r.game_label || "لعبة المطابقة", icon: <Gamepad2 className="w-3.5 h-3.5" />, color: "bg-purple-100 text-purple-700" };
+            case "ordering":
+                return { label: r.game_label || "لغز الترتيب", icon: <Puzzle className="w-3.5 h-3.5" />, color: "bg-cyan-100 text-cyan-700" };
+            default:
+                return { label: r.game_label || r.game_type || "لعبة", icon: <Gamepad2 className="w-3.5 h-3.5" />, color: "bg-slate-100 text-slate-600" };
         }
     };
 
@@ -374,6 +433,7 @@ export default function AdminResults() {
                                         <TableHead className="text-right font-bold">#</TableHead>
                                         <TableHead className="text-right font-bold">اسم الطالب</TableHead>
                                         <TableHead className="text-right font-bold">النوع</TableHead>
+                                        <TableHead className="text-right font-bold">الأقسام</TableHead>
                                         <TableHead className="text-right font-bold">الحالة</TableHead>
                                         <TableHead className="text-right font-bold">النتيجة</TableHead>
                                         <TableHead className="text-right font-bold">الإجابات الصحيحة</TableHead>
@@ -388,14 +448,14 @@ export default function AdminResults() {
                                 <TableBody>
                                     {results.length === 0 ? (
                                         <TableRow>
-                                            <TableCell colSpan={12} className="text-center py-12 text-muted-foreground">
+                                            <TableCell colSpan={13} className="text-center py-12 text-muted-foreground">
                                                 لا توجد نتائج بعد
                                             </TableCell>
                                         </TableRow>
                                     ) : (
                                         results.map((r, idx) => {
                                             const badge = getScoreBadge(r.score, r.total);
-                                            const typeInfo = getTypeLabel(r);
+                                            const typeInfo = getResultTypeLabel(r);
                                             const pct = r.total > 0 ? Math.round((r.score / r.total) * 100) : 0;
                                             return (
                                                 <TableRow key={`${r.type}-${r.id}`} className="hover:bg-slate-50/50 transition-colors">
@@ -415,6 +475,16 @@ export default function AdminResults() {
                                                             {typeInfo.icon}
                                                             {typeInfo.label}
                                                         </span>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        {r.section_label ? (
+                                                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-bold bg-purple-100 text-purple-700">
+                                                                <Target className="w-3 h-3" />
+                                                                {r.section_label}
+                                                            </span>
+                                                        ) : (
+                                                            <span className="text-muted-foreground text-xs">—</span>
+                                                        )}
                                                     </TableCell>
                                                     <TableCell>
                                                         {r.status === "completed" ? (

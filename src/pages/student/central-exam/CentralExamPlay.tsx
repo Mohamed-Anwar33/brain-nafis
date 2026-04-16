@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -37,6 +37,11 @@ import { toast } from "sonner";
 import confetti from "canvas-confetti";
 import { audioManager } from "@/lib/audio";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  getSelectionDisplayText,
+  getStoredSelectionContext,
+} from "@/lib/selection-context";
+import { getScopedPayload } from "@/lib/selection-scope";
 
 export default function CentralExamPlay() {
   const navigate = useNavigate();
@@ -51,10 +56,12 @@ export default function CentralExamPlay() {
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "success" | "error">("idle");
   const [exitDialogOpen, setExitDialogOpen] = useState(false);
   const startTime = useRef(Date.now());
+  const selectionContext = useMemo(() => getStoredSelectionContext(), []);
   
   // Strict answer system - track wrong attempts
   const [questionsWithErrors, setQuestionsWithErrors] = useState<Set<string>>(new Set());
   const [wrongAttempts, setWrongAttempts] = useState(0);
+  const [currentWrongReason, setCurrentWrongReason] = useState<string | null>(null);
 
   const handleExit = () => {
     setExitDialogOpen(true);
@@ -66,6 +73,10 @@ export default function CentralExamPlay() {
   };
 
   useEffect(() => {
+    if (!selectionContext || selectionContext.trackType !== "central") {
+      navigate("/student/dashboard", { replace: true });
+      return;
+    }
     // Preload audio with better error handling
     const initAudio = async () => {
       try {
@@ -77,9 +88,14 @@ export default function CentralExamPlay() {
     };
     initAudio();
     fetchQuestions();
-  }, []);
+  }, [navigate, selectionContext]);
 
   const fetchQuestions = async () => {
+    if (!selectionContext || selectionContext.trackType !== "central") {
+      navigate("/student/dashboard");
+      return;
+    }
+
     try {
       // Get student profile
       const { data: { session } } = await supabase.auth.getSession();
@@ -98,7 +114,7 @@ export default function CentralExamPlay() {
         }
       }
       
-      const data = await getCentralExamQuestions();
+      const data = await getCentralExamQuestions(selectionContext);
       // Filter only active questions
       const activeQuestions = data.filter(q => q.active);
       if (activeQuestions.length === 0) {
@@ -124,6 +140,7 @@ export default function CentralExamPlay() {
     if (isCorrect) {
       // ✅ CORRECT - play sound, add score, mark answered, advance after delay
       audioManager.playCorrect();
+      setCurrentWrongReason(null);
       setIsAnswered(true);
       const nextScore = score + 1;
       setScore(nextScore);
@@ -137,6 +154,7 @@ export default function CentralExamPlay() {
     } else {
       // ❌ WRONG - play sound, track error, DON'T advance, allow retry
       audioManager.playWrong();
+      setCurrentWrongReason(currentQuestion.wrong_reason || null);
       
       // Count wrong attempt (only once per question)
       const isFirstWrong = !questionsWithErrors.has(currentQuestion.id);
@@ -180,7 +198,7 @@ export default function CentralExamPlay() {
   const saveAttempt = async (finalScore: number) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
+      if (user && selectionContext) {
         const durationSeconds = Math.floor((Date.now() - startTime.current) / 1000);
         const percentage = Math.round((finalScore / questions.length) * 100);
         const resolvedStudentName = studentName || "طالب";
@@ -192,13 +210,15 @@ export default function CentralExamPlay() {
           correct_count: finalScore,
           total_questions: questions.length,
           duration_seconds: durationSeconds,
+          ...getScopedPayload(selectionContext),
           metadata: {
             student_name: resolvedStudentName,
             percentage: percentage,
             game_name: "الاختبار المركزي الشامل",
             exam_type: "central_exam",
             wrong_attempts: questionsWithErrors.size,
-            strict_mode: true
+            strict_mode: true,
+            selection_context: getSelectionDisplayText(selectionContext)
           }
         }).select().single();
 
@@ -211,10 +231,11 @@ export default function CentralExamPlay() {
           console.log("✅ Result saved successfully:", attemptData);
           
           // Trigger email notification
-          if (attemptData) {
+          const savedAttempt = attemptData as unknown as { id: string };
+          if (savedAttempt) {
             const { error: emailError } = await supabase.functions.invoke('exam-finish', {
               body: { 
-                attempt_id: attemptData.id, 
+                attempt_id: savedAttempt.id, 
                 is_game: true
               }
             });
@@ -552,6 +573,12 @@ export default function CentralExamPlay() {
               </div>
             </div>
 
+            {selectionContext && (
+              <div className="mb-6 text-center text-sm text-slate-500">
+                {getSelectionDisplayText(selectionContext)}
+              </div>
+            )}
+
             <h2 className="text-2xl md:text-3xl font-black leading-relaxed text-center text-slate-800">
               {currentQuestion.text}
             </h2>
@@ -615,6 +642,15 @@ export default function CentralExamPlay() {
             );
           })}
         </div>
+
+        {currentWrongReason && (
+          <Card className="mb-8 border-amber-200 bg-amber-50 p-5 shadow-lg shadow-amber-100/50">
+            <p className="text-sm font-black text-amber-700">سبب الخطأ</p>
+            <p className="mt-2 text-sm leading-7 text-amber-950">
+              {currentWrongReason}
+            </p>
+          </Card>
+        )}
 
         {/* Feedback Area */}
         <div className="mt-auto pb-8 text-center">

@@ -1,17 +1,23 @@
+import { useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { 
-  ChevronRight, 
-  Gamepad2, 
-  Puzzle, 
-  CircleDot, 
+import {
+  Brain,
+  ChevronRight,
+  Gamepad2,
   ListOrdered,
+  Puzzle,
   Sparkles,
   Target,
+  Timer,
+  Trophy,
   Zap,
-  Brain,
-  Trophy
 } from "lucide-react";
+import {
+  getSelectionDisplayText,
+  getStoredSelectionContext,
+} from "@/lib/selection-context";
 
 interface GameCard {
   id: string;
@@ -22,224 +28,241 @@ interface GameCard {
   gradient: string;
   shadow: string;
   path: string;
-  color: string;
+  dotClass: string;
 }
+
+const games: GameCard[] = [
+  {
+    id: "wheel",
+    title: "عجلة العلوم الدوارة",
+    description:
+      "اختبر معلوماتك في العلوم مع العجلة الذكية عبر أقسام ومراحل متعددة.",
+    features: [
+      "أقسام علمية متخصصة",
+      "نظام إجابة صارم",
+      "خصم نقاط عند الإجابة الخاطئة",
+    ],
+    icon: <Sparkles className="h-10 w-10" />,
+    gradient: "from-rose-500 to-pink-600",
+    shadow: "shadow-rose-500/30",
+    path: "/games/wheel",
+    dotClass: "bg-rose-500",
+  },
+  {
+    id: "matching",
+    title: "لعبة المطابقة",
+    description: "صل بين العناصر المتشابهة في أسرع وقت ممكن داخل نفس السياق.",
+    features: [
+      "تنمية الملاحظة",
+      "تعزيز الذاكرة البصرية",
+      "تحدي ضد الزمن",
+    ],
+    icon: <Puzzle className="h-10 w-10" />,
+    gradient: "from-purple-500 to-violet-600",
+    shadow: "shadow-purple-500/30",
+    path: "/games/matching",
+    dotClass: "bg-violet-500",
+  },
+  {
+    id: "ordering",
+    title: "لعبة السحب والإفلات",
+    description: "اسحب العناصر ورتبها بالترتيب الصحيح حسب السؤال المعروض.",
+    features: ["تعلم التسلسل المنطقي", "تفاعل سحب وإفلات", "تعزيز الفهم العلمي"],
+    icon: <Gamepad2 className="h-10 w-10" />,
+    gradient: "from-emerald-500 to-teal-600",
+    shadow: "shadow-emerald-500/30",
+    path: "/games/ordering",
+    dotClass: "bg-emerald-500",
+  },
+  {
+    id: "stages",
+    title: "ترتيب المراحل",
+    description: "رتب المراحل العلمية بالترتيب الصحيح واختبر فهمك للتسلسل.",
+    features: ["فهم المراحل العلمية", "تسلسل منطقي دقيق", "تقييم المعرفة"],
+    icon: <ListOrdered className="h-10 w-10" />,
+    gradient: "from-blue-500 to-indigo-600",
+    shadow: "shadow-blue-500/30",
+    path: "/games/stages",
+    dotClass: "bg-blue-500",
+  },
+  {
+    id: "speed",
+    title: "تحدي السرعة",
+    description: "إجابات سريعة داخل نفس الصف والمادة والمجال المختار.",
+    features: ["إيقاع سريع", "التزام كامل بالسياق", "لا انتقال إلا بإجابة صحيحة"],
+    icon: <Timer className="h-10 w-10" />,
+    gradient: "from-amber-500 to-orange-600",
+    shadow: "shadow-amber-500/30",
+    path: "/games/speed",
+    dotClass: "bg-amber-500",
+  },
+];
 
 export default function ChallengeGames() {
   const navigate = useNavigate();
+  const selectionContext = useMemo(() => getStoredSelectionContext(), []);
 
-  const games: GameCard[] = [
-    {
-      id: "wheel",
-      title: "عجلة العلوم الدوارة",
-      description: "اختبر معلوماتك في العلوم مع العجلة الذكية - أحياء، كيمياء، فيزياء وعلوم عامة",
-      features: [
-        "4 أقسام علمية متخصصة",
-        "نظام إجابة صارم (لازم تجاوب صح)",
-        "خصم نقاط عند الإجابة الخاطئة"
-      ],
-      icon: <Sparkles className="w-10 h-10" />,
-      gradient: "from-rose-500 to-pink-600",
-      shadow: "shadow-rose-500/30",
-      path: "/games/wheel",
-      color: "rose"
-    },
-    {
-      id: "matching",
-      title: "لعبة المطابقة",
-      description: "صل بين العناصر المتشابهة في أسرع وقت ممكن",
-      features: [
-        "تطوير مهارات الملاحظة",
-        "تعزيز الذاكرة البصرية",
-        "تحدي ضد الزمن"
-      ],
-      icon: <Puzzle className="w-10 h-10" />,
-      gradient: "from-purple-500 to-violet-600",
-      shadow: "shadow-purple-500/30",
-      path: "/games/matching",
-      color: "purple"
-    },
-    {
-      id: "ordering",
-      title: "لعبة السحب والإفلات",
-      description: "اسحب العناصر ورتبها في الترتيب الصحيح",
-      features: [
-        "تعلم التسلسل المنطقي",
-        "تفاعل سحب وإفلات",
-        "تعزيز الفهم العلمي"
-      ],
-      icon: <Gamepad2 className="w-10 h-10" />,
-      gradient: "from-emerald-500 to-teal-600",
-      shadow: "shadow-emerald-500/30",
-      path: "/games/ordering",
-      color: "emerald"
-    },
-    {
-      id: "stages",
-      title: "ترتيب المراحل",
-      description: "رتب المراحل العلمية بالترتيب الصحيح",
-      features: [
-        "فهم المراحل العلمية",
-        "تسلسل منطقي دقيق",
-        "تقييم المعرفة"
-      ],
-      icon: <ListOrdered className="w-10 h-10" />,
-      gradient: "from-blue-500 to-indigo-600",
-      shadow: "shadow-blue-500/30",
-      path: "/games/stages",
-      color: "blue"
+  useEffect(() => {
+    if (!selectionContext || selectionContext.trackType !== "central") {
+      navigate("/student/dashboard", { replace: true });
     }
-  ];
+  }, [navigate, selectionContext]);
+
+  if (!selectionContext || selectionContext.trackType !== "central") {
+    return null;
+  }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col" dir="rtl">
-      {/* Background Effects */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-[-10%] right-[-5%] w-[600px] h-[600px] bg-primary/5 rounded-full blur-[120px]"></div>
-        <div className="absolute bottom-[-10%] left-[-5%] w-[500px] h-[500px] bg-purple-500/5 rounded-full blur-[100px]"></div>
-        <div className="absolute top-[40%] left-[20%] w-[300px] h-[300px] bg-rose-500/5 rounded-full blur-[80px]"></div>
+    <div className="min-h-screen bg-slate-50" dir="rtl">
+      <div className="pointer-events-none fixed inset-0 overflow-hidden">
+        <div className="absolute right-[-5%] top-[-10%] h-[600px] w-[600px] rounded-full bg-primary/5 blur-[120px]" />
+        <div className="absolute bottom-[-10%] left-[-5%] h-[500px] w-[500px] rounded-full bg-blue-500/5 blur-[100px]" />
+        <div className="absolute left-[20%] top-[40%] h-[300px] w-[300px] rounded-full bg-rose-500/5 blur-[80px]" />
       </div>
 
-      {/* Header */}
-      <header className="relative z-10 bg-white/80 backdrop-blur-md border-b sticky top-0">
+      <header className="sticky top-0 z-10 border-b bg-white/80 backdrop-blur-md">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <Button 
-              variant="ghost" 
-              onClick={() => navigate("/central-exam")}
-              className="text-slate-500 hover:text-slate-800 gap-2"
+            <Button
+              variant="ghost"
+              onClick={() => navigate("/student/dashboard")}
+              className="gap-2 text-slate-500 hover:text-slate-800"
             >
-              <ChevronRight className="w-5 h-5" />
+              <ChevronRight className="h-5 w-5" />
               العودة
             </Button>
-            
+
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center">
-                <Trophy className="w-5 h-5 text-white" />
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/80">
+                <Trophy className="h-5 w-5 text-white" />
               </div>
-              <div>
-                <h1 className="font-bold text-lg text-slate-800">ألعاب التحدي</h1>
+              <div className="text-right">
+                <h1 className="text-lg font-bold text-slate-800">ألعاب التحدي</h1>
                 <p className="text-xs text-slate-500">اختر لعبتك المفضلة</p>
               </div>
             </div>
 
-            <div className="w-20"></div>
+            <div className="w-20" />
           </div>
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="flex-1 container mx-auto px-4 py-8 relative z-10">
-        {/* Hero Section */}
-        <div className="text-center mb-12 space-y-4">
-          <div className="inline-flex items-center gap-2 bg-white px-4 py-2 rounded-full shadow-sm border border-slate-100">
-            <Sparkles className="w-4 h-4 text-yellow-500" />
-            <span className="text-sm font-medium text-slate-600">4 ألعاب تفاعلية ممتعة</span>
+      <main className="relative z-10 container mx-auto px-4 py-8">
+        <div className="mb-12 space-y-4 text-center">
+          <div className="inline-flex items-center gap-2 rounded-full border border-slate-100 bg-white px-4 py-2 shadow-sm">
+            <Sparkles className="h-4 w-4 text-yellow-500" />
+            <span className="text-sm font-medium text-slate-600">
+              5 ألعاب تفاعلية ممتعة
+            </span>
           </div>
-          <h2 className="text-4xl md:text-5xl font-black text-slate-900">
-            اختر <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-purple-600">تحديك</span>
+
+          <h2 className="text-4xl font-black text-slate-900 md:text-5xl">
+            اختر{" "}
+            <span className="bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent">
+              تحديك
+            </span>
           </h2>
-          <p className="text-lg text-slate-500 max-w-2xl mx-auto">
-            مجموعة متنوعة من الألعاب التعليمية المصممة لتعزيز مهاراتك بطريقة ممتعة وشيقة
+
+          <p className="mx-auto max-w-2xl text-lg text-slate-500">
+            مجموعة متنوعة من الألعاب التعليمية المصممة لتعزيز مهاراتك بطريقة
+            ممتعة مع الالتزام الكامل بالسياق الدراسي الذي اخترته.
           </p>
         </div>
 
-        {/* Games Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
+        <div className="mx-auto mb-8 max-w-4xl rounded-[28px] border border-slate-200 bg-white/90 p-5 shadow-lg shadow-slate-200/60">
+          <div className="flex flex-wrap items-center gap-3">
+            <Badge className="rounded-full bg-slate-900 px-4 py-1 text-white hover:bg-slate-900">
+              السياق الحالي
+            </Badge>
+            <span className="text-sm text-slate-600">
+              {getSelectionDisplayText(selectionContext)}
+            </span>
+          </div>
+        </div>
+
+        <div className="mx-auto grid max-w-6xl grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
           {games.map((game, idx) => (
             <div
               key={game.id}
               onClick={() => navigate(game.path)}
-              className={`
-                group relative bg-white rounded-[2rem] p-6 border border-slate-100 
-                shadow-lg shadow-slate-200/50 hover:shadow-2xl 
-                hover:scale-[1.02] transition-all duration-300 cursor-pointer overflow-hidden
-                animate-in slide-in-from-bottom-4 fade-in
-              `}
+              className="group relative cursor-pointer overflow-hidden rounded-[2rem] border border-slate-100 bg-white p-6 shadow-lg shadow-slate-200/50 transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl"
               style={{ animationDelay: `${idx * 100}ms` }}
             >
-              {/* Gradient Background on Hover */}
-              <div className={`absolute inset-0 bg-gradient-to-br ${game.gradient} opacity-0 group-hover:opacity-5 transition-opacity duration-500`}></div>
-              
-              {/* Top Decoration */}
-              <div className={`absolute top-0 left-0 w-full h-1 bg-gradient-to-r ${game.gradient} transform origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-500`}></div>
+              <div
+                className={`absolute inset-0 bg-gradient-to-br ${game.gradient} opacity-0 transition-opacity duration-500 group-hover:opacity-5`}
+              />
+              <div
+                className={`absolute left-0 top-0 h-1 w-full origin-left scale-x-0 bg-gradient-to-r ${game.gradient} transition-transform duration-500 group-hover:scale-x-100`}
+              />
 
-              {/* Icon */}
-              <div className={`
-                w-20 h-20 rounded-2xl bg-gradient-to-br ${game.gradient} ${game.shadow}
-                flex items-center justify-center mb-6 text-white
-                transform group-hover:rotate-6 group-hover:scale-110 transition-all duration-300
-                shadow-lg
-              `}>
+              <div
+                className={`mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br ${game.gradient} ${game.shadow} text-white shadow-lg transition-all duration-300 group-hover:rotate-6 group-hover:scale-110`}
+              >
                 {game.icon}
               </div>
 
-              {/* Content */}
               <div className="relative z-10">
-                <h3 className="text-xl font-bold text-slate-800 mb-2 group-hover:text-slate-900">
+                <h3 className="mb-2 text-xl font-bold text-slate-800 group-hover:text-slate-900">
                   {game.title}
                 </h3>
-                <p className="text-slate-500 text-sm leading-relaxed mb-4 line-clamp-2">
+                <p className="mb-4 text-sm leading-relaxed text-slate-500">
                   {game.description}
                 </p>
 
-                {/* Features */}
-                <ul className="space-y-2 mb-6">
-                  {game.features.map((feature, fidx) => (
-                    <li key={fidx} className="flex items-center gap-2 text-xs text-slate-600">
-                      <div className={`w-1.5 h-1.5 rounded-full bg-${game.color}-500`}></div>
+                <ul className="mb-6 space-y-2">
+                  {game.features.map((feature) => (
+                    <li
+                      key={feature}
+                      className="flex items-center gap-2 text-xs text-slate-600"
+                    >
+                      <div className={`h-1.5 w-1.5 rounded-full ${game.dotClass}`} />
                       {feature}
                     </li>
                   ))}
                 </ul>
 
-                {/* CTA Button */}
-                <button className={`
-                  w-full py-3 px-6 rounded-xl font-bold text-sm
-                  bg-gradient-to-r ${game.gradient} text-white
-                  ${game.shadow} shadow-lg
-                  transform transition-all duration-300
-                  group-hover:translate-y-[-2px] group-hover:shadow-xl
-                  active:translate-y-0 active:shadow-md
-                  flex items-center justify-center gap-2
-                `}>
-                  <Zap className="w-4 h-4" />
+                <div
+                  className={`flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r px-6 py-3 text-sm font-bold text-white shadow-lg transition-all duration-300 group-hover:-translate-y-[2px] group-hover:shadow-xl ${game.gradient} ${game.shadow}`}
+                >
+                  <Zap className="h-4 w-4" />
                   ابدأ اللعب
-                </button>
+                </div>
               </div>
 
-              {/* Decorative Elements */}
-              <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-gradient-to-br from-slate-100 to-transparent rounded-full opacity-50 group-hover:scale-150 transition-transform duration-500"></div>
+              <div className="absolute -bottom-4 -right-4 h-24 w-24 rounded-full bg-gradient-to-br from-slate-100 to-transparent opacity-50 transition-transform duration-500 group-hover:scale-150" />
             </div>
           ))}
         </div>
 
-        {/* Bottom Stats */}
         <div className="mt-16 flex justify-center">
-          <div className="inline-flex items-center gap-8 bg-white px-8 py-4 rounded-2xl shadow-sm border border-slate-100">
+          <div className="inline-flex items-center gap-8 rounded-2xl border border-slate-100 bg-white px-8 py-4 shadow-sm">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-green-100 flex items-center justify-center">
-                <Brain className="w-5 h-5 text-green-600" />
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-green-100">
+                <Brain className="h-5 w-5 text-green-600" />
               </div>
               <div className="text-right">
                 <div className="text-xs text-slate-500">تعزيز الذكاء</div>
                 <div className="font-bold text-slate-800">تحدي ذهني</div>
               </div>
             </div>
-            <div className="w-px h-10 bg-slate-200"></div>
+
+            <div className="h-10 w-px bg-slate-200" />
+
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
-                <Target className="w-5 h-5 text-blue-600" />
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-100">
+                <Target className="h-5 w-5 text-blue-600" />
               </div>
               <div className="text-right">
                 <div className="text-xs text-slate-500">تقييم دقيق</div>
                 <div className="font-bold text-slate-800">نتائج فورية</div>
               </div>
             </div>
-            <div className="w-px h-10 bg-slate-200"></div>
+
+            <div className="h-10 w-px bg-slate-200" />
+
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center">
-                <Trophy className="w-5 h-5 text-purple-600" />
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-100">
+                <Trophy className="h-5 w-5 text-purple-600" />
               </div>
               <div className="text-right">
                 <div className="text-xs text-slate-500">نقاط ومكافآت</div>

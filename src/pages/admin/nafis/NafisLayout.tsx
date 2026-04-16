@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import {
   LayoutDashboard,
   FileQuestion,
-  Settings,
   LogOut,
   Menu,
   X,
@@ -13,12 +12,14 @@ import {
   Gamepad2,
   Puzzle,
   Timer,
-  Trophy,
-  Target
+  Sparkles,
+  ListOrdered,
+  ArrowRight,
+  BookOpen
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export default function AdminLayout() {
+export default function NafisLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const [isLoading, setIsLoading] = useState(true);
@@ -34,7 +35,6 @@ export default function AdminLayout() {
           return;
         }
 
-        // Check user role
         const { data: roleData, error } = await supabase
           .from('user_roles')
           .select('role')
@@ -42,7 +42,6 @@ export default function AdminLayout() {
           .single();
 
         if (error || !roleData || roleData.role !== 'admin') {
-          // If no role found or not admin, sign out and redirect
           console.error("Unauthorized access attempt", error);
           await supabase.auth.signOut();
           navigate("/admin/login");
@@ -81,15 +80,13 @@ export default function AdminLayout() {
   }
 
   const navItems = [
-    { path: "/admin", icon: LayoutDashboard, label: "لوحة التحكم" },
-    { path: "/admin/results", icon: Trophy, label: "نتائج الطلاب" },
-    { path: "/admin/catalog", icon: GraduationCap, label: "الكتالوج الدراسي" },
-    { path: "/admin/central-exam", icon: Target, label: "الاختبار المركزي" },
-    { path: "/admin/questions", icon: FileQuestion, label: "بنك الأسئلة" },
-    { path: "/admin/matching", icon: Gamepad2, label: "لعبة المطابقة" },
-    { path: "/admin/ordering", icon: Puzzle, label: "لغز الترتيب" },
-    { path: "/admin/speed", icon: Timer, label: "تحدي السرعة" },
-    // Settings page hidden - accessible only via direct URL
+    { path: "/admin/nafis", icon: LayoutDashboard, label: "لوحة التحكم" },
+    { path: "/admin/nafis/questions", icon: FileQuestion, label: "بنك الأسئلة" },
+    { path: "/admin/nafis/matching", icon: Gamepad2, label: "لعبة المطابقة" },
+    { path: "/admin/nafis/ordering", icon: Puzzle, label: "لغز الترتيب" },
+    { path: "/admin/nafis/speed", icon: Timer, label: "تحدي السرعة" },
+    { path: "/admin/nafis/stages", icon: ListOrdered, label: "لعبة المراحل" },
+    { path: "/admin/nafis/wheel", icon: Sparkles, label: "عجلة العلوم" },
   ];
 
   return (
@@ -103,8 +100,8 @@ export default function AdminLayout() {
           {isSidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
         </button>
         <div className="flex items-center gap-2">
-          <GraduationCap className="w-6 h-6 text-primary" />
-          <span className="font-bold text-lg">لوحة الإدارة</span>
+          <BookOpen className="w-6 h-6 text-primary" />
+          <span className="font-bold text-lg">نظام نافس</span>
         </div>
         <div className="w-10" />
       </div>
@@ -112,38 +109,51 @@ export default function AdminLayout() {
       <div className="flex">
         {/* Sidebar */}
         <aside className={cn(
-          "fixed lg:static inset-y-0 right-0 z-40 w-64 bg-card border-l border-border transition-transform duration-300",
+          "fixed lg:static inset-y-0 right-0 z-40 w-72 bg-card border-l border-border transition-transform duration-300",
           "lg:translate-x-0",
           isSidebarOpen ? "translate-x-0" : "translate-x-full lg:translate-x-0"
         )}>
           <div className="flex flex-col h-full">
             {/* Logo */}
-            <div className="p-6 border-b border-border hidden lg:block">
+            <div className="p-6 border-b border-border">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                  <GraduationCap className="w-6 h-6 text-primary" />
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg shadow-primary/20">
+                  <BookOpen className="w-7 h-7 text-white" />
                 </div>
                 <div>
-                  <h1 className="font-bold text-lg">براين نافس</h1>
-                  <p className="text-xs text-muted-foreground">لوحة الإدارة</p>
+                  <h1 className="font-bold text-lg text-slate-800">نظام نافس</h1>
+                  <p className="text-xs text-slate-500">إدارة الأسئلة والألعاب</p>
                 </div>
               </div>
+              
+              {/* Back to system selector */}
+              <Link 
+                to="/admin/system-selector"
+                className="mt-4 flex items-center gap-2 text-sm text-slate-500 hover:text-primary transition-colors"
+              >
+                <ArrowRight className="w-4 h-4" />
+                <span>العودة لاختيار النظام</span>
+              </Link>
             </div>
 
             {/* Navigation */}
-            <nav className="flex-1 p-4 space-y-2 mt-16 lg:mt-0">
+            <nav className="flex-1 p-4 space-y-1 mt-4">
               {navItems.map((item) => {
-                const isActive = location.pathname === item.path;
+                const isActive =
+                  item.path === "/admin/nafis"
+                    ? location.pathname === item.path
+                    : location.pathname === item.path ||
+                      location.pathname.startsWith(`${item.path}/`);
                 return (
                   <Link
                     key={item.path}
                     to={item.path}
                     onClick={() => setIsSidebarOpen(false)}
                     className={cn(
-                      "flex items-center gap-3 px-4 py-3 rounded-xl transition-colors",
+                      "flex items-center gap-3 px-4 py-3 rounded-xl transition-all",
                       isActive
-                        ? "bg-primary text-primary-foreground"
-                        : "hover:bg-secondary text-foreground"
+                        ? "bg-primary text-primary-foreground shadow-md shadow-primary/20"
+                        : "hover:bg-slate-100 text-slate-600"
                     )}
                   >
                     <item.icon className="w-5 h-5" />

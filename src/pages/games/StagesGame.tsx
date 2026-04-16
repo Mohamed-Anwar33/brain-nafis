@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,11 @@ import { ArrowRight, RefreshCw, Trophy, CheckCircle2, XCircle, ListOrdered, Ligh
 import { toast } from "sonner";
 import confetti from "canvas-confetti";
 import { audioManager } from "@/lib/audio";
+import {
+  getSelectionDisplayText,
+  getStoredSelectionContext,
+} from "@/lib/selection-context";
+import { applySelectionFilters, getScopedPayload } from "@/lib/selection-scope";
 
 interface StageItem {
   id: string;
@@ -25,6 +30,7 @@ interface StageQuestion {
 
 export default function StagesGame() {
   const navigate = useNavigate();
+  const selectionContext = useMemo(() => getStoredSelectionContext(), []);
   const [loading, setLoading] = useState(true);
   const [questions, setQuestions] = useState<StageQuestion[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -44,13 +50,23 @@ export default function StagesGame() {
   const startTime = useState(() => Date.now())[0];
 
   useEffect(() => {
+    if (!selectionContext || selectionContext.trackType !== "central") {
+      navigate("/student/dashboard", { replace: true });
+      return;
+    }
+
     audioManager.preload();
     fetchQuestions();
-  }, []);
+  }, [navigate, selectionContext]);
 
   const fetchQuestions = async () => {
     setLoading(true);
     try {
+      if (!selectionContext || selectionContext.trackType !== "central") {
+        navigate("/student/dashboard");
+        return;
+      }
+
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         toast.error("يجب تسجيل الدخول أولاً");
@@ -59,11 +75,14 @@ export default function StagesGame() {
       }
 
       // Try to fetch from database first
-      const { data: dbQuestions, error } = await supabase
-        .from("stages_game_questions")
-        .select("*")
-        .eq("is_active", true)
-        .limit(10);
+      const { data: dbQuestions, error } = await applySelectionFilters(
+        supabase
+          .from("stages_game_questions")
+          .select("*")
+          .eq("is_active", true)
+          .limit(10),
+        selectionContext,
+      );
 
       if (!error && dbQuestions && dbQuestions.length > 0) {
         const formatted: StageQuestion[] = dbQuestions.map(q => ({
@@ -80,14 +99,13 @@ export default function StagesGame() {
         }));
         setQuestions(formatted);
       } else {
-        // Use sample questions
-        const sampleQuestions = generateSampleQuestions();
-        setQuestions(sampleQuestions);
+        toast.error("لا توجد أسئلة مفعلة لهذه اللعبة داخل المجال المحدد");
+        navigate("/central-exam/games");
       }
     } catch (error) {
       console.error("Error fetching questions:", error);
-      const sampleQuestions = generateSampleQuestions();
-      setQuestions(sampleQuestions);
+      toast.error("فشل تحميل لعبة المراحل");
+      navigate("/central-exam/games");
     } finally {
       setLoading(false);
     }
@@ -257,7 +275,7 @@ export default function StagesGame() {
   const saveAttempt = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
+      if (user && selectionContext) {
         const durationSeconds = Math.floor((Date.now() - startTime) / 1000);
         const { data: profile } = await supabase
           .from("student_profiles")
@@ -272,8 +290,10 @@ export default function StagesGame() {
           correct_count: correctCount,
           total_questions: questions.length,
           duration_seconds: durationSeconds,
+          ...getScopedPayload(selectionContext),
           metadata: {
             student_name: resolvedStudentName,
+            selection_context: getSelectionDisplayText(selectionContext),
             game_name: "لعبة ترتيب المراحل"
           }
         }).select().single();

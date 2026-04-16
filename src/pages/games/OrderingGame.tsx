@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -20,6 +20,17 @@ import {
 } from "@dnd-kit/core";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import { cn } from "@/lib/utils";
+import {
+    getSelectionDisplayText,
+    getStoredSelectionContext,
+} from "@/lib/selection-context";
+import {
+    applySelectionFilters,
+    getScopedHistoryIds,
+    getScopedPayload,
+    recordScopedHistory,
+    resetScopedHistory,
+} from "@/lib/selection-scope";
 
 // --- Types ---
 interface Question {
@@ -153,6 +164,8 @@ function DroppableSlot({
 
 
 export default function OrderingGame() {
+    const navigate = useNavigate();
+    const selectionContext = useMemo(() => getStoredSelectionContext(), []);
     const [loading, setLoading] = useState(true);
     const [questions, setQuestions] = useState<Question[]>([]);
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -191,13 +204,23 @@ export default function OrderingGame() {
     );
 
     useEffect(() => {
+        if (!selectionContext) {
+            navigate("/student/dashboard", { replace: true });
+            return;
+        }
+
         audioManager.preload();
         fetchQuestions();
-    }, []);
+    }, [navigate, selectionContext]);
 
     const fetchQuestions = async () => {
         setLoading(true);
         try {
+            if (!selectionContext) {
+                navigate("/student/dashboard");
+                return;
+            }
+
             const { data: { session } } = await supabase.auth.getSession();
             if (!session) {
                 toast.error("يجب تسجيل الدخول أولاً");
@@ -210,11 +233,14 @@ export default function OrderingGame() {
             const limit = setting ? parseInt(setting.value) : 10;
 
             // 1. Fetch active
-            const { data: allQuestions, error } = await supabase
-                .from("ordering_game_questions")
-                .select("id")
-                .eq("is_active", true)
-                .eq("level", gameState.level);
+            const { data: allQuestions, error } = await applySelectionFilters(
+                supabase
+                    .from("ordering_game_questions")
+                    .select("id")
+                    .eq("is_active", true)
+                    .eq("level", gameState.level),
+                selectionContext,
+            );
 
             if (error || !allQuestions || allQuestions.length === 0) {
                 toast.error("لا توجد أسئلة متاحة");
@@ -222,16 +248,27 @@ export default function OrderingGame() {
                 return;
             }
 
-            // 2. Filter seen (Simplified for brevity, assumes same logic as before)
-            const availableQuestions = allQuestions;
-            // NOTE: Full history logic kept from original file would be placed here
+            const seenIds = await getScopedHistoryIds(
+                session.user.id,
+                "ordering",
+                selectionContext,
+            );
+            let availableQuestions = allQuestions.filter((question) => !seenIds.has(question.id));
+
+            if (availableQuestions.length < limit) {
+                await resetScopedHistory(session.user.id, "ordering", selectionContext);
+                availableQuestions = allQuestions;
+            }
 
             // 5. Fetch full data
             const availableIds = availableQuestions.map(q => q.id);
-            const { data: fullQuestions, error: fullError } = await supabase
-                .from("ordering_game_questions")
-                .select("*")
-                .in("id", availableIds);
+            const { data: fullQuestions, error: fullError } = await applySelectionFilters(
+                supabase
+                    .from("ordering_game_questions")
+                    .select("*")
+                    .in("id", availableIds),
+                selectionContext,
+            );
 
             if (fullError || !fullQuestions) {
                 toast.error("فشل تحميل بيانات الأسئلة");
@@ -252,6 +289,13 @@ export default function OrderingGame() {
 
             // 6. Shuffle questions
             const shuffledQuestions = [...typedQuestions].sort(() => Math.random() - 0.5).slice(0, limit);
+
+            await recordScopedHistory(
+                session.user.id,
+                "ordering",
+                shuffledQuestions.map((question) => question.id),
+                selectionContext,
+            );
 
             setQuestions(shuffledQuestions);
             if (shuffledQuestions.length > 0) loadQuestion(shuffledQuestions[0]);
@@ -392,7 +436,7 @@ export default function OrderingGame() {
     const saveAttempt = async (finalScore: number, finalCorrectCount: number) => {
         try {
             const { data: { user } } = await supabase.auth.getUser();
-            if (user) {
+            if (user && selectionContext) {
                 const durationSeconds = Math.floor((Date.now() - startTime) / 1000);
                 const { data: profile } = await supabase
                     .from("student_profiles")
@@ -407,8 +451,10 @@ export default function OrderingGame() {
                     correct_count: finalCorrectCount,
                     total_questions: questions.length,
                     duration_seconds: durationSeconds,
+                    ...getScopedPayload(selectionContext),
                     metadata: {
                         student_name: resolvedStudentName,
+                        selection_context: getSelectionDisplayText(selectionContext),
                         game_name: "لغز الترتيب"
                     }
                 }).select().single();

@@ -15,6 +15,11 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Plus, Trash2, Loader2, Upload, ImageIcon } from "lucide-react";
+import {
+  SelectionScopeFields,
+} from "@/components/admin/SelectionScopeFields";
+import { validateSelectionScope } from "@/lib/selection-scope-validation";
+import { SelectionScopeValue } from "@/types/selection";
 
 interface Choice {
   id?: string;
@@ -25,7 +30,15 @@ interface Choice {
 }
 
 interface QuestionFormProps {
-  question?: { id: string; text: string; active: boolean; image_url?: string; stage_number?: number } | null;
+  question?: {
+    id: string;
+    text: string;
+    active: boolean;
+    image_url?: string;
+    stage_number?: number;
+    grade_subject_id?: string | null;
+    wrong_reason?: string | null;
+  } | null;
   onComplete: () => void;
   defaultStage?: number;
 }
@@ -34,9 +47,17 @@ export function QuestionForm({ question, onComplete, defaultStage }: QuestionFor
   const [text, setText] = useState("");
   const [active, setActive] = useState(true);
   const [stageNumber, setStageNumber] = useState<number>(defaultStage || 1);
+  const [wrongReason, setWrongReason] = useState("");
   const [stagesList, setStagesList] = useState<{ stage_number: number; title: string }[]>([]);
   const [questionImage, setQuestionImage] = useState<File | null>(null);
   const [questionImageUrl, setQuestionImageUrl] = useState<string | null>(null);
+  const [scope, setScope] = useState<SelectionScopeValue>({
+    trackType: "nafis",
+    gradeId: "",
+    subjectId: "",
+    gradeSubjectId: "",
+    domainId: "",
+  });
 
   const [choices, setChoices] = useState<Choice[]>([
     { text: "", is_correct: true },
@@ -53,9 +74,15 @@ export function QuestionForm({ question, onComplete, defaultStage }: QuestionFor
       setActive(question.active);
       setStageNumber(question.stage_number || defaultStage || 1);
       setQuestionImageUrl(question.image_url || null);
+      setWrongReason(question.wrong_reason || "");
+      setScope((current) => ({
+        ...current,
+        trackType: "nafis",
+        gradeSubjectId: question.grade_subject_id || "",
+      }));
       fetchChoices(question.id);
     }
-  }, [question]);
+  }, [defaultStage, question]);
 
   // Fetch stages from stage_titles table
   useEffect(() => {
@@ -182,6 +209,12 @@ export function QuestionForm({ question, onComplete, defaultStage }: QuestionFor
       return;
     }
 
+    const scopeError = validateSelectionScope(scope);
+    if (scopeError) {
+      toast.error(scopeError);
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -207,7 +240,10 @@ export function QuestionForm({ question, onComplete, defaultStage }: QuestionFor
             text,
             active,
             image_url: finalQuestionImageUrl,
-            stage_number: stageNumber
+            stage_number: stageNumber,
+            grade_subject_id: scope.gradeSubjectId,
+            track_type: "nafis",
+            wrong_reason: wrongReason || null,
           })
           .eq("id", question.id);
 
@@ -226,7 +262,10 @@ export function QuestionForm({ question, onComplete, defaultStage }: QuestionFor
             text,
             active,
             image_url: finalQuestionImageUrl,
-            stage_number: stageNumber
+            stage_number: stageNumber,
+            grade_subject_id: scope.gradeSubjectId,
+            track_type: "nafis",
+            wrong_reason: wrongReason || null,
           })
           .select()
           .single();
@@ -352,6 +391,25 @@ export function QuestionForm({ question, onComplete, defaultStage }: QuestionFor
           </SelectContent>
         </Select>
         <p className="text-xs text-muted-foreground">حدد المرحلة التي ينتمي لها السؤال</p>
+      </div>
+
+      <div className="space-y-2">
+        <Label className="text-base font-medium">السياق الدراسي</Label>
+        <SelectionScopeFields
+          value={scope}
+          onChange={setScope}
+          trackMode="nafis"
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label className="text-base font-medium">سبب الخطأ</Label>
+        <Textarea
+          value={wrongReason}
+          onChange={(e) => setWrongReason(e.target.value)}
+          placeholder="اكتب التفسير الذي يظهر للطالب عند الإجابة الخاطئة"
+          className="min-h-24 resize-none"
+        />
       </div>
 
       {/* Active Status */}

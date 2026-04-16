@@ -310,6 +310,14 @@ export default function AdminDashboard() {
               <span className="text-muted-foreground">إجمالي المحاولات</span>
               <span className="font-bold text-slate-800">{isLoading ? "..." : stats.totalAttempts}</span>
             </div>
+            
+            <a
+              href="/admin/results"
+              className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-50 p-3 font-bold text-indigo-600 hover:bg-indigo-100 transition-colors"
+            >
+              <Trophy className="w-5 h-5" />
+              عرض صفحة النتائج بالتفصيل
+            </a>
           </CardContent>
         </Card>
 

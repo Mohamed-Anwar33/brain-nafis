@@ -9,6 +9,7 @@ interface ExamQuestionProps {
   totalQuestions: number;
   onAnswer: (choiceId: string) => Promise<boolean>;
   disabled: boolean;
+  wrongReason?: string | null;
 }
 
 export function ExamQuestion({
@@ -17,6 +18,7 @@ export function ExamQuestion({
   totalQuestions,
   onAnswer,
   disabled,
+  wrongReason,
 }: ExamQuestionProps) {
   const [selectedChoice, setSelectedChoice] = useState<string | null>(null);
   const [answerState, setAnswerState] = useState<"correct" | "wrong" | null>(null);
@@ -44,10 +46,9 @@ export function ExamQuestion({
       setAnswerState(isCorrect ? "correct" : "wrong");
 
       if (!isCorrect) {
-        // Reset for retry after brief delay
+        // Keep the feedback visible, but clear the selected choice to allow retry.
         setTimeout(() => {
           setSelectedChoice(null);
-          setAnswerState(null);
         }, 600);
       }
     } catch (err) {
@@ -157,6 +158,15 @@ export function ExamQuestion({
               );
             })}
           </div>
+
+          {answerState === "wrong" && wrongReason && (
+            <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-right">
+              <p className="text-sm font-bold text-amber-700">سبب الخطأ</p>
+              <p className="mt-2 text-sm leading-7 text-amber-900">
+                {wrongReason}
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>

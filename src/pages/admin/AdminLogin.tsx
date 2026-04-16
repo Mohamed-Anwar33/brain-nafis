@@ -44,7 +44,7 @@ export default function AdminLogin() {
         }
 
         toast.success("تم تسجيل الدخول بنجاح");
-        navigate("/admin");
+        navigate("/admin/system-selector");
       }
     } catch (err) {
       console.error(err);

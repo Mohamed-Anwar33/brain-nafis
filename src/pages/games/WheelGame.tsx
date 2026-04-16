@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,11 @@ import { ArrowRight, RotateCw, Trophy, Sparkles, Target, HelpCircle, CheckCircle
 import { toast } from "sonner";
 import confetti from "canvas-confetti";
 import { audioManager } from "@/lib/audio";
+import {
+  getSelectionDisplayText,
+  getStoredSelectionContext,
+} from "@/lib/selection-context";
+import { applySelectionFilters, getScopedPayload } from "@/lib/selection-scope";
 
 interface WheelSection {
   id: string;
@@ -34,6 +39,7 @@ interface WheelQuestion {
 
 export default function WheelGame() {
   const navigate = useNavigate();
+  const selectionContext = useMemo(() => getStoredSelectionContext(), []);
   const [loading, setLoading] = useState(true);
   const [sections, setSections] = useState<WheelSection[]>([]);
   const [questions, setQuestions] = useState<WheelQuestion[]>([]);
@@ -83,13 +89,23 @@ export default function WheelGame() {
   const startTime = useRef(Date.now());
 
   useEffect(() => {
+    if (!selectionContext || selectionContext.trackType !== "central") {
+      navigate("/student/dashboard", { replace: true });
+      return;
+    }
+
     audioManager.preload();
     fetchData();
-  }, []);
+  }, [navigate, selectionContext]);
 
   const fetchData = async () => {
     setLoading(true);
     try {
+      if (!selectionContext || selectionContext.trackType !== "central") {
+        navigate("/student/dashboard");
+        return;
+      }
+
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         toast.error("يجب تسجيل الدخول أولاً");
@@ -109,46 +125,49 @@ export default function WheelGame() {
       }
 
       // Fetch sections
-      const { data: sectionsData, error: sectionsError } = await supabase
-        .from("wheel_sections")
-        .select("*")
-        .eq("is_active", true)
-        .order("order_index", { ascending: true });
+      const { data: sectionsData, error: sectionsError } = await applySelectionFilters(
+        supabase
+          .from("wheel_sections")
+          .select("*")
+          .eq("is_active", true)
+          .order("order_index", { ascending: true }),
+        selectionContext,
+      );
 
       if (sectionsError) throw sectionsError;
 
       if (!sectionsData || sectionsData.length === 0) {
-        // Fallback: use sample data
-        const sampleSections = generateSampleSections();
-        const sampleQuestions = generateSampleQuestions();
-        setSections(sampleSections);
-        setQuestions(sampleQuestions);
-        setTotalQuestions(sampleQuestions.length);
-        setLoading(false);
+        toast.error("لا توجد أقسام مفعلة لهذا المجال حاليًا");
+        navigate("/central-exam/games");
         return;
       }
 
       setSections(sectionsData);
 
       // Fetch questions for all sections
-      const { data: questionsData, error: questionsError } = await supabase
-        .from("wheel_section_questions")
-        .select("*")
-        .eq("is_active", true);
+      const { data: questionsData, error: questionsError } = await applySelectionFilters(
+        supabase
+          .from("wheel_section_questions")
+          .select("*")
+          .eq("is_active", true),
+        selectionContext,
+      );
 
       if (questionsError) throw questionsError;
 
       const allQuestions = questionsData || [];
+      if (!allQuestions.length) {
+        toast.error("لا توجد أسئلة مفعلة لهذا المجال حاليًا");
+        navigate("/central-exam/games");
+        return;
+      }
+
       setQuestions(allQuestions);
       setTotalQuestions(allQuestions.length);
     } catch (error) {
       console.error("Error fetching data:", error);
-      // Fallback
-      const sampleSections = generateSampleSections();
-      const sampleQuestions = generateSampleQuestions();
-      setSections(sampleSections);
-      setQuestions(sampleQuestions);
-      setTotalQuestions(sampleQuestions.length);
+      toast.error("فشل تحميل بيانات لعبة العجلة");
+      navigate("/central-exam/games");
     } finally {
       setLoading(false);
     }
@@ -408,7 +427,7 @@ export default function WheelGame() {
   ) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (user && currentSection) {
+      if (user && currentSection && selectionContext) {
         const durationSeconds = Math.floor((Date.now() - startTime.current) / 1000);
         const percentage = stats.total > 0 ? Math.round((stats.correct / stats.total) * 100) : 0;
         const resolvedStudentName = studentName || "طالب";
@@ -420,8 +439,10 @@ export default function WheelGame() {
           correct_count: stats.correct,
           total_questions: stats.total,
           duration_seconds: durationSeconds,
+          ...getScopedPayload(selectionContext),
           metadata: {
             student_name: resolvedStudentName,
+            selection_context: getSelectionDisplayText(selectionContext),
             section_name: currentSection.name,
             section_id: currentSection.id,
             section_score: sectionScore,

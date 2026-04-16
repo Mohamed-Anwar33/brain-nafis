@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+﻿import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ExamQuestion } from "@/components/exam/ExamQuestion";
 import { AttemptData, ExamQuestion as ExamQuestionType } from "@/types/exam";
@@ -7,6 +7,23 @@ import { audioManager } from "@/lib/audio";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { StageTransition } from "@/components/exam/StageTransition";
+
+type QuestionChoiceRow = {
+  id: string;
+  text: string;
+  is_correct: boolean;
+  image_url?: string | null;
+};
+
+type QuestionRow = {
+  id: string;
+  text: string;
+  image_url?: string | null;
+  wrong_reason?: string | null;
+  stage_number?: number | null;
+  created_at: string;
+  choices: QuestionChoiceRow[];
+};
 
 export default function ExamPage() {
   const { attemptId } = useParams<{ attemptId: string }>();
@@ -24,6 +41,7 @@ export default function ExamPage() {
   const [completedQuestions, setCompletedQuestions] = useState<Set<string>>(new Set());
   const [questionsWithErrors, setQuestionsWithErrors] = useState<Set<string>>(new Set());
   const [penalties, setPenalties] = useState(0);
+  const [currentWrongReason, setCurrentWrongReason] = useState<string | null>(null);
 
   // Stage State
   const [showStageTransition, setShowStageTransition] = useState(false);
@@ -41,6 +59,10 @@ export default function ExamPage() {
   const [stagePenaltiesStart, setStagePenaltiesStart] = useState(0);
   const [stageTitlesMap, setStageTitlesMap] = useState<Record<number, string>>({});
 
+  useEffect(() => {
+    setCurrentWrongReason(null);
+  }, [currentIndex]);
+
   const handleNextStage = () => {
     setShowStageTransition(false);
     setCurrentIndex(prev => prev + 1);
@@ -50,37 +72,44 @@ export default function ExamPage() {
     setStagePenaltiesStart(penaltiesRef.current);
   };
 
-  // Load exam data from database directly (Client-side fetching for full control)
   useEffect(() => {
     const loadExam = async () => {
-      // Preload audio
       await audioManager.preload();
-
       setIsLoading(true);
+
       try {
-        // Fetch stage settings (active stages + display order)
         const { data: stageTitlesData } = await supabase
           .from("stage_titles")
           .select("*")
           .order("display_order");
 
-        // Build maps
         const titlesMap: Record<number, string> = {};
         const activeStages: Set<number> = new Set();
         const displayOrderMap: Record<number, number> = {};
 
         if (stageTitlesData) {
-          stageTitlesData.forEach(st => {
-            titlesMap[st.stage_number] = st.title;
-            displayOrderMap[st.stage_number] = st.display_order || st.stage_number;
-            if (st.is_active !== false) {
-              activeStages.add(st.stage_number);
+          stageTitlesData.forEach((stage) => {
+            titlesMap[stage.stage_number] = stage.title;
+            displayOrderMap[stage.stage_number] =
+              stage.display_order || stage.stage_number;
+
+            if (stage.is_active !== false) {
+              activeStages.add(stage.stage_number);
             }
           });
+
           setStageTitlesMap(titlesMap);
         }
 
-        // 1. Fetch ALL active questions
+        const storedExam = attemptId
+          ? sessionStorage.getItem(`exam_${attemptId}`)
+          : null;
+
+        if (storedExam) {
+          setExamData(JSON.parse(storedExam) as AttemptData);
+          return;
+        }
+
         const { data: questionsData, error: questionsError } = await supabase
           .from("questions")
           .select("*, choices(*)")
@@ -88,81 +117,73 @@ export default function ExamPage() {
           .order("stage_number", { ascending: true })
           .order("created_at", { ascending: true });
 
-        if (questionsError) throw questionsError;
-
-        // Filter only questions from active stages, then sort by display_order
-        let filteredQuestions = questionsData || [];
-        if (stageTitlesData && stageTitlesData.length > 0) {
-          // Always filter by active stages (if all are hidden, no questions will show)
-          filteredQuestions = filteredQuestions.filter(q => activeStages.has(q.stage_number || 1));
+        if (questionsError) {
+          throw questionsError;
         }
-        // Sort by display_order
+
+        let filteredQuestions = (questionsData || []) as QuestionRow[];
+        if (stageTitlesData && stageTitlesData.length > 0) {
+          filteredQuestions = filteredQuestions.filter((question) =>
+            activeStages.has(question.stage_number || 1),
+          );
+        }
+
         filteredQuestions.sort((a, b) => {
-          const orderA = displayOrderMap[a.stage_number || 1] || (a.stage_number || 1);
-          const orderB = displayOrderMap[b.stage_number || 1] || (b.stage_number || 1);
-          if (orderA !== orderB) return orderA - orderB;
-          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+          const orderA =
+            displayOrderMap[a.stage_number || 1] || (a.stage_number || 1);
+          const orderB =
+            displayOrderMap[b.stage_number || 1] || (b.stage_number || 1);
+
+          if (orderA !== orderB) {
+            return orderA - orderB;
+          }
+
+          return (
+            new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+          );
         });
 
-        if (!filteredQuestions || filteredQuestions.length === 0) {
-          toast.error("لا توجد أسئلة متاحة حالياً");
+        if (!filteredQuestions.length) {
+          toast.error("لا توجد أسئلة متاحة حاليًا");
           navigate("/student/dashboard");
           return;
         }
 
-        // 2. Fetch or create attempt
-        // We need an attempt ID to track progress. If attemptId is 'new', create one.
-        // If it exists in URL, use it.
-        let mAttemptId = attemptId;
         let studentName = "";
-
-        if (attemptId && attemptId !== 'new') {
-          // Verify attempt exists
-          const { data: attempt, error: attemptError } = await supabase
+        if (attemptId && attemptId !== "new") {
+          const { data: attempt } = await supabase
             .from("attempts")
             .select("*")
             .eq("id", attemptId)
             .single();
 
-          if (attemptError || !attempt) {
-            // Handle invalid attempt
-            console.error("Invalid attempt ID");
-            // For simplicity in this refactor, we might want to redirect or create new
-            // But let's assume valid attempt ID from dashboard
-          } else {
-            studentName = attempt.student_name;
-          }
-        } else {
-          // We prefer creating attempt at start to track everything
-          // But dashboard sends us with an ID usually.
+          studentName = attempt?.student_name || "";
         }
 
-        // Transform data to match ExamQuestion interface
-        const transformedQuestions: ExamQuestionType[] = filteredQuestions.map((q, index) => ({
-          id: q.id,
-          text: q.text,
-          image_url: q.image_url,
-          order_index: index,
-          choices: q.choices.map((c: any) => ({
-            id: c.id,
-            text: c.text,
-            is_correct: c.is_correct,
-            image_url: c.image_url
-          }))
-        }));
+        const transformedQuestions: ExamQuestionType[] = filteredQuestions.map(
+          (question, index) => ({
+            id: question.id,
+            text: question.text,
+            image_url: question.image_url,
+            wrong_reason: question.wrong_reason,
+            stage_number: question.stage_number,
+            order_index: index,
+            choices: question.choices.map((choice) => ({
+              id: choice.id,
+              text: choice.text,
+              is_correct: choice.is_correct,
+              image_url: choice.image_url || undefined,
+            })),
+          }),
+        );
 
-        const newExamData: AttemptData = {
+        setExamData({
           attempt_id: attemptId || "temp",
           student_name: studentName,
           question_count: transformedQuestions.length,
           score: 0,
-          questions: transformedQuestions
-        };
-
-        setExamData(newExamData);
-        // setScore(0); // Reset score or fetch from attempt if resuming? 
-        // For now, start fresh typically.
-
+          questions: transformedQuestions,
+        });
       } catch (err) {
         console.error("Failed to load exam:", err);
         toast.error("فشل تحميل الاختبار. يرجى المحاولة مرة أخرى.");
@@ -265,6 +286,7 @@ export default function ExamPage() {
 
     if (isCorrect) {
       audioManager.playCorrect();
+      setCurrentWrongReason(null);
 
       // Update score locally and in Ref
       setScore(prev => prev + 1);
@@ -284,6 +306,7 @@ export default function ExamPage() {
 
     } else {
       audioManager.playWrong();
+      setCurrentWrongReason(currentQuestion.wrong_reason || null);
 
       // Only add penalty if this question hasn't been answered wrong before
       if (!questionsWithErrorsRef.current.has(currentQuestion.id)) {
@@ -432,6 +455,8 @@ export default function ExamPage() {
       totalQuestions={currentStageTotalQuestions} // Total for this stage (20)
       onAnswer={handleAnswer}
       disabled={isSubmitting}
+      wrongReason={currentWrongReason}
     />
   );
 }
+

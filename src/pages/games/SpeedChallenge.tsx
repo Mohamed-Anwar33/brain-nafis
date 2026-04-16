@@ -1,6 +1,5 @@
-
-import { useEffect, useState, useRef, useCallback } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -8,6 +7,17 @@ import { ArrowRight, Clock, Trophy, RefreshCw, Zap, Sparkles, Target } from "luc
 import { toast } from "sonner";
 import confetti from "canvas-confetti";
 import { audioManager } from "@/lib/audio";
+import {
+    getSelectionDisplayText,
+    getStoredSelectionContext,
+} from "@/lib/selection-context";
+import {
+    applySelectionFilters,
+    getScopedHistoryIds,
+    getScopedPayload,
+    recordScopedHistory,
+    resetScopedHistory,
+} from "@/lib/selection-scope";
 
 interface Question {
     id: string;
@@ -32,6 +42,8 @@ interface GameState {
 }
 
 export default function SpeedChallenge() {
+    const navigate = useNavigate();
+    const selectionContext = useMemo(() => getStoredSelectionContext(), []);
     const [loading, setLoading] = useState(true);
     const [questions, setQuestions] = useState<Question[]>([]);
     const [currentIndex, setCurrentIndex] = useState(0);
@@ -59,6 +71,11 @@ export default function SpeedChallenge() {
 
     useEffect(() => {
         const fetchConfigAndQuestions = async () => {
+            if (!selectionContext) {
+                navigate("/student/dashboard", { replace: true });
+                return;
+            }
+
             // Preload audio
             await audioManager.preload();
 
@@ -75,7 +92,7 @@ export default function SpeedChallenge() {
 
         fetchConfigAndQuestions();
         return () => stopTimer();
-    }, []);
+    }, [navigate, selectionContext]);
 
     useEffect(() => {
         if (isPlaying && timeLeft > 0) {
@@ -91,6 +108,11 @@ export default function SpeedChallenge() {
     const fetchQuestions = async () => {
         setLoading(true);
         try {
+            if (!selectionContext) {
+                navigate("/student/dashboard");
+                return;
+            }
+
             const { data: { session } } = await supabase.auth.getSession();
             if (!session) {
                 toast.error("يجب تسجيل الدخول أولاً");
@@ -99,10 +121,13 @@ export default function SpeedChallenge() {
             }
 
             // 1. Fetch all active questions (IDs only for performance)
-            const { data: allQuestions, error } = await supabase
-                .from("speed_challenge_questions")
-                .select("id")
-                .eq("is_active", true);
+            const { data: allQuestions, error } = await applySelectionFilters(
+                supabase
+                    .from("speed_challenge_questions")
+                    .select("id")
+                    .eq("is_active", true),
+                selectionContext,
+            );
 
             if (error || !allQuestions || allQuestions.length === 0) {
                 toast.error("لا توجد أسئلة متاحة");
@@ -111,13 +136,11 @@ export default function SpeedChallenge() {
             }
 
             // 2. Fetch seen question IDs for this user
-            const { data: seenHistory } = await supabase
-                .from("student_question_history")
-                .select("question_id")
-                .eq("user_id", session.user.id)
-                .eq("game_type", "speed");
-
-            const seenIds = new Set(seenHistory?.map(h => h.question_id) || []);
+            const seenIds = await getScopedHistoryIds(
+                session.user.id,
+                "speed",
+                selectionContext,
+            );
 
             // 3. Filter unseen questions
             let availableQuestions = allQuestions.filter(q => !seenIds.has(q.id));
@@ -125,11 +148,7 @@ export default function SpeedChallenge() {
             // 4. Reset if needed (need at least 20 questions)
             const requiredCount = 20;
             if (availableQuestions.length < requiredCount) {
-                await supabase
-                    .from("student_question_history")
-                    .delete()
-                    .eq("user_id", session.user.id)
-                    .eq("game_type", "speed");
+                await resetScopedHistory(session.user.id, "speed", selectionContext);
 
                 availableQuestions = allQuestions;
                 // Silent reset - no notification to student
@@ -137,10 +156,13 @@ export default function SpeedChallenge() {
 
             // 5. Fetch full data for available questions
             const availableIds = availableQuestions.map(q => q.id);
-            const { data: fullQuestions, error: fullError } = await supabase
-                .from("speed_challenge_questions")
-                .select("*")
-                .in("id", availableIds);
+            const { data: fullQuestions, error: fullError } = await applySelectionFilters(
+                supabase
+                    .from("speed_challenge_questions")
+                    .select("*")
+                    .in("id", availableIds),
+                selectionContext,
+            );
 
             if (fullError || !fullQuestions) {
                 toast.error("فشل تحميل بيانات الأسئلة");
@@ -159,15 +181,12 @@ export default function SpeedChallenge() {
             const selectedQuestions = shuffled.slice(0, requiredCount);
 
             // 8. Record seen questions
-            const historyRecords = selectedQuestions.map(q => ({
-                user_id: session.user.id,
-                question_id: q.id,
-                game_type: "speed"
-            }));
-
-            await supabase
-                .from("student_question_history")
-                .upsert(historyRecords, { onConflict: "user_id,question_id,game_type", ignoreDuplicates: true });
+            await recordScopedHistory(
+                session.user.id,
+                "speed",
+                selectedQuestions.map((question) => question.id),
+                selectionContext,
+            );
 
             console.log(`Pool: ${fullQuestions.length}, Selected: ${selectedQuestions.length}`);
 
@@ -271,7 +290,7 @@ export default function SpeedChallenge() {
     const saveResult = async () => {
         try {
             const { data: { user } } = await supabase.auth.getUser();
-            if (user) {
+            if (user && selectionContext) {
                 const { data: profile } = await supabase
                     .from("student_profiles")
                     .select("full_name")
@@ -285,8 +304,10 @@ export default function SpeedChallenge() {
                     correct_count: correctCountRef.current,
                     total_questions: answeringCountRef.current,
                     duration_seconds: initialTime - timeLeft,
+                    ...getScopedPayload(selectionContext),
                     metadata: {
                         student_name: resolvedStudentName,
+                        selection_context: getSelectionDisplayText(selectionContext),
                         game_name: "تحدي السرعة"
                     }
                 }).select().single();

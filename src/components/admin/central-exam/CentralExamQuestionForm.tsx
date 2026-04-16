@@ -7,7 +7,18 @@ import { Textarea } from "@/components/ui/textarea";
 import { Trash2, Plus, Image as ImageIcon, Upload, X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { createCentralExamQuestion, updateCentralExamQuestion, CentralExamQuestion, CentralExamChoice } from "@/services/centralExamService";
+import {
+  createCentralExamQuestion,
+  updateCentralExamQuestion,
+  CentralExamQuestion,
+  CentralExamChoice,
+  CentralExamChoiceInput,
+} from "@/services/centralExamService";
+import {
+  SelectionScopeFields,
+} from "@/components/admin/SelectionScopeFields";
+import { validateSelectionScope } from "@/lib/selection-scope-validation";
+import { SelectionScopeValue } from "@/types/selection";
 
 interface Props {
   question: CentralExamQuestion | null;
@@ -19,6 +30,14 @@ export function CentralExamQuestionForm({ question, onComplete }: Props) {
   const [imageUrl, setImageUrl] = useState(question?.image_url || "");
   const [active, setActive] = useState(question?.active ?? true);
   const [orderIndex, setOrderIndex] = useState(question?.order_index || 0);
+  const [wrongReason, setWrongReason] = useState(question?.wrong_reason || "");
+  const [scope, setScope] = useState<SelectionScopeValue>({
+    trackType: "central",
+    gradeId: "",
+    subjectId: "",
+    gradeSubjectId: question?.grade_subject_id || "",
+    domainId: question?.domain_id || "",
+  });
   
   const [choices, setChoices] = useState<Partial<CentralExamChoice>[]>([]);
   const [loading, setLoading] = useState(false);
@@ -37,6 +56,13 @@ export function CentralExamQuestionForm({ question, onComplete }: Props) {
         { text: "", is_correct: false },
       ]);
     }
+    setWrongReason(question?.wrong_reason || "");
+    setScope((current) => ({
+      ...current,
+      trackType: "central",
+      gradeSubjectId: question?.grade_subject_id || "",
+      domainId: question?.domain_id || "",
+    }));
   }, [question]);
 
   const addChoice = () => {
@@ -47,7 +73,11 @@ export function CentralExamQuestionForm({ question, onComplete }: Props) {
     setChoices(choices.filter((_, i) => i !== index));
   };
 
-  const updateChoice = (index: number, field: keyof CentralExamChoice, value: any) => {
+  const updateChoice = (
+    index: number,
+    field: keyof CentralExamChoice,
+    value: string | boolean,
+  ) => {
     const newChoices = [...choices];
     if (field === "is_correct" && value === true) {
       // Only one correct choice
@@ -130,6 +160,12 @@ export function CentralExamQuestionForm({ question, onComplete }: Props) {
       return;
     }
 
+    const scopeError = validateSelectionScope(scope);
+    if (scopeError) {
+      toast.error(scopeError);
+      return;
+    }
+
     setLoading(true);
     try {
       if (question?.id) {
@@ -137,7 +173,11 @@ export function CentralExamQuestionForm({ question, onComplete }: Props) {
           text,
           image_url: imageUrl || null,
           active,
-          order_index: orderIndex
+          order_index: orderIndex,
+          track_type: "central",
+          grade_subject_id: scope.gradeSubjectId,
+          domain_id: scope.domainId,
+          wrong_reason: wrongReason || null,
         }, validChoices);
         toast.success("تم تحديث السؤال بنجاح");
       } else {
@@ -145,8 +185,12 @@ export function CentralExamQuestionForm({ question, onComplete }: Props) {
           text,
           image_url: imageUrl || null,
           active,
-          order_index: orderIndex
-        }, validChoices as any);
+          order_index: orderIndex,
+          track_type: "central",
+          grade_subject_id: scope.gradeSubjectId,
+          domain_id: scope.domainId,
+          wrong_reason: wrongReason || null,
+        }, validChoices as CentralExamChoiceInput[]);
         toast.success("تم إضافة السؤال بنجاح");
       }
       onComplete();
@@ -176,6 +220,15 @@ export function CentralExamQuestionForm({ question, onComplete }: Props) {
             onChange={(e) => setText(e.target.value)} 
             placeholder="اكتب نص السؤال هنا..."
             className="min-h-[100px] resize-y"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label>السياق الدراسي</Label>
+          <SelectionScopeFields
+            value={scope}
+            onChange={setScope}
+            trackMode="central"
           />
         </div>
 
@@ -234,6 +287,16 @@ export function CentralExamQuestionForm({ question, onComplete }: Props) {
             />
           </div>
         </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label>سبب الخطأ</Label>
+        <Textarea
+          value={wrongReason}
+          onChange={(e) => setWrongReason(e.target.value)}
+          placeholder="اكتب التفسير الذي سيظهر للطالب عند الإجابة الخاطئة"
+          className="min-h-[90px] resize-y"
+        />
       </div>
 
       <div className="space-y-4 pt-4 border-t">

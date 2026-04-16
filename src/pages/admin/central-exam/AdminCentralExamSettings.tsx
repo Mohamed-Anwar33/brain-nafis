@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { getCentralExamConfig, updateCentralExamConfig, toggleCentralExam, CentralExamConfig } from "@/services/centralExamService";
 import { SaudiLoader } from "@/components/ui/SaudiLoader";
+import { Settings } from "lucide-react";
 
 export default function AdminCentralExamSettings() {
   const [config, setConfig] = useState<CentralExamConfig | null>(null);
@@ -77,86 +78,99 @@ export default function AdminCentralExamSettings() {
   if (!config) return <div className="p-10 text-center text-red-500">حدث خطأ في قراءة قاعدة البيانات</div>;
 
   return (
-    <div className="max-w-3xl animate-in slide-in-from-bottom-4 duration-500">
-      <div className="bg-white rounded-2xl shadow-sm border overflow-hidden">
-        {/* Toggle Head */}
-        <div className={`p-6 md:p-8 flex items-center justify-between border-b ${config.is_active ? 'bg-primary/5' : 'bg-slate-50/50'}`}>
-          <div>
-            <h2 className="text-xl font-bold flex items-center gap-3">
-              حالة الاختبار
-              {config.is_active ? (
-                <span className="flex h-3 w-3 relative">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
-                </span>
-              ) : (
-                <span className="relative inline-flex rounded-full h-3 w-3 bg-slate-300"></span>
-              )}
-            </h2>
-            <p className="text-sm text-muted-foreground mt-1">تفعيل أو تعطيل ظهور الاختبار للطلاب في لوحة التحكم.</p>
-          </div>
-          <Switch 
-            checked={config.is_active} 
-            onCheckedChange={handleToggle}
-            className="data-[state=checked]:bg-green-500" 
-          />
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center gap-4">
+        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+          <Settings className="w-6 h-6 text-white" />
         </div>
+        <div>
+          <h1 className="text-3xl font-bold text-slate-800">الإعدادات العامة</h1>
+          <p className="text-slate-500">تحكم في إعدادات الاختبار المركزي</p>
+        </div>
+      </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 md:p-8 space-y-6">
-          <div className="space-y-2">
-            <Label htmlFor="title" className="text-base font-bold text-slate-700">العنوان البارز للاختبار</Label>
-            <Input
-              id="title"
-              value={config.title}
-              onChange={(e) => setConfig({ ...config, title: e.target.value })}
-              className="h-12 text-lg rounded-xl focus-visible:ring-primary/20"
-              placeholder="مثال: الاختبار المركزي"
+      <div className="max-w-3xl">
+        <div className="bg-white rounded-2xl shadow-sm border overflow-hidden card-elevated">
+          {/* Toggle Head */}
+          <div className={`p-6 flex items-center justify-between border-b ${config.is_active ? 'bg-emerald-50/50' : 'bg-slate-50/50'}`}>
+            <div>
+              <h2 className="text-xl font-bold flex items-center gap-3 text-slate-800">
+                حالة الاختبار
+                {config.is_active ? (
+                  <span className="flex h-3 w-3 relative">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                  </span>
+                ) : (
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-slate-300"></span>
+                )}
+              </h2>
+              <p className="text-sm text-slate-500 mt-1">تفعيل أو تعطيل ظهور الاختبار للطلاب في لوحة التحكم.</p>
+            </div>
+            <Switch 
+              checked={config.is_active} 
+              onCheckedChange={handleToggle}
+              className="data-[state=checked]:bg-emerald-500" 
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="desc" className="text-base font-bold text-slate-700">وصف الاختبار (يظهر للطالب)</Label>
-            <Textarea
-              id="desc"
-              value={config.description}
-              onChange={(e) => setConfig({ ...config, description: e.target.value })}
-              className="resize-none h-24 rounded-xl focus-visible:ring-primary/20"
-              placeholder="وصف مشوق للاختبار..."
-            />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="p-6 space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="grade" className="font-bold text-slate-700">المرحلة / الصف</Label>
+              <Label htmlFor="title" className="text-base font-bold text-slate-700">العنوان البارز للاختبار</Label>
               <Input
-                id="grade"
-                value={config.grade}
-                onChange={(e) => setConfig({ ...config, grade: e.target.value })}
-                className="rounded-xl h-12"
+                id="title"
+                value={config.title}
+                onChange={(e) => setConfig({ ...config, title: e.target.value })}
+                className="h-12 text-lg rounded-xl focus-visible:ring-indigo-500/20"
+                placeholder="مثال: الاختبار المركزي"
               />
             </div>
+
             <div className="space-y-2">
-              <Label htmlFor="subject" className="font-bold text-slate-700">المادة</Label>
-              <Input
-                id="subject"
-                value={config.subject}
-                onChange={(e) => setConfig({ ...config, subject: e.target.value })}
-                className="rounded-xl h-12"
+              <Label htmlFor="desc" className="text-base font-bold text-slate-700">وصف الاختبار (يظهر للطالب)</Label>
+              <Textarea
+                id="desc"
+                value={config.description}
+                onChange={(e) => setConfig({ ...config, description: e.target.value })}
+                className="resize-none h-24 rounded-xl focus-visible:ring-indigo-500/20"
+                placeholder="وصف مشوق للاختبار..."
               />
             </div>
-          </div>
 
-          <div className="pt-4 border-t flex justify-end">
-            <Button
-              type="submit"
-              disabled={saving}
-              className="h-12 px-8 text-lg rounded-xl btn-primary-gradient shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 hover:-translate-y-0.5 transition-all w-full md:w-auto"
-            >
-              {saving ? "جاري الحفظ..." : "حفظ الإعدادات"}
-            </Button>
-          </div>
-        </form>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="grade" className="font-bold text-slate-700">المرحلة / الصف</Label>
+                <Input
+                  id="grade"
+                  value={config.grade}
+                  onChange={(e) => setConfig({ ...config, grade: e.target.value })}
+                  className="rounded-xl h-12"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="subject" className="font-bold text-slate-700">المادة</Label>
+                <Input
+                  id="subject"
+                  value={config.subject}
+                  onChange={(e) => setConfig({ ...config, subject: e.target.value })}
+                  className="rounded-xl h-12"
+                />
+              </div>
+            </div>
+
+            <div className="pt-4 border-t flex justify-end">
+              <Button
+                type="submit"
+                disabled={saving}
+                className="h-12 px-8 text-lg rounded-xl bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white shadow-lg shadow-indigo-500/20 hover:shadow-xl hover:shadow-indigo-500/30 hover:-translate-y-0.5 transition-all w-full md:w-auto"
+              >
+                {saving ? "جاري الحفظ..." : "حفظ الإعدادات"}
+              </Button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );

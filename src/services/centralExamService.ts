@@ -1,4 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
+import { applySelectionFilters } from "@/lib/selection-scope";
+import { SelectionContext } from "@/types/selection";
 
 export interface CentralExamConfig {
   id: string;
@@ -15,6 +17,10 @@ export interface CentralExamQuestion {
   image_url: string | null;
   active: boolean;
   order_index: number;
+  track_type?: "nafis" | "central";
+  grade_subject_id?: string | null;
+  domain_id?: string | null;
+  wrong_reason?: string | null;
   choices?: CentralExamChoice[];
 }
 
@@ -24,6 +30,11 @@ export interface CentralExamChoice {
   text: string;
   is_correct: boolean;
 }
+
+export type CentralExamChoiceInput = Omit<
+  CentralExamChoice,
+  "id" | "question_id"
+>;
 
 // ==========================================
 // Config Services
@@ -42,7 +53,7 @@ export async function getCentralExamConfig(): Promise<CentralExamConfig | null> 
     }
     return null;
   }
-  return data;
+  return data as unknown as CentralExamConfig;
 }
 
 export async function updateCentralExamConfig(config: Partial<CentralExamConfig>): Promise<boolean> {
@@ -80,14 +91,20 @@ export async function toggleCentralExam(id: string, isActive: boolean): Promise<
 // Question Services
 // ==========================================
 
-export async function getCentralExamQuestions() {
-  const { data, error } = await supabase
+export async function getCentralExamQuestions(context?: SelectionContext) {
+  let query = supabase
     .from("central_exam_questions")
     .select(`
       *,
       choices:central_exam_choices(*)
     `)
-    .order('order_index', { ascending: true });
+    .order("order_index", { ascending: true });
+
+  if (context) {
+    query = applySelectionFilters(query, context);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     console.error("Error fetching questions:", error);
@@ -99,7 +116,7 @@ export async function getCentralExamQuestions() {
 
 export async function createCentralExamQuestion(
   question: Omit<CentralExamQuestion, 'id' | 'choices'>,
-  choices: Omit<CentralExamChoice, 'id' | 'question_id'>[]
+  choices: CentralExamChoiceInput[]
 ) {
   const { data: qData, error: qError } = await supabase
     .from("central_exam_questions")
@@ -109,9 +126,10 @@ export async function createCentralExamQuestion(
 
   if (qError) throw qError;
 
+  const inserted = qData as unknown as { id: string };
   const choicesToInsert = choices.map(c => ({
     ...c,
-    question_id: qData.id
+    question_id: inserted.id
   }));
 
   const { error: cError } = await supabase

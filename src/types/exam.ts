@@ -10,6 +10,8 @@ export interface Question {
   text: string;
   choices: Choice[];
   image_url?: string;
+  wrong_reason?: string | null;
+  stage_number?: number | null;
 }
 
 export interface ExamQuestion extends Question {
@@ -21,6 +23,7 @@ export interface AttemptData {
   student_name: string;
   question_count: number;
   score: number;
+  selection_snapshot?: Record<string, unknown>;
   questions: ExamQuestion[];
 }
 

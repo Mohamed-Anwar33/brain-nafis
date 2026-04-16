@@ -1,5 +1,4 @@
-
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -8,6 +7,17 @@ import { ArrowRight, RefreshCw, Trophy, Sparkles, Zap, Target, Gamepad2 } from "
 import { toast } from "sonner";
 import confetti from "canvas-confetti";
 import { audioManager } from "@/lib/audio";
+import {
+    getSelectionDisplayText,
+    getStoredSelectionContext,
+} from "@/lib/selection-context";
+import {
+    applySelectionFilters,
+    getScopedHistoryIds,
+    getScopedPayload,
+    recordScopedHistory,
+    resetScopedHistory,
+} from "@/lib/selection-scope";
 
 interface Question {
     id: string;
@@ -25,6 +35,7 @@ interface GameState {
 
 export default function MatchingGame() {
     const navigate = useNavigate();
+    const selectionContext = useMemo(() => getStoredSelectionContext(), []);
     const [loading, setLoading] = useState(true);
     const [questions, setQuestions] = useState<Question[]>([]);
     const [leftItems, setLeftItems] = useState<{ id: string; text: string; imageUrl?: string; matched: boolean }[]>([]);
@@ -43,13 +54,23 @@ export default function MatchingGame() {
     const [startTime] = useState(() => Date.now());
 
     useEffect(() => {
+        if (!selectionContext) {
+            navigate("/student/dashboard", { replace: true });
+            return;
+        }
+
         audioManager.preload();
         fetchQuestions();
-    }, []);
+    }, [navigate, selectionContext]);
 
     const fetchQuestions = async () => {
         setLoading(true);
         try {
+            if (!selectionContext) {
+                navigate("/student/dashboard");
+                return;
+            }
+
             const { data: { session } } = await supabase.auth.getSession();
             if (!session) {
                 toast.error("يجب تسجيل الدخول أولاً");
@@ -62,11 +83,14 @@ export default function MatchingGame() {
             const limit = setting ? parseInt(setting.value) : 6;
 
             // 1. Fetch all active questions (IDs only)
-            const { data: allQuestions, error } = await supabase
-                .from("matching_game_questions")
-                .select("id")
-                .eq("is_active", true)
-                .eq("level", gameState.level);
+            const { data: allQuestions, error } = await applySelectionFilters(
+                supabase
+                    .from("matching_game_questions")
+                    .select("id")
+                    .eq("is_active", true)
+                    .eq("level", gameState.level),
+                selectionContext,
+            );
 
             if (error || !allQuestions || allQuestions.length === 0) {
                 toast.error("لا توجد أسئلة متاحة");
@@ -75,24 +99,18 @@ export default function MatchingGame() {
             }
 
             // 2. Fetch seen question IDs
-            const { data: seenHistory } = await supabase
-                .from("student_question_history")
-                .select("question_id")
-                .eq("user_id", session.user.id)
-                .eq("game_type", "matching");
-
-            const seenIds = new Set(seenHistory?.map(h => h.question_id) || []);
+            const seenIds = await getScopedHistoryIds(
+                session.user.id,
+                "matching",
+                selectionContext,
+            );
 
             // 3. Filter unseen
             let availableQuestions = allQuestions.filter(q => !seenIds.has(q.id));
 
             // 4. Reset if needed
             if (availableQuestions.length < limit) {
-                await supabase
-                    .from("student_question_history")
-                    .delete()
-                    .eq("user_id", session.user.id)
-                    .eq("game_type", "matching");
+                await resetScopedHistory(session.user.id, "matching", selectionContext);
 
                 availableQuestions = allQuestions;
                 // Silent reset - no notification to student
@@ -100,10 +118,13 @@ export default function MatchingGame() {
 
             // 5. Fetch full data
             const availableIds = availableQuestions.map(q => q.id);
-            const { data: fullQuestions, error: fullError } = await supabase
-                .from("matching_game_questions")
-                .select("*")
-                .in("id", availableIds);
+            const { data: fullQuestions, error: fullError } = await applySelectionFilters(
+                supabase
+                    .from("matching_game_questions")
+                    .select("*")
+                    .in("id", availableIds),
+                selectionContext,
+            );
 
             if (fullError || !fullQuestions) {
                 toast.error("فشل تحميل بيانات الأسئلة");
@@ -120,15 +141,12 @@ export default function MatchingGame() {
             const selectedQuestions = shuffledQuestions.slice(0, limit);
 
             // 7. Record seen
-            const historyRecords = selectedQuestions.map(q => ({
-                user_id: session.user.id,
-                question_id: q.id,
-                game_type: "matching"
-            }));
-
-            await supabase
-                .from("student_question_history")
-                .upsert(historyRecords, { onConflict: "user_id,question_id,game_type", ignoreDuplicates: true });
+            await recordScopedHistory(
+                session.user.id,
+                "matching",
+                selectedQuestions.map((question) => question.id),
+                selectionContext,
+            );
 
             setQuestions(selectedQuestions);
             initializeGame(selectedQuestions);
@@ -235,7 +253,7 @@ export default function MatchingGame() {
     const saveAttempt = async (finalScore: number, finalCorrect: number) => {
         try {
             const { data: { user } } = await supabase.auth.getUser();
-            if (user) {
+            if (user && selectionContext) {
                 const durationSeconds = Math.floor((Date.now() - startTime) / 1000);
                 const { data: profile } = await supabase
                     .from("student_profiles")
@@ -251,8 +269,10 @@ export default function MatchingGame() {
                     correct_count: finalCorrect,
                     total_questions: questions.length,
                     duration_seconds: durationSeconds,
+                    ...getScopedPayload(selectionContext),
                     metadata: {
                         student_name: resolvedStudentName,
+                        selection_context: getSelectionDisplayText(selectionContext),
                         game_name: "لعبة المطابقة"
                     }
                 }).select().single();

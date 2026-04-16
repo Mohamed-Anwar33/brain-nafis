@@ -1,480 +1,704 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Zap, Puzzle, Gamepad2, Timer, LogOut, GraduationCap, ChevronLeft, Calendar, Target, Brain, Sparkles, Crown, Star, Rocket } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  BookOpen,
+  Brain,
+  Gamepad2,
+  GraduationCap,
+  LogOut,
+  Target,
+  Zap,
+} from "lucide-react";
 import { toast } from "sonner";
 import { SaudiLoader } from "@/components/ui/SaudiLoader";
-import { getCentralExamConfig, CentralExamConfig } from "@/services/centralExamService";
+import { useAcademicCatalog } from "@/hooks/use-academic-catalog";
+import {
+  clearSelectionContext,
+  getSelectionDisplayText,
+  getStoredSelectionContext,
+  saveSelectionContext,
+} from "@/lib/selection-context";
+import {
+  applySelectionFilters,
+  getScopedHistoryIds,
+  getScopedPayload,
+  recordScopedHistory,
+  resetScopedHistory,
+} from "@/lib/selection-scope";
+import {
+  ExperienceType,
+  SelectionContext,
+  TrackType,
+} from "@/types/selection";
+
+type DashboardChoiceRow = {
+  id: string;
+  text: string;
+  image_url?: string | null;
+  is_correct: boolean;
+};
+
+type DashboardQuestionRow = {
+  id: string;
+  text: string;
+  image_url?: string | null;
+  wrong_reason?: string | null;
+  stage_number?: number | null;
+  choices?: DashboardChoiceRow[];
+};
+
+type DashboardSelectionState = {
+  trackType: TrackType;
+  gradeId: string;
+  subjectId: string;
+  gradeSubjectId: string;
+  domainId: string;
+};
+
+const defaultSelectionState: DashboardSelectionState = {
+  trackType: "nafis",
+  gradeId: "",
+  subjectId: "",
+  gradeSubjectId: "",
+  domainId: "",
+};
 
 export default function StudentDashboard() {
-    const navigate = useNavigate();
-    const [loading, setLoading] = useState(true);
-    const [studentName, setStudentName] = useState<string | null>(null);
-    const [centralConfig, setCentralConfig] = useState<CentralExamConfig | null>(null);
+  const navigate = useNavigate();
+  const { data: catalog, isLoading: isCatalogLoading } = useAcademicCatalog();
 
-    // Format Hijri Date
-    const hijriDate = new Intl.DateTimeFormat('ar-SA-u-ca-islamic-umalqura', {
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric'
-    }).format(new Date());
+  const [isLoading, setIsLoading] = useState(true);
+  const [studentName, setStudentName] = useState<string | null>(null);
+  const [selection, setSelection] =
+    useState<DashboardSelectionState>(defaultSelectionState);
+  const [experienceType, setExperienceType] = useState<ExperienceType | null>(
+    null,
+  );
+  const [isActionLoading, setIsActionLoading] = useState(false);
 
-    useEffect(() => {
-        checkUser();
-        fetchCentralConfig();
-    }, []);
-
-    const fetchCentralConfig = async () => {
-        try {
-            const data = await getCentralExamConfig();
-            setCentralConfig(data);
-        } catch (e) {
-            console.error("Failed to load central exam config");
-        }
-    };
-
-    const checkUser = async () => {
-        try {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (!session) {
-                navigate("/");
-                return;
-            }
-
-            const { data: profile, error } = await supabase
-                .from("student_profiles")
-                .select("full_name")
-                .eq("id", session.user.id)
-                .single();
-
-            if (!error && profile) {
-                setStudentName(profile.full_name);
-            }
-        } catch (error) {
-            console.error("Auth check error:", error);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleLogout = async () => {
-        await supabase.auth.signOut();
-        navigate("/");
-    };
-
-    const startQuiz = async () => {
-        try {
-            setLoading(true);
-            const { data: { session } } = await supabase.auth.getSession();
-            if (!session) return;
-
-            // Fetch configured question count
-            const { data: setting } = await supabase
-                .from("settings")
-                .select("exam_question_count")
-                .eq("id", 1)
-                .single();
-
-            const limitCount = setting?.exam_question_count || 10;
-
-            // 1. Fetch all active questions (IDs only for performance)
-            const { data: allQuestions, error: questionsError } = await supabase
-                .from("questions")
-                .select("id")
-                .eq("active", true);
-
-            if (questionsError || !allQuestions || allQuestions.length === 0) {
-                toast.error("لا توجد أسئلة متاحة حالياً");
-                setLoading(false);
-                return;
-            }
-
-            if (allQuestions.length < limitCount) {
-                toast.error(`لا يوجد عدد كافٍ من الأسئلة. المطلوب: ${limitCount}, المتاح: ${allQuestions.length}`);
-                setLoading(false);
-                return;
-            }
-
-            // 2. Fetch seen question IDs for this user (performance: IDs only)
-            const { data: seenHistory } = await supabase
-                .from("student_question_history")
-                .select("question_id")
-                .eq("user_id", session.user.id)
-                .eq("game_type", "exam");
-
-            const seenIds = new Set(seenHistory?.map(h => h.question_id) || []);
-
-            // 3. Filter unseen questions
-            let availableQuestions = allQuestions.filter(q => !seenIds.has(q.id));
-
-            // 4. Reset if needed
-            let didReset = false;
-            if (availableQuestions.length < limitCount) {
-                await supabase
-                    .from("student_question_history")
-                    .delete()
-                    .eq("user_id", session.user.id)
-                    .eq("game_type", "exam");
-
-                availableQuestions = allQuestions;
-                // Silent reset - no notification to student
-            }
-
-            // 5. Shuffle with Fisher-Yates
-            const shuffled = [...availableQuestions];
-            for (let i = shuffled.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-            }
-
-            // 6. Select first N questions
-            const selectedQuestionIds = shuffled.slice(0, limitCount).map(q => q.id);
-
-            // 7. Fetch full question data with choices
-            const { data: selectedQuestionsData, error: fullDataError } = await supabase
-                .from("questions")
-                .select("*, choices(*)")
-                .in("id", selectedQuestionIds);
-
-            if (fullDataError || !selectedQuestionsData) {
-                toast.error("فشل تحميل بيانات الأسئلة");
-                setLoading(false);
-                return;
-            }
-
-            // Preserve shuffle order
-            const questionMap = new Map(selectedQuestionsData.map(q => [q.id, q]));
-            const orderedQuestions = selectedQuestionIds.map(id => questionMap.get(id)).filter(Boolean);
-
-            // 8. Create attempt
-            const { data: attempt, error: attemptError } = await supabase
-                .from("attempts")
-                .insert({
-                    student_name: studentName || "طالب",
-                    score: 0,
-                    question_count: orderedQuestions.length
-                })
-                .select()
-                .single();
-
-            if (attemptError) throw attemptError;
-
-            // 9. Record seen questions (ON CONFLICT DO NOTHING to handle race conditions)
-            const historyRecords = selectedQuestionIds.map(qid => ({
-                user_id: session.user.id,
-                question_id: qid,
-                game_type: "exam"
-            }));
-
-            await supabase
-                .from("student_question_history")
-                .upsert(historyRecords, { onConflict: "user_id,question_id,game_type", ignoreDuplicates: true });
-
-            // 10. Build exam data
-            const examQuestions = orderedQuestions.map((q, index) => ({
-                id: q.id,
-                text: q.text,
-                choices: q.choices.map((c: any) => ({
-                    id: c.id,
-                    text: c.text,
-                    is_correct: c.is_correct
-                })),
-                order_index: index
-            }));
-
-            const attemptData = {
-                attempt_id: attempt.id,
-                student_name: studentName || "طالب",
-                question_count: examQuestions.length,
-                score: 0,
-                questions: examQuestions
-            };
-
-            sessionStorage.setItem(`exam_${attempt.id}`, JSON.stringify(attemptData));
-            navigate(`/exam/${attempt.id}`);
-
-        } catch (e) {
-            console.error(e);
-            toast.error("حدث خطأ غير متوقع");
-            setLoading(false);
-        }
-    };
-
-    const games = [
-        {
-            id: "quick-quiz",
-            title: "الاختبار السريع",
-            subtitle: "تحدي المعلومات",
-            icon: <Zap className="w-6 h-6" />,
-            action: startQuiz,
-            accent: "violet",
-            accentColor: "text-violet-600",
-            accentBg: "bg-violet-100",
-            accentGradient: "from-violet-500 to-purple-600",
-            accentBorder: "border-violet-200",
-            accentHover: "hover:bg-violet-50",
-            featured: true,
-            description: "اختبر معلوماتك العامة بأسئلة متنوعة وشيقة"
-        },
-        {
-            id: "matching",
-            title: "لعبة المطابقة",
-            subtitle: "ربط العناصر",
-            icon: <Gamepad2 className="w-6 h-6" />,
-            action: () => navigate("/games/matching"),
-            accent: "rose",
-            accentColor: "text-rose-600",
-            accentBg: "bg-rose-100",
-            accentGradient: "from-rose-500 to-pink-600",
-            accentBorder: "border-rose-200",
-            accentHover: "hover:bg-rose-50",
-            description: "صل بين العنصر وما يطابقه في أسرع وقت ممكن"
-        },
-        {
-            id: "ordering",
-            title: "لغز الترتيب",
-            subtitle: "التسلسل الصحيح",
-            icon: <Puzzle className="w-6 h-6" />,
-            action: () => navigate("/games/ordering"),
-            accent: "cyan",
-            accentColor: "text-cyan-600",
-            accentBg: "bg-cyan-100",
-            accentGradient: "from-cyan-500 to-blue-600",
-            accentBorder: "border-cyan-200",
-            accentHover: "hover:bg-cyan-50",
-            description: "رتب العناصر وفقاً للتسلسل المنطقي الصحيح"
-        },
-        {
-            id: "speed",
-            title: "تحدي السرعة",
-            subtitle: "سباق الزمن",
-            icon: <Timer className="w-6 h-6" />,
-            action: () => navigate("/games/speed"),
-            accent: "amber",
-            accentColor: "text-amber-600",
-            accentBg: "bg-amber-100",
-            accentGradient: "from-amber-500 to-orange-600",
-            accentBorder: "border-amber-200",
-            accentHover: "hover:bg-amber-50",
-            description: "أجب عن أكبر عدد من الأسئلة قبل انتهاء الوقت المخصص"
-        }
-    ];
-
-    if (loading) {
-        return (
-            <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-                <SaudiLoader text="جاري تجهيز لوحة الطالب..." />
-            </div>
-        );
+  useEffect(() => {
+    const existingContext = getStoredSelectionContext();
+    if (!existingContext) {
+      return;
     }
 
-    return (
-        <div className="min-h-screen bg-gradient-to-br from-violet-100 via-fuchsia-50 to-blue-100 relative overflow-hidden" dir="rtl">
-            {/* Floating Background Elements */}
-            <div className="fixed inset-0 overflow-hidden pointer-events-none">
-                <div className="absolute top-10 left-10 w-64 h-64 bg-purple-300/30 rounded-full blur-3xl animate-pulse"></div>
-                <div className="absolute bottom-10 right-10 w-80 h-80 bg-pink-300/20 rounded-full blur-3xl animate-pulse delay-500"></div>
-                <div className="absolute top-1/3 right-1/4 w-48 h-48 bg-blue-300/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
-                <div className="absolute bottom-1/3 left-1/4 w-56 h-56 bg-violet-300/20 rounded-full blur-3xl animate-pulse delay-700"></div>
-                
-                {/* Animated floating shapes */}
-                {[...Array(12)].map((_, i) => (
-                    <div
-                        key={i}
-                        className="absolute rounded-full animate-pulse"
-                        style={{
-                            left: `${Math.random() * 100}%`,
-                            top: `${Math.random() * 100}%`,
-                            width: `${20 + Math.random() * 30}px`,
-                            height: `${20 + Math.random() * 30}px`,
-                            background: ['#fbbf24', '#f472b6', '#60a5fa', '#34d399', '#a78bfa', '#fb923c'][Math.floor(Math.random() * 6)],
-                            animationDelay: `${Math.random() * 3}s`,
-                            opacity: 0.15,
-                            filter: 'blur(2px)'
-                        }}
-                    />
-                ))}
-            </div>
+    setSelection({
+      trackType: existingContext.trackType,
+      gradeId: existingContext.gradeId,
+      subjectId: existingContext.subjectId,
+      gradeSubjectId: existingContext.gradeSubjectId,
+      domainId: existingContext.domainId || "",
+    });
+    setExperienceType(existingContext.experienceType);
+  }, []);
 
-            {/* Header */}
-            <header className="relative z-20 bg-white/80 backdrop-blur-xl border-b border-white/50 sticky top-0">
-                <div className="container mx-auto px-4 py-3 flex justify-between items-center">
-                    {/* Right Side: User Info */}
-                    <div className="flex items-center gap-3">
-                        <div className="relative">
-                            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white flex items-center justify-center font-bold text-lg shadow-lg shadow-purple-500/30">
-                                {studentName ? studentName[0] : "ط"}
-                            </div>
-                            <div className="absolute -bottom-1 -right-1 bg-green-500 w-3 h-3 rounded-full border-2 border-white"></div>
-                        </div>
-                        <div className="hidden sm:block">
-                            <h1 className="font-bold text-slate-800 flex items-center gap-2">
-                                أهلاً، {studentName || "يا بطل"} <span className="text-lg">👋</span>
-                            </h1>
-                            <p className="text-xs font-medium text-slate-500">لوحة التحكم</p>
-                        </div>
-                    </div>
+  useEffect(() => {
+    const bootstrap = async () => {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
 
-                    {/* Center: Hijri Date */}
-                    <div className="flex items-center gap-2 bg-gradient-to-r from-violet-100 to-fuchsia-100 px-4 py-2 rounded-full border border-violet-200">
-                        <Calendar className="w-4 h-4 text-violet-600" />
-                        <span className="text-xs font-bold text-violet-700">{hijriDate}</span>
-                    </div>
+        if (!session) {
+          navigate("/");
+          return;
+        }
 
-                    {/* Left Side: Logout Button */}
-                    <Button variant="ghost" size="sm" onClick={handleLogout} className="text-slate-500 hover:text-red-500 hover:bg-red-50 rounded-full">
-                        <LogOut className="w-4 h-4 ml-1" />
-                        <span className="hidden sm:inline font-bold">خروج</span>
-                    </Button>
-                </div>
-            </header>
+        const { data: profile } = await supabase
+          .from("student_profiles")
+          .select("full_name")
+          .eq("id", session.user.id)
+          .single();
 
-            <main className="container mx-auto px-4 py-8 relative z-10">
-                {/* Hero Header - Enhanced Design */}
-                <div className="text-center max-w-2xl mx-auto mb-12 space-y-5">
-                    {/* Main Icon */}
-                    <div className="inline-flex items-center justify-center">
-                        <div className="relative">
-                            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-violet-500 via-fuchsia-500 to-pink-500 p-1.5 shadow-2xl shadow-violet-500/30">
-                                <div className="w-full h-full rounded-full bg-white flex items-center justify-center">
-                                    <Brain className="w-12 h-12 text-violet-600" />
-                                </div>
-                            </div>
-                            {/* Decorative elements */}
-                            <div className="absolute -top-2 -right-2 text-3xl animate-bounce">✨</div>
-                            <div className="absolute -bottom-1 -left-3 text-2xl animate-bounce delay-150">⭐</div>
-                            <div className="absolute top-1/2 -left-6 text-xl animate-pulse">🎮</div>
-                            <div className="absolute top-1/2 -right-6 text-xl animate-pulse delay-300">🧩</div>
-                        </div>
-                    </div>
-                    
-                    {/* Title Section */}
-                    <div className="space-y-3">
-                        <span className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-white/80 backdrop-blur border border-violet-200 text-violet-700 font-bold text-sm shadow-sm">
-                            <Sparkles className="w-4 h-4" />
-                            الأنشطة التعليمية
-                            <Target className="w-4 h-4" />
-                        </span>
-                        
-                        <h2 className="text-3xl md:text-5xl font-black bg-gradient-to-r from-violet-600 via-fuchsia-600 to-pink-600 bg-clip-text text-transparent drop-shadow-sm">
-                            اختر تحديك التالي
-                        </h2>
-                        
-                        <p className="text-slate-500 text-lg max-w-md mx-auto">
-                            مجموعة متنوعة من الألعاب والاختبارات لتعزيز مهاراتك
-                        </p>
-                    </div>
-                </div>
+        if (profile?.full_name) {
+          setStudentName(profile.full_name);
+        }
+      } catch (error) {
+        console.error("Failed to bootstrap student dashboard", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-                {/* Central Exam Banner - Enhanced */}
-                {centralConfig?.is_active && (
-                    <Card 
-                        onClick={() => navigate("/central-exam")}
-                        className="mb-10 cursor-pointer group bg-gradient-to-r from-violet-600 via-fuchsia-600 to-purple-600 border-0 shadow-2xl shadow-violet-500/30 overflow-hidden relative"
-                    >
-                        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4xIj48Y2lyY2xlIGN4PSIzMCIgY3k9IjMwIiByPSIyIi8+PC9nPjwvZz48L3N2Zz4=')] opacity-30"></div>
-                        <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-3xl"></div>
-                        <div className="absolute bottom-0 left-0 w-64 h-64 bg-fuchsia-500/20 rounded-full blur-2xl"></div>
-                        
-                        <div className="relative p-8 md:p-10 flex flex-col md:flex-row items-center justify-between gap-6">
-                            <div className="relative z-10 flex-1 text-right text-white text-center md:text-right">
-                                <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur px-4 py-1.5 rounded-full text-sm font-bold mb-4">
-                                    <Sparkles className="w-4 h-4 text-yellow-300" />
-                                    <span>حصري وجديد</span>
-                                </div>
-                                <h3 className="text-2xl md:text-4xl font-black mb-3">
-                                    {centralConfig.title}
-                                </h3>
-                                <p className="text-violet-100 max-w-xl text-sm md:text-base leading-relaxed">
-                                    {centralConfig.description}
-                                </p>
-                                <div className="mt-4 flex gap-2 justify-center md:justify-start">
-                                    <Badge className="bg-white/20 text-white border-0 backdrop-blur font-bold">{centralConfig.grade}</Badge>
-                                    <Badge className="bg-white/20 text-white border-0 backdrop-blur font-bold">{centralConfig.subject}</Badge>
-                                </div>
-                            </div>
+    bootstrap();
+  }, [navigate]);
 
-                            <div className="relative z-10">
-                                <button className="bg-white text-violet-600 px-8 py-4 rounded-xl font-black text-lg shadow-xl hover:shadow-2xl hover:scale-105 hover:-translate-y-1 transition-all flex items-center gap-2 group/btn">
-                                    بدء الاختبار الآن
-                                    <ChevronLeft className="w-5 h-5 group-hover/btn:-translate-x-1 transition-transform" />
-                                </button>
-                            </div>
-                        </div>
-                    </Card>
-                )}
+  const gradeSubjects = useMemo(
+    () => catalog?.gradeSubjects ?? [],
+    [catalog?.gradeSubjects],
+  );
+  const domains = useMemo(() => catalog?.domains ?? [], [catalog?.domains]);
+  const grades = useMemo(() => catalog?.grades ?? [], [catalog?.grades]);
 
-                {/* Games Grid - Premium SaaS Design */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
-                    {games.map((game, idx) => (
-                        <Card
-                            key={game.id}
-                            onClick={game.action}
-                            className={`cursor-pointer group relative overflow-hidden transition-all duration-300 hover:-translate-y-2 ${
-                                game.featured 
-                                    ? 'bg-gradient-to-br from-violet-50 via-white to-fuchsia-50 border-2 border-violet-200 shadow-xl hover:shadow-2xl shadow-violet-500/10 scale-[1.02]' 
-                                    : 'bg-white border border-slate-200 shadow-lg hover:shadow-xl'
-                            }`}
-                            style={{ animationDelay: `${idx * 100}ms` }}
-                        >
-                            {/* Featured badge */}
-                            {game.featured && (
-                                <div className="absolute top-3 left-3">
-                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-violet-500 to-purple-600 text-white text-[10px] font-bold">
-                                        <Sparkles className="w-3 h-3" />
-                                        مميز
-                                    </span>
-                                </div>
-                            )}
-                            
-                            <div className="p-6 flex flex-col h-full">
-                                {/* Icon - Accent colored */}
-                                <div className={`w-12 h-12 rounded-xl ${game.accentBg} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300`}>
-                                    <div className={game.accentColor}>
-                                        {game.icon}
-                                    </div>
-                                </div>
-                                
-                                {/* Title */}
-                                <h3 className="text-lg font-bold text-slate-900 mb-2 group-hover:text-slate-700 transition-colors">
-                                    {game.title}
-                                </h3>
-                                
-                                {/* Tag/Subtitle - Accent colored */}
-                                <span className={`inline-flex self-start px-2.5 py-1 rounded-md text-xs font-semibold ${game.accentBg} ${game.accentColor} mb-3`}>
-                                    {game.subtitle}
-                                </span>
-                                
-                                {/* Description */}
-                                <p className="text-sm text-slate-500 leading-relaxed mb-4 flex-grow">
-                                    {game.description}
-                                </p>
-                                
-                                {/* CTA Button - Accent colored */}
-                                <button className={`w-full mt-auto py-2.5 px-4 rounded-lg font-semibold text-sm transition-all duration-200 flex items-center justify-center gap-2 ${
-                                    game.featured
-                                        ? `bg-gradient-to-r ${game.accentGradient} text-white shadow-md hover:shadow-lg hover:opacity-90`
-                                        : `${game.accentBg} ${game.accentColor} ${game.accentHover}`
-                                }`}>
-                                    ابدأ اللعب
-                                    <ChevronLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-                                </button>
-                            </div>
-                        </Card>
-                    ))}
-                </div>
+  const availableSubjects = useMemo(() => {
+    if (!catalog?.subjects || !selection.gradeId) {
+      return [];
+    }
 
-                {/* Footer */}
-                <div className="mt-16 text-center">
-                    <div className="inline-flex items-center gap-2 text-slate-500 text-sm font-medium bg-white/80 px-6 py-3 rounded-full shadow-sm border border-white/50">
-                        <GraduationCap className="w-4 h-4 text-violet-500" />
-                        <span>تعلم، العب، وارتقِ بمستواك الدراسي</span>
-                    </div>
-                </div>
-            </main>
-        </div>
+    const subjectIds = new Set(
+      gradeSubjects
+        .filter((item) => item.grade_id === selection.gradeId)
+        .map((item) => item.subject_id),
     );
+
+    return catalog.subjects.filter((subject) => subjectIds.has(subject.id));
+  }, [catalog?.subjects, gradeSubjects, selection.gradeId]);
+
+  const availableDomains = useMemo(
+    () =>
+      domains.filter(
+        (domain) => domain.grade_subject_id === selection.gradeSubjectId,
+      ),
+    [domains, selection.gradeSubjectId],
+  );
+
+  const selectedGrade = grades.find((grade) => grade.id === selection.gradeId);
+  const selectedSubject = availableSubjects.find(
+    (subject) => subject.id === selection.subjectId,
+  );
+  const selectedDomain = availableDomains.find(
+    (domain) => domain.id === selection.domainId,
+  );
+
+  const handleTrackChange = (trackType: TrackType) => {
+    setSelection((current) => ({
+      ...current,
+      trackType,
+      domainId: trackType === "central" ? current.domainId : "",
+    }));
+  };
+
+  const handleGradeChange = (gradeId: string) => {
+    setSelection((current) => ({
+      ...current,
+      gradeId,
+      subjectId: "",
+      gradeSubjectId: "",
+      domainId: "",
+    }));
+  };
+
+  const handleSubjectChange = (subjectId: string) => {
+    const matchedGradeSubject = gradeSubjects.find(
+      (item) =>
+        item.grade_id === selection.gradeId && item.subject_id === subjectId,
+    );
+
+    setSelection((current) => ({
+      ...current,
+      subjectId,
+      gradeSubjectId: matchedGradeSubject?.id || "",
+      domainId: "",
+    }));
+  };
+
+  const handleDomainChange = (domainId: string) => {
+    setSelection((current) => ({
+      ...current,
+      domainId,
+    }));
+  };
+
+  const buildSelectionContext = (): SelectionContext | null => {
+    if (!selectedGrade || !selectedSubject || !selection.gradeSubjectId) {
+      return null;
+    }
+
+    if (selection.trackType === "central" && !selectedDomain) {
+      return null;
+    }
+
+    return {
+      trackType: selection.trackType,
+      experienceType: experienceType || "quick-quiz",
+      gradeId: selectedGrade.id,
+      gradeName: selectedGrade.name,
+      subjectId: selectedSubject.id,
+      subjectName: selectedSubject.name,
+      gradeSubjectId: selection.gradeSubjectId,
+      domainId:
+        selection.trackType === "central" ? selectedDomain?.id || null : null,
+      domainName:
+        selection.trackType === "central"
+          ? selectedDomain?.name || null
+          : null,
+    };
+  };
+
+  const handleLogout = async () => {
+    clearSelectionContext();
+    await supabase.auth.signOut();
+    navigate("/");
+  };
+
+  const startNafisQuickQuiz = async (context: SelectionContext) => {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (!session) {
+      navigate("/");
+      return;
+    }
+
+    const { data: setting } = await supabase
+      .from("settings")
+      .select("exam_question_count")
+      .eq("id", 1)
+      .maybeSingle();
+
+    const limitCount = setting?.exam_question_count || 10;
+
+    const scopedIdsQuery = applySelectionFilters(
+      supabase.from("questions").select("id").eq("active", true),
+      context,
+    );
+    const { data: allQuestions, error: questionsError } = await scopedIdsQuery;
+
+    if (questionsError) {
+      throw questionsError;
+    }
+
+    if (!allQuestions || allQuestions.length === 0) {
+      toast.error("لا توجد أسئلة متاحة لهذا الصف والمادة حاليًا");
+      return;
+    }
+
+    if (allQuestions.length < limitCount) {
+      toast.error(
+        `عدد الأسئلة المتاح أقل من المطلوب. المطلوب ${limitCount} والمتاح ${allQuestions.length}`,
+      );
+      return;
+    }
+
+    const seenIds = await getScopedHistoryIds(session.user.id, "exam", context);
+    let availableQuestions = allQuestions.filter((question) => !seenIds.has(question.id));
+
+    if (availableQuestions.length < limitCount) {
+      await resetScopedHistory(session.user.id, "exam", context);
+      availableQuestions = allQuestions;
+    }
+
+    const shuffled = [...availableQuestions];
+    for (let index = shuffled.length - 1; index > 0; index -= 1) {
+      const randomIndex = Math.floor(Math.random() * (index + 1));
+      [shuffled[index], shuffled[randomIndex]] = [
+        shuffled[randomIndex],
+        shuffled[index],
+      ];
+    }
+
+    const selectedQuestionIds = shuffled.slice(0, limitCount).map((item) => item.id);
+
+    const scopedQuestionsQuery = applySelectionFilters(
+      supabase
+        .from("questions")
+        .select("*, choices(*)")
+        .in("id", selectedQuestionIds),
+      context,
+    );
+    const { data: selectedQuestionsData, error: fullDataError } =
+      await scopedQuestionsQuery;
+
+    if (fullDataError) {
+      throw fullDataError;
+    }
+
+    const selectedQuestions = (selectedQuestionsData ||
+      []) as DashboardQuestionRow[];
+    const questionMap = new Map(
+      selectedQuestions.map((question) => [question.id, question]),
+    );
+    const orderedQuestions = selectedQuestionIds
+      .map((id) => questionMap.get(id))
+      .filter(
+        (question): question is DashboardQuestionRow => question !== undefined,
+      );
+
+    const { data: attempt, error: attemptError } = await supabase
+      .from("attempts")
+      .insert({
+        student_name: studentName || "طالب",
+        score: 0,
+        question_count: orderedQuestions.length,
+        ...getScopedPayload(context),
+      })
+      .select()
+      .single();
+
+    if (attemptError) {
+      throw attemptError;
+    }
+
+    const attemptRow = attempt as unknown as { id: string };
+
+    await recordScopedHistory(
+      session.user.id,
+      "exam",
+      selectedQuestionIds,
+      context,
+    );
+
+    const examQuestions = orderedQuestions.map((question, index: number) => ({
+      id: question.id,
+      text: question.text,
+      image_url: question.image_url,
+      wrong_reason: question.wrong_reason,
+      stage_number: question.stage_number,
+      order_index: index,
+      choices: (question.choices || []).map((choice) => ({
+        id: choice.id,
+        text: choice.text,
+        image_url: choice.image_url,
+        is_correct: choice.is_correct,
+      })),
+    }));
+
+    const attemptData = {
+      attempt_id: attemptRow.id,
+      student_name: studentName || "طالب",
+      question_count: examQuestions.length,
+      score: 0,
+      selection_snapshot: getScopedPayload(context).selection_snapshot,
+      questions: examQuestions,
+    };
+
+    sessionStorage.setItem(`exam_${attemptRow.id}`, JSON.stringify(attemptData));
+    navigate(`/exam/${attemptRow.id}`);
+  };
+
+  const handleStart = async () => {
+    if (!experienceType) {
+      toast.error("يرجى اختيار نوع التجربة");
+      return;
+    }
+
+    const context = buildSelectionContext();
+    if (!context) {
+      toast.error(
+        selection.trackType === "central"
+          ? "يرجى اختيار الصف والمادة والمجال أولًا"
+          : "يرجى اختيار الصف والمادة أولًا",
+      );
+      return;
+    }
+
+    saveSelectionContext(context);
+    setIsActionLoading(true);
+
+    try {
+      if (context.trackType === "nafis" && context.experienceType === "quick-quiz") {
+        await startNafisQuickQuiz(context);
+        return;
+      }
+
+      if (
+        context.trackType === "nafis" &&
+        context.experienceType === "interactive-games"
+      ) {
+        navigate("/student/games");
+        return;
+      }
+
+      if (
+        context.trackType === "central" &&
+        context.experienceType === "interactive-games"
+      ) {
+        navigate("/central-exam/games");
+        return;
+      }
+
+      navigate("/central-exam/play");
+    } catch (error) {
+      console.error("Failed to start student flow", error);
+      toast.error("حدث خطأ أثناء تجهيز التجربة");
+    } finally {
+      setIsActionLoading(false);
+    }
+  };
+
+  const currentContext = buildSelectionContext();
+
+  if (isLoading || isCatalogLoading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <SaudiLoader text="جاري تجهيز لوحة الطالب..." />
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="min-h-screen bg-[radial-gradient(circle_at_top_right,_rgba(59,130,246,0.14),_transparent_28%),radial-gradient(circle_at_bottom_left,_rgba(16,185,129,0.14),_transparent_25%),linear-gradient(135deg,#f8fafc,#eef2ff,#ecfeff)]"
+      dir="rtl"
+    >
+      <header className="sticky top-0 z-20 border-b border-white/70 bg-white/80 backdrop-blur-xl">
+        <div className="container mx-auto flex items-center justify-between px-4 py-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-lg">
+                <Brain className="h-5 w-5" />
+              </div>
+              <div>
+                <h1 className="text-lg font-black text-slate-900">
+                  {studentName ? `أهلًا ${studentName}` : "لوحة الطالب"}
+                </h1>
+                <p className="text-sm text-slate-500">
+                  اختر المسار والسياق الدراسي ثم ابدأ التجربة
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <Button
+            variant="ghost"
+            onClick={handleLogout}
+            className="gap-2 rounded-full text-slate-600 hover:bg-slate-100"
+          >
+            <LogOut className="h-4 w-4" />
+            تسجيل الخروج
+          </Button>
+        </div>
+      </header>
+
+      <main className="container mx-auto px-4 py-12">
+        <div className="mx-auto max-w-2xl">
+          <Card className="border-0 bg-white p-8 shadow-2xl shadow-slate-200/50 rounded-3xl">
+            <div className="space-y-8">
+              <div className="text-center space-y-4">
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-slate-900 to-slate-700 text-white mb-2">
+                  <GraduationCap className="h-8 w-8" />
+                </div>
+                <h2 className="text-3xl font-black text-slate-900">
+                  اختر مسارك الدراسي
+                </h2>
+                <p className="text-slate-500 max-w-md mx-auto leading-relaxed">
+                  حدد الصف والمادة والمسار المناسب لبدء رحلتك التعليمية
+                </p>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={() => handleTrackChange("nafis")}
+                  className={`group relative overflow-hidden rounded-2xl border-2 p-5 text-right transition-all duration-300 ${
+                    selection.trackType === "nafis"
+                      ? "border-emerald-500 bg-emerald-50/50 shadow-lg shadow-emerald-100"
+                      : "border-slate-100 bg-white hover:border-emerald-200 hover:shadow-md"
+                  }`}
+                >
+                  <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-100/50 rounded-full -translate-y-1/2 translate-x-1/2" />
+                  <div className="relative">
+                    <div className={`mb-4 flex h-12 w-12 items-center justify-center rounded-xl transition-all duration-300 ${
+                      selection.trackType === "nafis" ? "bg-emerald-500 text-white shadow-lg shadow-emerald-200" : "bg-emerald-100 text-emerald-600 group-hover:bg-emerald-500 group-hover:text-white"
+                    }`}>
+                      <Zap className="h-5 w-5" />
+                    </div>
+                    <h3 className="text-lg font-bold text-slate-900">نافس</h3>
+                    <p className="mt-1 text-sm text-slate-500 leading-relaxed">
+                      بنك الأسئلة والألعاب العامة
+                    </p>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleTrackChange("central")}
+                  className={`group relative overflow-hidden rounded-2xl border-2 p-5 text-right transition-all duration-300 ${
+                    selection.trackType === "central"
+                      ? "border-blue-500 bg-blue-50/50 shadow-lg shadow-blue-100"
+                      : "border-slate-100 bg-white hover:border-blue-200 hover:shadow-md"
+                  }`}
+                >
+                  <div className="absolute top-0 right-0 w-24 h-24 bg-blue-100/50 rounded-full -translate-y-1/2 translate-x-1/2" />
+                  <div className="relative">
+                    <div className={`mb-4 flex h-12 w-12 items-center justify-center rounded-xl transition-all duration-300 ${
+                      selection.trackType === "central" ? "bg-blue-600 text-white shadow-lg shadow-blue-200" : "bg-blue-100 text-blue-600 group-hover:bg-blue-600 group-hover:text-white"
+                    }`}>
+                      <Target className="h-5 w-5" />
+                    </div>
+                    <h3 className="text-lg font-bold text-slate-900">الاختبار المركزي</h3>
+                    <p className="mt-1 text-sm text-slate-500 leading-relaxed">
+                      مع مجال علمي محدد
+                    </p>
+                  </div>
+                </button>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-slate-700">
+                  <div className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+                  <span className="text-sm font-medium">بياناتك الدراسية</span>
+                </div>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-3">
+                <div className="space-y-2">
+                  <span className="text-sm font-medium text-slate-600">الصف</span>
+                  <Select
+                    value={selection.gradeId || undefined}
+                    onValueChange={handleGradeChange}
+                  >
+                    <SelectTrigger className="h-12 rounded-xl border-slate-200 bg-slate-50 hover:bg-white transition-colors">
+                      <SelectValue placeholder="اختر الصف" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {grades.map((grade) => (
+                        <SelectItem key={grade.id} value={grade.id}>
+                          {grade.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <span className="text-sm font-medium text-slate-600">المادة</span>
+                  <Select
+                    disabled={!selection.gradeId}
+                    value={selection.subjectId || undefined}
+                    onValueChange={handleSubjectChange}
+                  >
+                    <SelectTrigger className="h-12 rounded-xl border-slate-200 bg-slate-50 hover:bg-white transition-colors">
+                      <SelectValue placeholder="اختر المادة" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableSubjects.map((subject) => (
+                        <SelectItem key={subject.id} value={subject.id}>
+                          {subject.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {selection.trackType === "central" && (
+                  <div className="space-y-2">
+                    <span className="text-sm font-medium text-slate-600">
+                      المجال
+                    </span>
+                    <Select
+                      disabled={!selection.gradeSubjectId}
+                      value={selection.domainId || undefined}
+                      onValueChange={handleDomainChange}
+                    >
+                      <SelectTrigger className="h-12 rounded-xl border-slate-200 bg-slate-50 hover:bg-white transition-colors">
+                        <SelectValue placeholder="اختر المجال" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableDomains.map((domain) => (
+                          <SelectItem key={domain.id} value={domain.id}>
+                            {domain.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-slate-700">
+                  <div className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+                  <span className="text-sm font-medium">نوع التجربة</span>
+                </div>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={() => setExperienceType("quick-quiz")}
+                  className={`group relative overflow-hidden rounded-2xl border-2 p-5 text-right transition-all duration-300 ${
+                    experienceType === "quick-quiz"
+                      ? "border-amber-500 bg-amber-50/50 shadow-lg shadow-amber-100"
+                      : "border-slate-100 bg-white hover:border-amber-200 hover:shadow-md"
+                  }`}
+                >
+                  <div className="absolute top-0 right-0 w-20 h-20 bg-amber-100/50 rounded-full -translate-y-1/2 translate-x-1/2" />
+                  <div className="relative">
+                    <div className={`mb-3 flex h-11 w-11 items-center justify-center rounded-xl transition-all duration-300 ${
+                      experienceType === "quick-quiz" ? "bg-amber-500 text-white shadow-lg shadow-amber-200" : "bg-amber-100 text-amber-600 group-hover:bg-amber-500 group-hover:text-white"
+                    }`}>
+                      <BookOpen className="h-5 w-5" />
+                    </div>
+                    <h3 className="text-base font-bold text-slate-900">
+                      اختبار سريع
+                    </h3>
+                    <p className="mt-1 text-xs text-slate-500 leading-relaxed">
+                      أسئلة مباشرة حسب اختيارك
+                    </p>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setExperienceType("interactive-games")}
+                  className={`group relative overflow-hidden rounded-2xl border-2 p-5 text-right transition-all duration-300 ${
+                    experienceType === "interactive-games"
+                      ? "border-fuchsia-500 bg-fuchsia-50/50 shadow-lg shadow-fuchsia-100"
+                      : "border-slate-100 bg-white hover:border-fuchsia-200 hover:shadow-md"
+                  }`}
+                >
+                  <div className="absolute top-0 right-0 w-20 h-20 bg-fuchsia-100/50 rounded-full -translate-y-1/2 translate-x-1/2" />
+                  <div className="relative">
+                    <div className={`mb-3 flex h-11 w-11 items-center justify-center rounded-xl transition-all duration-300 ${
+                      experienceType === "interactive-games" ? "bg-fuchsia-600 text-white shadow-lg shadow-fuchsia-200" : "bg-fuchsia-100 text-fuchsia-600 group-hover:bg-fuchsia-600 group-hover:text-white"
+                    }`}>
+                      <Gamepad2 className="h-5 w-5" />
+                    </div>
+                    <h3 className="text-base font-bold text-slate-900">
+                      ألعاب تفاعلية
+                    </h3>
+                    <p className="mt-1 text-xs text-slate-500 leading-relaxed">
+                      ألعاب متاحة حسب سياقك
+                    </p>
+                  </div>
+                </button>
+              </div>
+
+              {currentContext && (
+                <div className="rounded-xl border border-emerald-100 bg-emerald-50/50 p-4">
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                    <p className="text-sm font-bold text-emerald-800">جاهز للبدء</p>
+                  </div>
+                  <p className="text-sm text-emerald-600 leading-relaxed">
+                    {getSelectionDisplayText(currentContext)}
+                  </p>
+                </div>
+              )}
+
+              <Button
+                onClick={handleStart}
+                disabled={isActionLoading}
+                className="h-14 w-full rounded-xl bg-gradient-to-r from-slate-900 to-slate-800 text-base font-bold text-white shadow-lg shadow-slate-300/50 hover:shadow-xl hover:shadow-slate-300/70 hover:from-slate-800 hover:to-slate-700 transition-all duration-300"
+              >
+                {isActionLoading ? (
+                  <span className="flex items-center gap-2">
+                    <span className="animate-spin">⏳</span>
+                    جاري التجهيز...
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-2">
+                    ابدأ الآن
+                    <span>→</span>
+                  </span>
+                )}
+              </Button>
+            </div>
+          </Card>
+        </div>
+      </main>
+    </div>
+  );
 }

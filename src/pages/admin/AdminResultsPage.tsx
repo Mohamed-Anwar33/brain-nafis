@@ -57,7 +57,7 @@ export default function AdminResultsPage() {
                 <GraduationCap className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h1 className="font-bold text-base text-slate-800 leading-none">براين نافس</h1>
+                <h1 className="font-bold text-base text-slate-800 leading-none">براين ساينس</h1>
                 <p className="text-[11px] text-slate-400 mt-0.5">نتائج الطلاب</p>
               </div>
             </div>

@@ -46,7 +46,7 @@ export default function AdminSystemSelector() {
               <GraduationCap className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="font-bold text-xl text-slate-800">براين نافس</h1>
+              <h1 className="font-bold text-xl text-slate-800">براين ساينس</h1>
               <p className="text-xs text-slate-500">لوحة الإدارة - اختيار النظام</p>
             </div>
           </div>
@@ -94,7 +94,7 @@ export default function AdminSystemSelector() {
                   
                   <div className="flex-1">
                     <h3 className="text-xl font-bold text-slate-800 mb-2 group-hover:text-primary transition-colors">
-                      نظام نافس
+                      نظام براين ساينس
                     </h3>
                     <p className="text-slate-500 text-sm leading-relaxed mb-4">
                       النظام الأساسي للأسئلة والألعاب العامة. يحتوي على بنك الأسئلة وألعاب: المطابقة، الترتيب، السرعة، المراحل، والعجلة.
@@ -113,7 +113,7 @@ export default function AdminSystemSelector() {
                     </div>
 
                     <Button className="btn-primary-gradient w-full gap-2">
-                      دخول نظام نافس
+                      دخول نظام براين ساينس
                       <ArrowLeft className="w-4 h-4" />
                     </Button>
                   </div>

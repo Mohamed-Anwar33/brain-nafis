@@ -172,7 +172,7 @@ export default function NafisStages() {
           <ListOrdered className="w-6 h-6 text-white" />
         </div>
         <div>
-          <h1 className="text-3xl font-bold text-slate-800">لعبة المراحل - نافس</h1>
+          <h1 className="text-3xl font-bold text-slate-800">لعبة المراحل - براين ساينس</h1>
           <p className="text-slate-500">إدارة أسئلة المراحل في النظام العام</p>
         </div>
       </div>

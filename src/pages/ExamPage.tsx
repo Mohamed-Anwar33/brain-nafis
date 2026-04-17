@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ExamQuestion } from "@/components/exam/ExamQuestion";
 import { AttemptData, ExamQuestion as ExamQuestionType } from "@/types/exam";
@@ -30,7 +30,7 @@ export default function ExamPage() {
   const navigate = useNavigate();
 
   // Intro State
-  const [showIntro, setShowIntro] = useState(true);
+  const [showIntro, setShowIntro] = useState(false);
 
   const [examData, setExamData] = useState<AttemptData | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -88,7 +88,7 @@ export default function ExamPage() {
         const displayOrderMap: Record<number, number> = {};
 
         if (stageTitlesData) {
-          stageTitlesData.forEach((stage) => {
+          stageTitlesData.forEach((stage: any) => {
             titlesMap[stage.stage_number] = stage.title;
             displayOrderMap[stage.stage_number] =
               stage.display_order || stage.stage_number;
@@ -157,7 +157,7 @@ export default function ExamPage() {
             .eq("id", attemptId)
             .single();
 
-          studentName = attempt?.student_name || "";
+          studentName = (attempt as any)?.student_name || "";
         }
 
         const transformedQuestions: ExamQuestionType[] = filteredQuestions.map(
@@ -386,7 +386,7 @@ export default function ExamPage() {
                   </div>
                   <div>
                     <p className="text-sm font-bold text-purple-400 mb-1">معلمة مادة العلوم</p>
-                    <h3 className="text-xl font-bold text-gray-800">أ/ هيفاء شجيع السلمي</h3>
+                    <h3 className="text-xl font-bold text-gray-800">أ/ هيفا السلمي</h3>
                   </div>
                 </div>
               </div>
@@ -404,6 +404,7 @@ export default function ExamPage() {
               </div>
 
             </div>
+
 
             <div className="pt-8 animate-bounce-in">
               <button

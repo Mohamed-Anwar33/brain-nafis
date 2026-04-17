@@ -109,7 +109,7 @@ export default function NafisQuestions() {
         .select("*")
         .eq("question_id", question.id)
         .order("created_at");
-      setPreviewChoices(data || []);
+      setPreviewChoices((data as Choice[]) || []);
     } catch (e) {
       console.error(e);
       toast.error("فشل تحميل الاختيارات");
@@ -147,7 +147,7 @@ export default function NafisQuestions() {
 
       if (error) throw error;
 
-      setQuestions(data || []);
+      setQuestions((data as Question[]) || []);
       setTotalCount(count || 0);
     } catch (err) {
       console.error("Error fetching questions:", err);
@@ -163,7 +163,7 @@ export default function NafisQuestions() {
         .from("stage_titles")
         .select("*")
         .order("stage_number");
-      setStageTitles(titles || []);
+      setStageTitles((titles as StageTitle[]) || []);
 
       const { data: allQ } = await supabase
         .from("questions")
@@ -333,7 +333,7 @@ export default function NafisQuestions() {
           <BookOpen className="w-6 h-6 text-white" />
         </div>
         <div>
-          <h1 className="text-3xl font-bold text-slate-800">بنك أسئلة نافس</h1>
+          <h1 className="text-3xl font-bold text-slate-800">بنك أسئلة براين ساينس</h1>
           <p className="text-slate-500">إدارة أسئلة النظام العام</p>
         </div>
       </div>

@@ -138,7 +138,7 @@ export default function NafisSpeed() {
           <Timer className="w-6 h-6 text-white" />
         </div>
         <div>
-          <h1 className="text-3xl font-bold text-slate-800">تحدي السرعة - نافس</h1>
+          <h1 className="text-3xl font-bold text-slate-800">تحدي السرعة - براين ساينس</h1>
           <p className="text-slate-500">إدارة أسئلة السرعة في النظام العام</p>
         </div>
       </div>

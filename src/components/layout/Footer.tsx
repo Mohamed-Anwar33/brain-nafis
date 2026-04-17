@@ -11,7 +11,7 @@ export const Footer = () => {
                     <span className="text-xl">🌴</span>
                 </p>
                 <p className="text-xs text-slate-400">
-                    جميع الحقوق محفوظة © {new Date().getFullYear()} براين نافس
+                    جميع الحقوق محفوظة للمعلمة هيفا السلمي 2026 ، براين ساينس
                 </p>
             </div>
         </footer>

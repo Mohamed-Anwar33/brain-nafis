@@ -19,6 +19,8 @@ import {
   LogOut,
   Target,
   Zap,
+  ChevronRight,
+  ArrowRight
 } from "lucide-react";
 import { toast } from "sonner";
 import { SaudiLoader } from "@/components/ui/SaudiLoader";
@@ -86,6 +88,7 @@ export default function StudentDashboard() {
     null,
   );
   const [isActionLoading, setIsActionLoading] = useState(false);
+  const [step, setStep] = useState<1 | 2 | 3>(1);
 
   useEffect(() => {
     const existingContext = getStoredSelectionContext();
@@ -171,12 +174,100 @@ export default function StudentDashboard() {
     (domain) => domain.id === selection.domainId,
   );
 
-  const handleTrackChange = (trackType: TrackType) => {
+  const handleTrackChange = async (trackType: TrackType) => {
     setSelection((current) => ({
       ...current,
       trackType,
       domainId: trackType === "central" ? current.domainId : "",
     }));
+
+    // Move to next step instead of starting immediately
+    setStep(2);
+  };
+
+  const handleBack = () => {
+    if (step === 3) {
+      setStep(2);
+      setExperienceType(null);
+    } else if (step === 2) {
+      setStep(1);
+      setExperienceType(null);
+      if (selection.trackType === "central") {
+        setSelection(curr => ({ ...curr, domainId: "" }));
+      }
+    }
+  };
+
+  const handleExperienceChange = async (type: ExperienceType) => {
+    setExperienceType(type);
+
+    // Auto-start if track (and domain for central) is already selected
+    const context = buildSelectionContextExtended(selection.trackType, type);
+    if (context) {
+      await executeStart(context);
+    }
+  };
+
+  const handleDomainSelection = (domainId: string) => {
+    handleDomainChange(domainId);
+    setStep(3);
+  };
+
+  const buildSelectionContextExtended = (track: TrackType, exp: ExperienceType): SelectionContext | null => {
+    if (!selectedGrade || !selectedSubject || !selection.gradeSubjectId) {
+      return null;
+    }
+
+    if (track === "central" && !selectedDomain) {
+      return null;
+    }
+
+    return {
+      trackType: track,
+      experienceType: exp,
+      gradeId: selectedGrade.id,
+      gradeName: selectedGrade.name,
+      subjectId: selectedSubject.id,
+      subjectName: selectedSubject.name,
+      gradeSubjectId: selection.gradeSubjectId,
+      domainId: track === "central" ? selectedDomain?.id || null : null,
+      domainName: track === "central" ? selectedDomain?.name || null : null,
+    };
+  };
+
+  const executeStart = async (context: SelectionContext) => {
+    saveSelectionContext(context);
+    setIsActionLoading(true);
+
+    try {
+      if (context.trackType === "nafis" && context.experienceType === "quick-quiz") {
+        await startNafisQuickQuiz(context);
+        return;
+      }
+
+      if (
+        context.trackType === "nafis" &&
+        context.experienceType === "interactive-games"
+      ) {
+        navigate("/student/games");
+        return;
+      }
+
+      if (
+        context.trackType === "central" &&
+        context.experienceType === "interactive-games"
+      ) {
+        navigate("/central-exam/games");
+        return;
+      }
+
+      navigate("/central-exam/play");
+    } catch (error) {
+      console.error("Failed to start student flow", error);
+      toast.error("حدث خطأ أثناء تجهيز التجربة");
+    } finally {
+      setIsActionLoading(false);
+    }
   };
 
   const handleGradeChange = (gradeId: string) => {
@@ -209,6 +300,39 @@ export default function StudentDashboard() {
       domainId,
     }));
   };
+
+  // Auto-selection logic for single availability
+  useEffect(() => {
+    if (grades.length === 1 && !selection.gradeId) {
+      handleGradeChange(grades[0].id);
+    }
+  }, [grades, selection.gradeId]);
+
+  useEffect(() => {
+    if (
+      availableSubjects.length === 1 &&
+      !selection.subjectId &&
+      selection.gradeId
+    ) {
+      handleSubjectChange(availableSubjects[0].id);
+    }
+  }, [availableSubjects, selection.subjectId, selection.gradeId]);
+
+  useEffect(() => {
+    if (
+      selection.trackType === "central" &&
+      availableDomains.length === 1 &&
+      !selection.domainId &&
+      selection.gradeSubjectId
+    ) {
+      handleDomainChange(availableDomains[0].id);
+    }
+  }, [
+    selection.trackType,
+    availableDomains,
+    selection.domainId,
+    selection.gradeSubjectId,
+  ]);
 
   const buildSelectionContext = (): SelectionContext | null => {
     if (!selectedGrade || !selectedSubject || !selection.gradeSubjectId) {
@@ -377,55 +501,7 @@ export default function StudentDashboard() {
     navigate(`/exam/${attemptRow.id}`);
   };
 
-  const handleStart = async () => {
-    if (!experienceType) {
-      toast.error("يرجى اختيار نوع التجربة");
-      return;
-    }
 
-    const context = buildSelectionContext();
-    if (!context) {
-      toast.error(
-        selection.trackType === "central"
-          ? "يرجى اختيار الصف والمادة والمجال أولًا"
-          : "يرجى اختيار الصف والمادة أولًا",
-      );
-      return;
-    }
-
-    saveSelectionContext(context);
-    setIsActionLoading(true);
-
-    try {
-      if (context.trackType === "nafis" && context.experienceType === "quick-quiz") {
-        await startNafisQuickQuiz(context);
-        return;
-      }
-
-      if (
-        context.trackType === "nafis" &&
-        context.experienceType === "interactive-games"
-      ) {
-        navigate("/student/games");
-        return;
-      }
-
-      if (
-        context.trackType === "central" &&
-        context.experienceType === "interactive-games"
-      ) {
-        navigate("/central-exam/games");
-        return;
-      }
-
-      navigate("/central-exam/play");
-    } catch (error) {
-      console.error("Failed to start student flow", error);
-      toast.error("حدث خطأ أثناء تجهيز التجربة");
-    } finally {
-      setIsActionLoading(false);
-    }
-  };
 
   const currentContext = buildSelectionContext();
 
@@ -446,6 +522,17 @@ export default function StudentDashboard() {
         <div className="container mx-auto flex items-center justify-between px-4 py-4">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
+              {step > 1 && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleBack}
+                  className="h-9 w-9 rounded-xl text-slate-500 hover:bg-slate-100 mr-2"
+                  title="العودة للخطوة السابقة"
+                >
+                  <ChevronRight className="h-5 w-5" />
+                </Button>
+              )}
               <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-lg">
                 <Brain className="h-5 w-5" />
               </div>
@@ -454,7 +541,7 @@ export default function StudentDashboard() {
                   {studentName ? `أهلًا ${studentName}` : "لوحة الطالب"}
                 </h1>
                 <p className="text-sm text-slate-500">
-                  اختر المسار والسياق الدراسي ثم ابدأ التجربة
+                  {step === 1 ? "اختر المسار التعليمي" : step === 2 && selection.trackType === 'central' ? "اختر التخصص" : "اختر نوع التجربة"}
                 </p>
               </div>
             </div>
@@ -475,196 +562,191 @@ export default function StudentDashboard() {
         <div className="mx-auto max-w-2xl">
           <Card className="border-0 bg-white p-8 shadow-2xl shadow-slate-200/50 rounded-3xl">
             <div className="space-y-8">
-              <div className="text-center space-y-4">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-slate-900 to-slate-700 text-white mb-2">
-                  <GraduationCap className="h-8 w-8" />
-                </div>
-                <h2 className="text-3xl font-black text-slate-900">
-                  اختر مسارك الدراسي
-                </h2>
-                <p className="text-slate-500 max-w-md mx-auto leading-relaxed">
-                  حدد الصف والمادة والمسار المناسب لبدء رحلتك التعليمية
-                </p>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <button
-                  type="button"
-                  onClick={() => handleTrackChange("nafis")}
-                  className={`group relative overflow-hidden rounded-2xl border-2 p-5 text-right transition-all duration-300 ${
-                    selection.trackType === "nafis"
-                      ? "border-emerald-500 bg-emerald-50/50 shadow-lg shadow-emerald-100"
-                      : "border-slate-100 bg-white hover:border-emerald-200 hover:shadow-md"
-                  }`}
-                >
-                  <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-100/50 rounded-full -translate-y-1/2 translate-x-1/2" />
-                  <div className="relative">
-                    <div className={`mb-4 flex h-12 w-12 items-center justify-center rounded-xl transition-all duration-300 ${
-                      selection.trackType === "nafis" ? "bg-emerald-500 text-white shadow-lg shadow-emerald-200" : "bg-emerald-100 text-emerald-600 group-hover:bg-emerald-500 group-hover:text-white"
-                    }`}>
-                      <Zap className="h-5 w-5" />
+              {step === 1 ? (
+                <>
+                  <div className="text-center space-y-4">
+                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-600 to-emerald-400 text-white mb-2 shadow-lg shadow-emerald-100">
+                      <Zap className="h-8 w-8" />
                     </div>
-                    <h3 className="text-lg font-bold text-slate-900">نافس</h3>
-                    <p className="mt-1 text-sm text-slate-500 leading-relaxed">
-                      بنك الأسئلة والألعاب العامة
+                    <h2 className="text-3xl font-black text-slate-900">
+                      اختر مسارك الدراسي
+                    </h2>
+                    <p className="text-slate-500 max-w-md mx-auto leading-relaxed">
+                      ابدأ رحلتك التعليمية باختيار المسار المناسب لك اليوم
                     </p>
                   </div>
-                </button>
 
-                <button
-                  type="button"
-                  onClick={() => handleTrackChange("central")}
-                  className={`group relative overflow-hidden rounded-2xl border-2 p-5 text-right transition-all duration-300 ${
-                    selection.trackType === "central"
-                      ? "border-blue-500 bg-blue-50/50 shadow-lg shadow-blue-100"
-                      : "border-slate-100 bg-white hover:border-blue-200 hover:shadow-md"
-                  }`}
-                >
-                  <div className="absolute top-0 right-0 w-24 h-24 bg-blue-100/50 rounded-full -translate-y-1/2 translate-x-1/2" />
-                  <div className="relative">
-                    <div className={`mb-4 flex h-12 w-12 items-center justify-center rounded-xl transition-all duration-300 ${
-                      selection.trackType === "central" ? "bg-blue-600 text-white shadow-lg shadow-blue-200" : "bg-blue-100 text-blue-600 group-hover:bg-blue-600 group-hover:text-white"
-                    }`}>
-                      <Target className="h-5 w-5" />
-                    </div>
-                    <h3 className="text-lg font-bold text-slate-900">الاختبار المركزي</h3>
-                    <p className="mt-1 text-sm text-slate-500 leading-relaxed">
-                      مع مجال علمي محدد
-                    </p>
-                  </div>
-                </button>
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-slate-700">
-                  <div className="w-1.5 h-1.5 rounded-full bg-slate-400" />
-                  <span className="text-sm font-medium">بياناتك الدراسية</span>
-                </div>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-3">
-                <div className="space-y-2">
-                  <span className="text-sm font-medium text-slate-600">الصف</span>
-                  <Select
-                    value={selection.gradeId || undefined}
-                    onValueChange={handleGradeChange}
-                  >
-                    <SelectTrigger className="h-12 rounded-xl border-slate-200 bg-slate-50 hover:bg-white transition-colors">
-                      <SelectValue placeholder="اختر الصف" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {grades.map((grade) => (
-                        <SelectItem key={grade.id} value={grade.id}>
-                          {grade.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <span className="text-sm font-medium text-slate-600">المادة</span>
-                  <Select
-                    disabled={!selection.gradeId}
-                    value={selection.subjectId || undefined}
-                    onValueChange={handleSubjectChange}
-                  >
-                    <SelectTrigger className="h-12 rounded-xl border-slate-200 bg-slate-50 hover:bg-white transition-colors">
-                      <SelectValue placeholder="اختر المادة" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableSubjects.map((subject) => (
-                        <SelectItem key={subject.id} value={subject.id}>
-                          {subject.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {selection.trackType === "central" && (
-                  <div className="space-y-2">
-                    <span className="text-sm font-medium text-slate-600">
-                      المجال
-                    </span>
-                    <Select
-                      disabled={!selection.gradeSubjectId}
-                      value={selection.domainId || undefined}
-                      onValueChange={handleDomainChange}
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <button
+                      type="button"
+                      onClick={() => handleTrackChange("nafis")}
+                      className="group relative overflow-hidden rounded-2xl border-2 border-slate-100 bg-white p-6 text-right transition-all duration-300 hover:border-emerald-500 hover:shadow-xl hover:shadow-emerald-100/50"
                     >
-                      <SelectTrigger className="h-12 rounded-xl border-slate-200 bg-slate-50 hover:bg-white transition-colors">
-                        <SelectValue placeholder="اختر المجال" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {availableDomains.map((domain) => (
-                          <SelectItem key={domain.id} value={domain.id}>
-                            {domain.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-50 rounded-full -translate-y-1/2 translate-x-1/2 group-hover:bg-emerald-100 transition-colors" />
+                      <div className="relative">
+                        <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600 group-hover:bg-emerald-500 group-hover:text-white transition-all duration-300 shadow-sm">
+                          <Zap className="h-6 w-6" />
+                        </div>
+                        <h3 className="text-xl font-bold text-slate-900">نافس</h3>
+                        <p className="mt-2 text-sm text-slate-500 leading-relaxed">
+                          استمتع ببنك الأسئلة والألعاب التعليمية العامة لتطوير مهاراتك
+                        </p>
+                        <div className="mt-4 flex items-center text-emerald-600 font-bold text-sm">
+                          <span>ابدأ الآن</span>
+                          <span className="mr-1 group-hover:translate-x-[-4px] transition-transform">←</span>
+                        </div>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleTrackChange("central")}
+                      className="group relative overflow-hidden rounded-2xl border-2 border-slate-100 bg-white p-6 text-right transition-all duration-300 hover:border-blue-500 hover:shadow-xl hover:shadow-blue-100/50"
+                    >
+                      <div className="absolute top-0 right-0 w-24 h-24 bg-blue-50 rounded-full -translate-y-1/2 translate-x-1/2 group-hover:bg-blue-100 transition-colors" />
+                      <div className="relative">
+                        <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-blue-100 text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all duration-300 shadow-sm">
+                          <Target className="h-6 w-6" />
+                        </div>
+                        <h3 className="text-xl font-bold text-slate-900">الاختبار المركزي</h3>
+                        <p className="mt-2 text-sm text-slate-500 leading-relaxed">
+                          اختبر معلوماتك في مجالات علمية محددة ومنظمة
+                        </p>
+                        <div className="mt-4 flex items-center text-blue-600 font-bold text-sm">
+                          <span>ابدأ الآن</span>
+                          <span className="mr-1 group-hover:translate-x-[-4px] transition-transform">←</span>
+                        </div>
+                      </div>
+                    </button>
                   </div>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-slate-700">
-                  <div className="w-1.5 h-1.5 rounded-full bg-slate-400" />
-                  <span className="text-sm font-medium">نوع التجربة</span>
-                </div>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <button
-                  type="button"
-                  onClick={() => setExperienceType("quick-quiz")}
-                  className={`group relative overflow-hidden rounded-2xl border-2 p-5 text-right transition-all duration-300 ${
-                    experienceType === "quick-quiz"
-                      ? "border-amber-500 bg-amber-50/50 shadow-lg shadow-amber-100"
-                      : "border-slate-100 bg-white hover:border-amber-200 hover:shadow-md"
-                  }`}
-                >
-                  <div className="absolute top-0 right-0 w-20 h-20 bg-amber-100/50 rounded-full -translate-y-1/2 translate-x-1/2" />
-                  <div className="relative">
-                    <div className={`mb-3 flex h-11 w-11 items-center justify-center rounded-xl transition-all duration-300 ${
-                      experienceType === "quick-quiz" ? "bg-amber-500 text-white shadow-lg shadow-amber-200" : "bg-amber-100 text-amber-600 group-hover:bg-amber-500 group-hover:text-white"
-                    }`}>
-                      <BookOpen className="h-5 w-5" />
+                </>
+              ) : step === 2 && selection.trackType === "central" ? (
+                <>
+                  <div className="text-center space-y-4">
+                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-600 to-blue-400 text-white mb-2 shadow-lg shadow-blue-100">
+                      <Target className="h-8 w-8" />
                     </div>
-                    <h3 className="text-base font-bold text-slate-900">
-                      اختبار سريع
-                    </h3>
-                    <p className="mt-1 text-xs text-slate-500 leading-relaxed">
-                      أسئلة مباشرة حسب اختيارك
+                    <h2 className="text-3xl font-black text-slate-900">
+                      اختر التخصص
+                    </h2>
+                    <p className="text-slate-500 max-w-md mx-auto leading-relaxed">
+                      حدد المجال العلمي الذي ترغب في البدء به للاختبار المركزي
                     </p>
                   </div>
-                </button>
 
-                <button
-                  type="button"
-                  onClick={() => setExperienceType("interactive-games")}
-                  className={`group relative overflow-hidden rounded-2xl border-2 p-5 text-right transition-all duration-300 ${
-                    experienceType === "interactive-games"
-                      ? "border-fuchsia-500 bg-fuchsia-50/50 shadow-lg shadow-fuchsia-100"
-                      : "border-slate-100 bg-white hover:border-fuchsia-200 hover:shadow-md"
-                  }`}
-                >
-                  <div className="absolute top-0 right-0 w-20 h-20 bg-fuchsia-100/50 rounded-full -translate-y-1/2 translate-x-1/2" />
-                  <div className="relative">
-                    <div className={`mb-3 flex h-11 w-11 items-center justify-center rounded-xl transition-all duration-300 ${
-                      experienceType === "interactive-games" ? "bg-fuchsia-600 text-white shadow-lg shadow-fuchsia-200" : "bg-fuchsia-100 text-fuchsia-600 group-hover:bg-fuchsia-600 group-hover:text-white"
-                    }`}>
-                      <Gamepad2 className="h-5 w-5" />
+                  <div className="grid gap-4 md:grid-cols-2">
+                    {availableDomains.length > 0 ? (
+                      availableDomains.map((domain) => (
+                        <button
+                          key={domain.id}
+                          type="button"
+                          onClick={() => handleDomainSelection(domain.id)}
+                          className="group relative overflow-hidden rounded-2xl border-2 border-slate-100 bg-white p-6 text-right transition-all duration-300 hover:border-blue-500 hover:shadow-xl hover:shadow-blue-100/50"
+                        >
+                          <div className="absolute top-0 right-0 w-20 h-20 bg-blue-50 rounded-full -translate-y-1/2 translate-x-1/2 group-hover:bg-blue-100 transition-colors" />
+                          <div className="relative">
+                            <div className="mb-4 flex h-13 w-13 items-center justify-center rounded-xl bg-blue-100 text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all duration-300">
+                              <Target className="h-5 w-5" />
+                            </div>
+                            <h3 className="text-lg font-bold text-slate-900">
+                              {domain.name}
+                            </h3>
+                            <p className="mt-2 text-sm text-slate-500 leading-relaxed line-clamp-2">
+                              اختبر مهاراتك في هذا المجال المحدد
+                            </p>
+                          </div>
+                        </button>
+                      ))
+                    ) : (
+                      <div className="col-span-full py-12 text-center text-slate-500">
+                        لا توجد مجالات متاحة حالياً لهذا التخصص.
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="mt-6 flex justify-center">
+                    <Button
+                      variant="ghost"
+                      onClick={handleBack}
+                      className="text-slate-500 hover:text-slate-900 gap-2"
+                    >
+                      <ArrowRight className="h-4 w-4" />
+                      العودة للمسارات
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="text-center space-y-4">
+                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-400 text-white mb-2 shadow-lg shadow-amber-100">
+                      <BookOpen className="h-8 w-8" />
                     </div>
-                    <h3 className="text-base font-bold text-slate-900">
-                      ألعاب تفاعلية
-                    </h3>
-                    <p className="mt-1 text-xs text-slate-500 leading-relaxed">
-                      ألعاب متاحة حسب سياقك
+                    <h2 className="text-3xl font-black text-slate-900">
+                      اختر نوع التجربة
+                    </h2>
+                    <p className="text-slate-500 max-w-md mx-auto leading-relaxed">
+                      {selection.trackType === 'central' && selectedDomain ? (
+                        <>التخصص: <span className="font-bold text-slate-900">{selectedDomain.name}</span></>
+                      ) : (
+                        <>المسار المختار: <span className="font-bold text-slate-900">{selection.trackType === 'nafis' ? 'نافس' : 'الاختبار المركزي'}</span></>
+                      )}
                     </p>
                   </div>
-                </button>
-              </div>
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <button
+                      type="button"
+                      disabled={isActionLoading}
+                      onClick={() => handleExperienceChange("quick-quiz")}
+                      className="group relative overflow-hidden rounded-2xl border-2 border-slate-100 bg-white p-6 text-right transition-all duration-300 hover:border-amber-500 hover:shadow-xl hover:shadow-amber-100/50 disabled:opacity-50"
+                    >
+                      <div className="absolute top-0 right-0 w-20 h-20 bg-amber-50 rounded-full -translate-y-1/2 translate-x-1/2 group-hover:bg-amber-100 transition-colors" />
+                      <div className="relative">
+                        <div className="mb-4 flex h-13 w-13 items-center justify-center rounded-xl bg-amber-100 text-amber-600 group-hover:bg-amber-500 group-hover:text-white transition-all duration-300">
+                          <Zap className="h-5 w-5" />
+                        </div>
+                        <h3 className="text-lg font-bold text-slate-900">
+                          اختبار سريع
+                        </h3>
+                        <p className="mt-2 text-sm text-slate-500 leading-relaxed">
+                          أسئلة مباشرة وسريعة لقياس مستواك بشكل حصري
+                        </p>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={isActionLoading}
+                      onClick={() => handleExperienceChange("interactive-games")}
+                      className="group relative overflow-hidden rounded-2xl border-2 border-slate-100 bg-white p-6 text-right transition-all duration-300 hover:border-fuchsia-500 hover:shadow-xl hover:shadow-fuchsia-100/50 disabled:opacity-50"
+                    >
+                      <div className="absolute top-0 right-0 w-20 h-20 bg-fuchsia-100/50 rounded-full -translate-y-1/2 translate-x-1/2 group-hover:bg-fuchsia-100 transition-colors" />
+                      <div className="relative">
+                        <div className="mb-4 flex h-13 w-13 items-center justify-center rounded-xl bg-fuchsia-100 text-fuchsia-600 group-hover:bg-fuchsia-600 group-hover:text-white transition-all duration-300">
+                          <Gamepad2 className="h-5 w-5" />
+                        </div>
+                        <h3 className="text-lg font-bold text-slate-900">
+                          ألعاب تفاعلية
+                        </h3>
+                        <p className="mt-2 text-sm text-slate-500 leading-relaxed">
+                          تعلم بطريقة ممتعة وتفاعلية من خلال الألعاب التعليمية
+                        </p>
+                      </div>
+                    </button>
+                  </div>
+
+                  <div className="mt-6 flex justify-center">
+                    <Button
+                      variant="ghost"
+                      onClick={handleBack}
+                      className="text-slate-500 hover:text-slate-900 gap-2"
+                    >
+                      <ArrowRight className="h-4 w-4" />
+                      {selection.trackType === 'central' ? 'تغيير التخصص المختار' : 'تغيير المسار المختار'}
+                    </Button>
+                  </div>
+                </>
+              )}
 
               {currentContext && (
                 <div className="rounded-xl border border-emerald-100 bg-emerald-50/50 p-4">
@@ -678,23 +760,7 @@ export default function StudentDashboard() {
                 </div>
               )}
 
-              <Button
-                onClick={handleStart}
-                disabled={isActionLoading}
-                className="h-14 w-full rounded-xl bg-gradient-to-r from-slate-900 to-slate-800 text-base font-bold text-white shadow-lg shadow-slate-300/50 hover:shadow-xl hover:shadow-slate-300/70 hover:from-slate-800 hover:to-slate-700 transition-all duration-300"
-              >
-                {isActionLoading ? (
-                  <span className="flex items-center gap-2">
-                    <span className="animate-spin">⏳</span>
-                    جاري التجهيز...
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-2">
-                    ابدأ الآن
-                    <span>→</span>
-                  </span>
-                )}
-              </Button>
+
             </div>
           </Card>
         </div>

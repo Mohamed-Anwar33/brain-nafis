@@ -49,7 +49,7 @@ export function StartScreen({ onStart, isLoading }: StartScreenProps) {
             </div>
             <h1 className="text-4xl md:text-6xl font-black text-gray-900 mb-6 tracking-tight">
               <span className="text-primary relative inline-block">
-                براين نافس
+                براين ساينس
                 <svg className="absolute w-full h-3 -bottom-1 right-0 text-primary/20" viewBox="0 0 100 10" preserveAspectRatio="none">
                   <path d="M0 5 Q 50 10 100 5" stroke="currentColor" strokeWidth="8" fill="none" />
                 </svg>
@@ -59,11 +59,13 @@ export function StartScreen({ onStart, isLoading }: StartScreenProps) {
             <div className="space-y-2 mb-8 animate-fade-in delay-100">
               <h2 className="text-xl md:text-2xl font-bold text-gray-800">المتوسطة الرابعة والعشرون جدة</h2>
               <div className="flex flex-wrap justify-center gap-4 text-sm md:text-base text-muted-foreground">
-                <p>معلمة مادة العلوم: <span className="font-semibold text-primary">هيفاء شجيع السلمي</span></p>
+                <p>معلمة مادة العلوم: <span className="font-semibold text-primary">هيفا السلمي</span></p>
                 <span className="hidden md:inline">•</span>
                 <p>قائدة المدرسة: <span className="font-semibold text-primary">تهاني السفياني</span></p>
               </div>
             </div>
+
+
           </div>
 
           {/* Features */}

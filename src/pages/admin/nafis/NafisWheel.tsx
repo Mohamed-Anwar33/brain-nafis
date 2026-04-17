@@ -190,7 +190,7 @@ export default function NafisWheel() {
           <Sparkles className="w-6 h-6 text-white" />
         </div>
         <div>
-          <h1 className="text-3xl font-bold text-slate-800">عجلة العلوم - نافس</h1>
+          <h1 className="text-3xl font-bold text-slate-800">عجلة العلوم - براين ساينس</h1>
           <p className="text-slate-500">إدارة أقسام وأسئلة العجلة في النظام العام</p>
         </div>
       </div>

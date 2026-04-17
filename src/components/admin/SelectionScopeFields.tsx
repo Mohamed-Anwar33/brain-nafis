@@ -157,7 +157,7 @@ export function SelectionScopeFields({
               <SelectValue placeholder="اختر المسار" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="nafis">نافس</SelectItem>
+              <SelectItem value="nafis">براين ساينس</SelectItem>
               <SelectItem value="central">الاختبار المركزي</SelectItem>
             </SelectContent>
           </Select>

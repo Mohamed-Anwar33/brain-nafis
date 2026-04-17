@@ -199,7 +199,7 @@ export default function NafisMatching() {
           <Gamepad2 className="w-6 h-6 text-white" />
         </div>
         <div>
-          <h1 className="text-3xl font-bold text-slate-800">لعبة المطابقة - نافس</h1>
+          <h1 className="text-3xl font-bold text-slate-800">لعبة المطابقة - براين ساينس</h1>
           <p className="text-slate-500">إدارة أسئلة المطابقة في النظام العام</p>
         </div>
       </div>

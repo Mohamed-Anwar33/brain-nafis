@@ -186,7 +186,7 @@ export default function NafisDashboard() {
           <BookOpen className="w-7 h-7 text-white" />
         </div>
         <div>
-          <h1 className="text-3xl font-bold text-slate-800">نظام نافس</h1>
+          <h1 className="text-3xl font-bold text-slate-800">نظام براين ساينس</h1>
           <p className="text-slate-500">ملخص حي للأسئلة والألعاب في النظام العام</p>
         </div>
       </div>
@@ -219,7 +219,7 @@ export default function NafisDashboard() {
       <Card className="card-elevated">
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
-            <CardTitle className="text-xl">ألعاب نافس</CardTitle>
+            <CardTitle className="text-xl">ألعاب براين ساينس</CardTitle>
             <p className="text-sm text-muted-foreground mt-1">إدارة الألعاب التفاعلية في النظام العام</p>
           </div>
           <Trophy className="w-6 h-6 text-slate-400" />
@@ -279,7 +279,7 @@ export default function NafisDashboard() {
                 <BookOpen className="w-5 h-5 text-primary" />
               </div>
               <div>
-                <p className="font-medium text-sm">نظام نافس</p>
+                <p className="font-medium text-sm">نظام براين ساينس</p>
                 <p className="text-xs text-muted-foreground">النظام العام للأسئلة والألعاب</p>
               </div>
             </div>

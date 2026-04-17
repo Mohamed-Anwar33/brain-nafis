@@ -101,7 +101,7 @@ export default function NafisLayout() {
         </button>
         <div className="flex items-center gap-2">
           <BookOpen className="w-6 h-6 text-primary" />
-          <span className="font-bold text-lg">نظام نافس</span>
+          <span className="font-bold text-lg">نظام براين ساينس</span>
         </div>
         <div className="w-10" />
       </div>
@@ -121,7 +121,7 @@ export default function NafisLayout() {
                   <BookOpen className="w-7 h-7 text-white" />
                 </div>
                 <div>
-                  <h1 className="font-bold text-lg text-slate-800">نظام نافس</h1>
+                  <h1 className="font-bold text-lg text-slate-800">نظام براين ساينس</h1>
                   <p className="text-xs text-slate-500">إدارة الأسئلة والألعاب</p>
                 </div>
               </div>

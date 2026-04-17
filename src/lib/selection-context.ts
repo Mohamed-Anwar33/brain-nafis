@@ -79,7 +79,7 @@ export function buildSelectionSnapshot(context: SelectionContext) {
 
 export function getSelectionDisplayText(context: SelectionContext) {
   const parts = [
-    context.trackType === "central" ? "الاختبار المركزي" : "نافس",
+    context.trackType === "central" ? "الاختبار المركزي" : "براين ساينس",
     context.gradeName,
     context.subjectName,
   ];

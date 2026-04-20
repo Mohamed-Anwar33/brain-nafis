@@ -101,7 +101,9 @@ export default function WheelGame() {
   const fetchData = async () => {
     setLoading(true);
     try {
+      console.log("[WheelGame] selectionContext:", JSON.stringify(selectionContext, null, 2));
       if (!selectionContext || selectionContext.trackType !== "central") {
+        console.log("[WheelGame] No selectionContext or not central, redirecting");
         navigate("/student/dashboard");
         return;
       }
@@ -124,45 +126,45 @@ export default function WheelGame() {
         setStudentName(profile.full_name);
       }
 
-      // Fetch sections
-      const { data: sectionsData, error: sectionsError } = await applySelectionFilters(
-        supabase
-          .from("wheel_sections")
-          .select("*")
-          .eq("is_active", true)
-          .order("order_index", { ascending: true }),
-        selectionContext,
-      );
+      // Fetch sections - no domain filter, show ALL for grade+subject
+      const { data: sectionsData, error: sectionsError } = await supabase
+        .from("wheel_sections")
+        .select("*")
+        .eq("is_active", true)
+        .eq("track_type", selectionContext.trackType)
+        .eq("grade_subject_id", selectionContext.gradeSubjectId)
+        .order("order_index", { ascending: true });
 
       if (sectionsError) throw sectionsError;
 
       if (!sectionsData || sectionsData.length === 0) {
-        toast.error("لا توجد أقسام مفعلة لهذا المجال حاليًا");
+        toast.error("لا توجد أقسام مفعلة حاليًا");
         navigate("/central-exam/games");
         return;
       }
 
-      setSections(sectionsData);
+      setSections(sectionsData as unknown as WheelSection[]);
 
-      // Fetch questions for all sections
-      const { data: questionsData, error: questionsError } = await applySelectionFilters(
-        supabase
-          .from("wheel_section_questions")
-          .select("*")
-          .eq("is_active", true),
-        selectionContext,
-      );
+      // Fetch questions for all active sections
+      const sectionIds = (sectionsData as any[]).map((s) => s.id);
+      const { data: questionsData, error: questionsError } = await supabase
+        .from("wheel_section_questions")
+        .select("*")
+        .eq("is_active", true)
+        .eq("track_type", selectionContext.trackType)
+        .eq("grade_subject_id", selectionContext.gradeSubjectId)
+        .in("section_id", sectionIds);
 
       if (questionsError) throw questionsError;
 
-      const allQuestions = questionsData || [];
+      const allQuestions = (questionsData || []) as unknown as WheelQuestion[];
       if (!allQuestions.length) {
-        toast.error("لا توجد أسئلة مفعلة لهذا المجال حاليًا");
+        toast.error("لا توجد أسئلة مفعلة حاليًا");
         navigate("/central-exam/games");
         return;
       }
 
-      setQuestions(allQuestions);
+      setQuestions(allQuestions as unknown as WheelQuestion[]);
       setTotalQuestions(allQuestions.length);
     } catch (error) {
       console.error("Error fetching data:", error);

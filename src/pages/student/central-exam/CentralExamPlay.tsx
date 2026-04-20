@@ -12,6 +12,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { getCentralExamQuestions, CentralExamQuestion } from "@/services/centralExamService";
 import { SaudiLoader } from "@/components/ui/SaudiLoader";
 import { 
@@ -31,7 +36,8 @@ import {
   Award,
   Sparkles,
   LogOut,
-  AlertTriangle
+  AlertTriangle,
+  Maximize2
 } from "lucide-react";
 import { toast } from "sonner";
 import confetti from "canvas-confetti";
@@ -551,16 +557,38 @@ export default function CentralExamPlay() {
         {/* Question Card */}
         <Card className="mb-8 overflow-hidden border-0 shadow-2xl shadow-purple-500/10 bg-white/80 backdrop-blur-xl">
           {currentQuestion.image_url && (
-            <div className="relative h-48 overflow-hidden">
-              <img 
-                src={currentQuestion.image_url} 
-                alt="Question" 
-                className="w-full h-full object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
-              <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur px-3 py-1 rounded-full text-sm font-bold text-slate-700">
-                صورة توضيحية
-              </div>
+            <div className="relative group">
+              <Dialog>
+                <DialogTrigger asChild>
+                  <div className="relative min-h-[200px] max-h-[400px] bg-slate-50/50 flex items-center justify-center overflow-hidden cursor-zoom-in transition-all duration-500 hover:shadow-2xl hover:shadow-violet-500/20 group-hover:scale-[1.01]">
+                    <img 
+                      src={currentQuestion.image_url} 
+                      alt="Question" 
+                      className="w-full h-full max-h-[400px] object-contain transition-transform duration-700"
+                    />
+                    
+                    {/* Hover Overlay Hint */}
+                    <div className="absolute inset-0 bg-violet-600/0 group-hover:bg-violet-600/5 transition-colors duration-300 flex items-center justify-center">
+                      <div className="opacity-0 group-hover:opacity-100 transform translate-y-4 group-hover:translate-y-0 transition-all duration-300 bg-white/90 backdrop-blur-md p-3 rounded-full shadow-xl">
+                        <Maximize2 className="w-6 h-6 text-violet-600" />
+                      </div>
+                    </div>
+
+                    <div className="absolute bottom-4 right-4 bg-white/70 backdrop-blur-md px-4 py-1.5 rounded-full text-xs font-bold text-slate-700 border border-white/50 shadow-sm z-10">
+                      صورة توضيحية
+                    </div>
+                  </div>
+                </DialogTrigger>
+                <DialogContent className="max-w-[95vw] max-h-[95vh] p-0 border-0 bg-transparent shadow-none overflow-hidden" dir="rtl">
+                  <div className="relative w-full h-full flex items-center justify-center">
+                    <img 
+                      src={currentQuestion.image_url} 
+                      alt="Full Question" 
+                      className="max-w-full max-h-[90vh] object-contain rounded-2xl shadow-2xl animate-in zoom-in-95 duration-300"
+                    />
+                  </div>
+                </DialogContent>
+              </Dialog>
             </div>
           )}
           

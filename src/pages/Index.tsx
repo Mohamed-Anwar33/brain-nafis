@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { StartScreen } from "@/components/exam/StartScreen";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,11 +8,12 @@ import { SaudiLoader } from "@/components/ui/SaudiLoader";
 const Index = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
+  const [existingName, setExistingName] = useState<string | null>(null);
 
   // Check for existing session on mount
-  useState(() => {
+  useEffect(() => {
     checkSession();
-  });
+  }, []);
 
   async function checkSession() {
     try {
@@ -35,8 +36,9 @@ const Index = () => {
           .eq("id", data.session.user.id)
           .single();
 
-        if (profile) {
-          navigate("/student/dashboard");
+        if (profile?.full_name) {
+          console.info(`Found existing session for: ${profile.full_name} (${data.session.user.id})`);
+          setExistingName(profile.full_name);
         }
       }
     } catch (error) {
@@ -55,7 +57,13 @@ const Index = () => {
     setIsLoading(true);
     setAuthError(null);
     try {
-      console.log("Starting anonymous login flow...");
+      console.log("Starting anonymous login flow...", { enteredName: studentName });
+
+      // If a different name is entered, sign out to get a new session ID
+      if (existingName && studentName.trim() !== existingName.trim()) {
+        console.info("Different name entered. Signing out previous session to get a fresh ID.");
+        await supabase.auth.signOut();
+      }
 
       // 1. Ensure Auth Session (Anonymous)
       let { data, error: sessionError } = await supabase.auth.getSession();
@@ -133,6 +141,14 @@ const Index = () => {
     );
   }
 
+  const handleLogout = async () => {
+    setIsLoading(true);
+    console.info("User requested logout from Start Screen.");
+    await supabase.auth.signOut();
+    setExistingName(null);
+    setIsLoading(false);
+  };
+
   if (isLoading) {
     // Safety timeout: if loading takes too long (> 15s), show a retry button
     setTimeout(() => {
@@ -154,7 +170,14 @@ const Index = () => {
     );
   }
 
-  return <StartScreen onStart={handleStart} isLoading={isLoading} />;
+  return (
+    <StartScreen 
+      onStart={handleStart} 
+      isLoading={isLoading} 
+      existingName={existingName}
+      onLogout={handleLogout}
+    />
+  );
 };
 
 export default Index;

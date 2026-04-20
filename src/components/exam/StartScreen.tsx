@@ -8,9 +8,11 @@ import { toast } from "sonner";
 interface StartScreenProps {
   onStart: (studentName: string) => Promise<void>;
   isLoading: boolean;
+  existingName?: string | null;
+  onLogout?: () => void;
 }
 
-export function StartScreen({ onStart, isLoading }: StartScreenProps) {
+export function StartScreen({ onStart, isLoading, existingName, onLogout }: StartScreenProps) {
   const [studentName, setStudentName] = useState("");
   const [error, setError] = useState("");
 
@@ -80,41 +82,77 @@ export function StartScreen({ onStart, isLoading }: StartScreenProps) {
             </div>
           </div>
 
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="studentName" className="text-base font-medium">
-                الاسم الثلاثي
-              </Label>
-              <Input
-                id="studentName"
-                type="text"
-                value={studentName}
-                onChange={(e) => setStudentName(e.target.value)}
-                placeholder="أحمد محمد علي"
-                className="h-14 text-lg rounded-xl border-2 focus:border-primary transition-colors"
-                dir="rtl"
-              />
-              {error && (
-                <p className="text-destructive text-sm animate-fade-in">{error}</p>
-              )}
+          {existingName ? (
+            <div className="space-y-6 text-center bg-primary/5 p-8 rounded-2xl border border-primary/20">
+              <h3 className="text-2xl font-bold text-slate-800">
+                مرحباً بعودتك، <span className="text-primary">{existingName}</span>
+              </h3>
+              <p className="text-slate-500 mb-6">هل تود الاستمرار بهذا الحساب؟</p>
+              
+              <div className="space-y-3">
+                <Button
+                  onClick={() => onStart(existingName)}
+                  disabled={isLoading}
+                  className="w-full h-14 text-lg font-semibold rounded-xl btn-primary-gradient"
+                >
+                  {isLoading ? (
+                    <span className="flex items-center gap-2">
+                      <span className="animate-spin">⏳</span>
+                      جاري التحميل...
+                    </span>
+                  ) : (
+                    "الاستمرار بهذا الحساب"
+                  )}
+                </Button>
+                
+                {onLogout && (
+                  <Button
+                    variant="outline"
+                    onClick={onLogout}
+                    disabled={isLoading}
+                    className="w-full h-14 text-lg font-semibold rounded-xl border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+                  >
+                    لست أنت؟ تسجيل الخروج وإدخال اسم جديد
+                  </Button>
+                )}
+              </div>
             </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="studentName" className="text-base font-medium">
+                  الاسم الثلاثي
+                </Label>
+                <Input
+                  id="studentName"
+                  type="text"
+                  value={studentName}
+                  onChange={(e) => setStudentName(e.target.value)}
+                  placeholder="أحمد محمد علي"
+                  className="h-14 text-lg rounded-xl border-2 focus:border-primary transition-colors"
+                  dir="rtl"
+                />
+                {error && (
+                  <p className="text-destructive text-sm animate-fade-in">{error}</p>
+                )}
+              </div>
 
-            <Button
-              type="submit"
-              disabled={isLoading || !studentName.trim()}
-              className="w-full h-14 text-lg font-semibold rounded-xl btn-primary-gradient"
-            >
-              {isLoading ? (
-                <span className="flex items-center gap-2">
-                  <span className="animate-spin">⏳</span>
-                  جاري التحميل...
-                </span>
-              ) : (
-                "ابدأ الاختبار"
-              )}
-            </Button>
-          </form>
+              <Button
+                type="submit"
+                disabled={isLoading || !studentName.trim()}
+                className="w-full h-14 text-lg font-semibold rounded-xl btn-primary-gradient"
+              >
+                {isLoading ? (
+                  <span className="flex items-center gap-2">
+                    <span className="animate-spin">⏳</span>
+                    جاري التحميل...
+                  </span>
+                ) : (
+                  "ابدأ الاختبار"
+                )}
+              </Button>
+            </form>
+          )}
         </div>
       </div>
     </div>

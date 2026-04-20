@@ -94,17 +94,32 @@ export default function CentralExamWheel() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    fetchSections();
-  }, []);
+    if (sectionScope.gradeSubjectId && sectionScope.domainId) {
+      fetchSections();
+    } else {
+      setSections([]);
+      setQuestions({});
+      setIsLoading(false);
+    }
+  }, [sectionScope.gradeSubjectId, sectionScope.domainId]);
 
   const fetchSections = async () => {
     setIsLoading(true);
     try {
-      const { data: sectionsData, error: sectionsError } = await supabase
+      let query = supabase
         .from("wheel_sections")
         .select("id, name, color, icon, is_active, order_index, grade_subject_id, domain_id")
         .eq('track_type', 'central')
         .order("created_at", { ascending: false });
+
+      if (sectionScope.gradeSubjectId) {
+        query = query.eq('grade_subject_id', sectionScope.gradeSubjectId);
+      }
+      if (sectionScope.domainId) {
+        query = query.eq('domain_id', sectionScope.domainId);
+      }
+
+      const { data: sectionsData, error: sectionsError } = await query;
 
       if (sectionsError) throw sectionsError;
       setSections((sectionsData as WheelSection[]) || []);
@@ -454,10 +469,15 @@ export default function CentralExamWheel() {
 
         {isLoading ? (
           <div className="flex items-center justify-center py-20"><Loader2 className="w-10 h-10 animate-spin text-rose-500" /></div>
+        ) : (!sectionScope.gradeSubjectId || !sectionScope.domainId) ? (
+          <div className="text-center py-20 bg-white rounded-2xl border-2 border-dashed border-slate-200">
+            <LayoutGrid className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+            <p className="text-slate-500 text-lg font-medium">الرجاء اختيار المادة والمجال أولاً من الأعلى لعرض الأقسام وإدارتها.</p>
+          </div>
         ) : sections.length === 0 ? (
           <div className="text-center py-20 bg-white rounded-2xl border-2 border-dashed border-slate-200">
             <Sparkles className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-            <p className="text-slate-500 text-lg font-medium">لم تقم بإضافة أي أقسام بعد.</p>
+            <p className="text-slate-500 text-lg font-medium">لم تقم بإضافة أي أقسام بعد لهذا المجال.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">

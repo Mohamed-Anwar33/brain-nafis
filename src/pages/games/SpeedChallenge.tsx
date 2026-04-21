@@ -39,6 +39,7 @@ interface GameState {
     correctCount: number;
     answeringCount: number;
     level: number;
+    stage: number;
 }
 
 export default function SpeedChallenge() {
@@ -56,7 +57,8 @@ export default function SpeedChallenge() {
         score: 0,
         correctCount: 0,
         answeringCount: 0,
-        level: 1
+        level: 1,
+        stage: 1
     });
 
     const [initialTime, setInitialTime] = useState(60);
@@ -193,9 +195,9 @@ export default function SpeedChallenge() {
             setQuestions(selectedQuestions);
             setLoading(false);
             setIsPlaying(true);
-            setGameState({ score: 0, correctCount: 0, answeringCount: 0, level: 1 });
             setCurrentIndex(0);
             setIsGameOver(false);
+            setTimeLeft(initialTime);
         } catch (error) {
             console.error(error);
             toast.error("فشل تحميل الأسئلة");
@@ -205,10 +207,19 @@ export default function SpeedChallenge() {
 
     const startGame = () => {
         setIsPlaying(true);
-        setTimeLeft(initialTime); // Use dynamic initial time
-        setGameState({ score: 0, correctCount: 0, answeringCount: 0, level: 1 });
+        setTimeLeft(initialTime);
+        setGameState({ score: 0, correctCount: 0, answeringCount: 0, level: 1, stage: 1 });
         setCurrentIndex(0);
         setIsGameOver(false);
+    };
+
+    const startNextStage = () => {
+        setGameState(prev => ({
+            ...prev,
+            stage: prev.stage + 1
+        }));
+        setQuestionsWithErrors(new Set());
+        fetchQuestions();
     };
 
     const stopTimer = () => {
@@ -369,7 +380,7 @@ export default function SpeedChallenge() {
                         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center shadow-lg shadow-orange-500/30">
                             <Zap className="w-5 h-5 text-white" />
                         </div>
-                        <h1 className="text-xl font-black text-slate-800 hidden md:block">تحدي السرعة</h1>
+                        <h1 className="text-xl font-black text-slate-800 hidden md:block">تحدي السرعة - المرحلة {gameState.stage}</h1>
                     </div>
                     
                     <div className="flex items-center gap-4">
@@ -394,23 +405,18 @@ export default function SpeedChallenge() {
                     </div>
                 ) : isGameOver ? (
                     <Card className="p-10 text-center space-y-6 max-w-md w-full bg-white/90 backdrop-blur-xl border-0 shadow-2xl shadow-orange-500/20">
-                        <div className="relative inline-block">
-                            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-yellow-400 via-amber-500 to-orange-500 flex items-center justify-center shadow-xl shadow-orange-500/30">
-                                <Trophy className="w-12 h-12 text-white" />
-                            </div>
-                            <div className="absolute -top-2 -right-2 text-2xl animate-bounce">✨</div>
-                            <div className="absolute -bottom-1 -left-2 text-xl animate-bounce delay-100">⭐</div>
-                        </div>
-                        
                         <div>
-                            <h2 className="text-3xl font-black bg-gradient-to-r from-orange-600 to-amber-600 bg-clip-text text-transparent mb-2">انتهى التحدي!</h2>
-                            <p className="text-slate-500">أجبت على {gameState.answeringCount} أسئلة.</p>
+                            <h2 className="text-3xl font-black bg-gradient-to-r from-orange-600 to-amber-600 bg-clip-text text-transparent mb-2">أحسنت يا بطل!</h2>
+                            <p className="text-slate-500">أكملت المرحلة {gameState.stage} بنجاح.</p>
                         </div>
-                        
-                        <div className="text-5xl font-black bg-gradient-to-r from-orange-600 via-amber-600 to-yellow-600 bg-clip-text text-transparent">
-                            {gameState.score}
+
+                        <div className="bg-gradient-to-r from-orange-50 to-amber-50 p-6 rounded-2xl border border-orange-200">
+                            <div className="text-sm text-orange-700 mb-2 font-bold">نقاط المرحلة</div>
+                            <div className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-amber-600">
+                                {gameState.score}
+                            </div>
+                            <div className="text-sm text-slate-400 mt-2">نقطة</div>
                         </div>
-                        <p className="text-slate-400">نقطة</p>
                         
                         <div className="grid grid-cols-2 gap-4">
                             <Card className="p-4 bg-gradient-to-br from-emerald-50 to-green-50 border-emerald-200">
@@ -424,19 +430,20 @@ export default function SpeedChallenge() {
                         </div>
                         
                         <div className="flex flex-col gap-3">
-                            <Button asChild className="w-full h-12 font-bold rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:opacity-90 shadow-lg shadow-emerald-500/20">
-                                <Link to="/games/stages" className="flex items-center justify-center">
-                                    <Sparkles className="w-5 h-5 ml-2" />
-                                    الانتقال للمرحلة التالية
-                                </Link>
+                            <Button onClick={startNextStage} className="w-full h-14 text-xl font-black rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-emerald-500/20">
+                                <Sparkles className="w-6 h-6 ml-3" />
+                                الانتقال للمرحلة {gameState.stage + 1}
                             </Button>
-                            <Button onClick={fetchQuestions} variant="outline" className="w-full h-12 font-bold rounded-xl border-2">
-                                <RefreshCw className="w-5 h-5 ml-2" />
-                                إعادة اللعب
-                            </Button>
-                            <Button asChild className="w-full h-12 font-bold rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:opacity-90">
-                                <Link to="/student/dashboard">العودة للقائمة</Link>
-                            </Button>
+                            
+                            <div className="grid grid-cols-2 gap-3">
+                                <Button onClick={() => window.location.reload()} variant="outline" className="h-12 text-lg rounded-xl font-bold border-2">
+                                    <RefreshCw className="w-5 h-5 ml-2" />
+                                    إعادة اللعبة
+                                </Button>
+                                <Button asChild className="h-12 text-lg rounded-xl bg-slate-800 text-white hover:bg-slate-900 transition-colors">
+                                    <Link to="/student/dashboard" className="flex items-center justify-center font-bold">القائمة</Link>
+                                </Button>
+                            </div>
                         </div>
                     </Card>
                 ) : questions.length > 0 ? (

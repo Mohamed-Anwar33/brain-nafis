@@ -46,6 +46,7 @@ interface Question {
 interface GameState {
     score: number;
     level: number;
+    stage: number;
 }
 
 interface GameItem {
@@ -175,7 +176,8 @@ export default function OrderingGame() {
 
     const [gameState, setGameState] = useState<GameState>({
         score: 0,
-        level: 1
+        level: 1,
+        stage: 1
     });
     const [correctCount, setCorrectCount] = useState(0);
     const [wrongCount, setWrongCount] = useState(0);  // Track wrong attempts
@@ -456,7 +458,7 @@ export default function OrderingGame() {
                         selection_context: getSelectionDisplayText(selectionContext),
                         game_name: "لغز الترتيب"
                     }
-                }).select().single();
+                }).select().single() as any;
 
                 if (attemptData && !insertError) {
                     await supabase.functions.invoke('exam-finish', {
@@ -470,11 +472,27 @@ export default function OrderingGame() {
     };
 
     const restartGame = () => {
-        setCurrentQuestionIndex(0);
-        setGameState({
+        setGameState(prev => ({
+            ...prev,
             score: 0,
-            level: 1
-        });
+            stage: 1
+        }));
+        setCurrentQuestionIndex(0);
+        setCorrectCount(0);
+        setGameOver(false);
+        setAvailableItems([]);
+        setPlacedItems([]);
+        setIsChecked(false);
+        setIsCorrect(false);
+        fetchQuestions();
+    };
+
+    const startNextStage = () => {
+        setGameState(prev => ({
+            ...prev,
+            stage: prev.stage + 1
+        }));
+        setCurrentQuestionIndex(0);
         setCorrectCount(0);
         setGameOver(false);
         setAvailableItems([]);
@@ -503,43 +521,33 @@ export default function OrderingGame() {
                     </div>
                     
                     <div>
-                        <h2 className="text-3xl font-black bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent mb-2">أحسنت!</h2>
-                        <p className="text-slate-500">أكملت جميع ألغاز الترتيب</p>
+                        <h2 className="text-3xl font-black bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent mb-2">أحسنت يا بطل!</h2>
+                        <p className="text-slate-500">أكملت المرحلة {gameState.stage} من ألغاز الترتيب</p>
                     </div>
 
                     <div className="bg-gradient-to-r from-emerald-50 to-teal-50 p-6 rounded-2xl border border-emerald-200">
-                        <div className="text-sm text-emerald-700 mb-2 font-bold">النتيجة النهائية</div>
+                        <div className="text-sm text-emerald-700 mb-2 font-bold">نقاط المرحلة</div>
                         <div className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-teal-600">
-                            {gameState.score}
+                            {correctCount}
                         </div>
                         <div className="text-sm text-slate-400 mt-2">نقطة</div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                        <Card className="p-4 bg-gradient-to-br from-emerald-50 to-green-50 border-emerald-200">
-                            <div className="text-2xl font-black text-emerald-600">{correctCount}</div>
-                            <div className="text-xs text-slate-500 font-bold">صحيحة</div>
-                        </Card>
-                        <Card className="p-4 bg-gradient-to-br from-slate-50 to-gray-50 border-slate-200">
-                            <div className="text-2xl font-black text-slate-600">{questions.length}</div>
-                            <div className="text-xs text-slate-500 font-bold">مجموع</div>
-                        </Card>
-                    </div>
-
                     <div className="flex flex-col gap-3">
-                        <Button asChild className="w-full h-12 text-lg font-bold rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:opacity-90 shadow-lg shadow-emerald-500/20">
-                            <Link to="/games/stages" className="flex items-center justify-center">
-                                <Sparkles className="w-5 h-5 ml-2" />
-                                الانتقال للمرحلة التالية
-                            </Link>
+                        <Button onClick={startNextStage} className="w-full h-14 text-xl font-black rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-500 hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-emerald-500/20">
+                            <Sparkles className="w-6 h-6 ml-3" />
+                            الانتقال للمرحلة {gameState.stage + 1}
                         </Button>
-                        <Button onClick={restartGame} variant="outline" className="w-full h-12 text-lg rounded-xl font-bold border-2">
-                            <RotateCcw className="w-5 h-5 ml-2" />
-                            العب مرة أخرى
-                        </Button>
-                        <Button asChild className="w-full h-12 text-lg rounded-xl font-bold bg-gradient-to-r from-emerald-500 to-teal-500 hover:opacity-90">
-                            <Link to="/student/dashboard">العودة للوحة الطالب</Link>
-                        </Button>
+                        
+                        <div className="grid grid-cols-2 gap-3">
+                            <Button onClick={() => window.location.reload()} variant="outline" className="h-12 text-lg rounded-xl font-bold border-2">
+                                <RotateCcw className="w-5 h-5 ml-2" />
+                                إعادة اللعب
+                            </Button>
+                            <Button asChild className="h-12 text-lg rounded-xl bg-slate-800 text-white hover:bg-slate-900 transition-colors">
+                                <Link to="/student/dashboard" className="flex items-center justify-center font-bold">القائمة</Link>
+                            </Button>
+                        </div>
                     </div>
                 </Card>
             </div>
@@ -590,7 +598,7 @@ export default function OrderingGame() {
                             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-lg shadow-emerald-500/30">
                                 <Puzzle className="w-5 h-5 text-white" />
                             </div>
-                            <h1 className="font-black text-xl text-slate-800 hidden md:block">لغز الترتيب</h1>
+                            <h1 className="font-black text-xl text-slate-800 hidden md:block">لغز الترتيب - المرحلة {gameState.stage}</h1>
                         </div>
                         
                         <div className="flex items-center gap-2 bg-gradient-to-r from-emerald-100 to-teal-100 px-4 py-2 rounded-full border border-emerald-200">

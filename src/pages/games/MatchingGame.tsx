@@ -31,6 +31,7 @@ interface GameState {
     score: number;
     correctAnswers: number;
     level: number;
+    stage: number;
 }
 
 export default function MatchingGame() {
@@ -47,7 +48,8 @@ export default function MatchingGame() {
     const [gameState, setGameState] = useState<GameState>({
         score: 0,
         correctAnswers: 0,
-        level: 1
+        level: 1,
+        stage: 1
     });
 
     const [attempts, setAttempts] = useState(0);
@@ -274,7 +276,7 @@ export default function MatchingGame() {
                         selection_context: getSelectionDisplayText(selectionContext),
                         game_name: "لعبة المطابقة"
                     }
-                }).select().single();
+                }).select().single() as any;
 
                 // Send email notification
                 if (attemptData && !insertError) {
@@ -329,14 +331,14 @@ export default function MatchingGame() {
                             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-lg shadow-purple-500/30">
                                 <Gamepad2 className="w-5 h-5 text-white" />
                             </div>
-                            <h1 className="text-xl font-black text-slate-800 hidden md:block">لعبة المطابقة</h1>
+                            <h1 className="text-xl font-black text-slate-800 hidden md:block">لعبة المطابقة - المرحلة {gameState.stage}</h1>
                         </div>
                     </div>
 
                     <div className="flex items-center gap-3 bg-white/80 backdrop-blur px-4 py-2 rounded-full shadow-lg border border-white/50">
                         <div className="flex flex-col items-center">
-                            <span className="text-[10px] text-slate-500 font-bold">المستوى</span>
-                            <span className="font-black text-lg leading-none text-violet-600">{gameState.level}</span>
+                            <span className="text-[10px] text-slate-500 font-bold">المرحلة</span>
+                            <span className="font-black text-lg leading-none text-violet-600">{gameState.stage}</span>
                         </div>
                         <div className="w-px h-8 bg-slate-200"></div>
                         <div className="flex flex-col items-center">
@@ -375,29 +377,39 @@ export default function MatchingGame() {
                         </div>
                         
                         <div>
-                            <h2 className="text-3xl font-black bg-gradient-to-r from-violet-600 to-fuchsia-600 bg-clip-text text-transparent mb-2">أحسنت!</h2>
-                            <p className="text-slate-500">أكملت المستوى بنجاح.</p>
+                            <h2 className="text-3xl font-black bg-gradient-to-r from-violet-600 to-fuchsia-600 bg-clip-text text-transparent mb-2">أحسنت يا بطل!</h2>
+                            <p className="text-slate-500">أكملت المرحلة {gameState.stage} بنجاح.</p>
                         </div>
                         
-                        <div className="text-5xl font-black bg-gradient-to-r from-violet-600 via-fuchsia-600 to-pink-600 bg-clip-text text-transparent">
-                            {gameState.score}
+                        <div className="bg-gradient-to-r from-violet-50 to-fuchsia-50 p-6 rounded-2xl border border-violet-100">
+                            <div className="text-sm text-slate-500 mb-2 font-bold">نقاط المرحلة</div>
+                            <div className="text-5xl font-black bg-gradient-to-r from-violet-600 via-fuchsia-600 to-pink-600 bg-clip-text text-transparent">
+                                {gameState.correctAnswers * 10 - (attempts > questions.length ? (attempts - questions.length) : 0)}
+                            </div>
+                            <div className="text-sm text-slate-400 mt-2">نقطة</div>
                         </div>
-                        <p className="text-slate-400">نقطة</p>
                         
                         <div className="flex flex-col gap-3">
-                            <Button asChild className="w-full h-12 font-bold rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:opacity-90 shadow-lg shadow-emerald-500/20">
-                                <Link to="/games/stages" className="flex items-center justify-center">
-                                    <Sparkles className="w-5 h-5 ml-2" />
-                                    الانتقال للمرحلة التالية
-                                </Link>
+                            <Button 
+                                onClick={() => {
+                                    setGameState(prev => ({ ...prev, stage: prev.stage + 1 }));
+                                    fetchQuestions();
+                                }} 
+                                className="w-full h-14 text-xl font-black rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-emerald-500/20"
+                            >
+                                <Sparkles className="w-6 h-6 ml-3" />
+                                الانتقال للمرحلة {gameState.stage + 1}
                             </Button>
-                            <Button onClick={() => window.location.reload()} variant="outline" className="w-full h-12 font-bold rounded-xl border-2">
-                                <RefreshCw className="w-5 h-5 ml-2" />
-                                إعادة اللعب
-                            </Button>
-                            <Button asChild className="w-full h-12 font-bold rounded-xl bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:opacity-90">
-                                <Link to="/student/dashboard">العودة للقائمة</Link>
-                            </Button>
+                            
+                            <div className="grid grid-cols-2 gap-3">
+                                <Button onClick={() => window.location.reload()} variant="outline" className="h-12 text-lg rounded-xl font-bold border-2">
+                                    <RefreshCw className="w-5 h-5 ml-2" />
+                                    إعادة اللعبة
+                                </Button>
+                                <Button asChild className="h-12 text-lg rounded-xl bg-slate-800 text-white hover:bg-slate-900 transition-colors">
+                                    <Link to="/student/dashboard" className="flex items-center justify-center font-bold">القائمة</Link>
+                                </Button>
+                            </div>
                         </div>
                     </Card>
                 ) : (

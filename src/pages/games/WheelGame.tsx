@@ -57,6 +57,7 @@ export default function WheelGame() {
   
   // Score tracking
   const [score, setScore] = useState(0);
+  const [stage, setStage] = useState(1); // Track current stage
   const [totalQuestions, setTotalQuestions] = useState(0);
   const [answeredCount, setAnsweredCount] = useState(0);
   const [correctCount, setCorrectCount] = useState(0);
@@ -392,11 +393,11 @@ export default function WheelGame() {
           // Save attempt after each section
           void saveSectionAttempt(nextSectionStats, nextSectionScore);
 
-          // If total limit reached, set game over after a delay
+          // If total limit reached, set stage over after a delay
           if (isTotalLimitReached) {
             setTimeout(() => {
                 setShowSectionResults(false);
-                setGameOver(true);
+                setGameOver(true); // Treat as stage over
             }, 3000);
           }
         }
@@ -504,8 +505,38 @@ export default function WheelGame() {
     }
   };
 
+  const startNextStage = () => {
+    setStage(prev => prev + 1);
+    setAnsweredCount(0);
+    setCorrectCount(0);
+    setUsedSections([]);
+    setCurrentSection(null);
+    setSectionQuestions([]);
+    setCurrentQuestionIndex(0);
+    setCurrentQuestion(null);
+    setSectionProgress({ current: 0, total: 0 });
+    setGameOver(false);
+    setShowQuestion(false);
+    setSelectedChoice(null);
+    setIsAnswered(false);
+    setIsCorrectAnswer(false);
+    setWaitingForNextSpin(false);
+    setWrongAttempts(0);
+    setQuestionsWithErrors(new Set());
+    setShowCorrectFeedback(false);
+    setSectionResults(new Map());
+    setShowSectionResults(false);
+    setCurrentSectionStats({ correct: 0, wrong: 0, total: 0 });
+    setCurrentSectionScore(0);
+    setRotation(0);
+    setSelectedIndex(null);
+    startTime.current = Date.now();
+    fetchData();
+  };
+
   const restartGame = () => {
     setScore(0);
+    setStage(1);
     setTotalQuestions(0);
     setAnsweredCount(0);
     setCorrectCount(0);
@@ -557,14 +588,14 @@ export default function WheelGame() {
           
           <div>
             <h2 className="text-3xl font-black text-slate-800 mb-1">أحسنت يا {studentName || "بطل"}! 🎉</h2>
-            <p className="text-slate-500">أكملت عجلة العلوم الدوارة</p>
+            <p className="text-slate-500">أكملت المرحلة {stage} من عجلة العلوم</p>
           </div>
           
           {/* Score */}
           <div className="bg-gradient-to-r from-slate-50 to-slate-100 p-6 rounded-2xl border border-slate-200">
-            <div className="text-sm text-slate-500 mb-2">النتيجة النهائية</div>
+            <div className="text-sm text-slate-500 mb-2">نقاط المرحلة</div>
             <div className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-primary to-purple-600">
-              {score}
+              {currentSectionScore}
             </div>
             <div className="text-sm text-slate-400 mt-2">نقطة</div>
           </div>
@@ -572,52 +603,38 @@ export default function WheelGame() {
           {/* Stats Grid */}
           <div className="grid grid-cols-4 gap-3 text-center">
             <div className="p-3 bg-green-50 rounded-xl border border-green-100">
-              <div className="text-xl font-bold text-green-600">{correctCount}</div>
+              <div className="text-xl font-bold text-green-600">{currentSectionStats.correct}</div>
               <div className="text-xs text-slate-500">صحيحة</div>
             </div>
             <div className="p-3 bg-red-50 rounded-xl border border-red-100">
-              <div className="text-xl font-bold text-red-600">{questionsWithErrors.size}</div>
+              <div className="text-xl font-bold text-red-600">{currentSectionStats.wrong}</div>
               <div className="text-xs text-slate-500">أخطاء</div>
             </div>
             <div className="p-3 bg-blue-50 rounded-xl border border-blue-100">
-              <div className="text-xl font-bold text-blue-600">{answeredCount}</div>
+              <div className="text-xl font-bold text-blue-600">{currentSectionStats.total}</div>
               <div className="text-xs text-slate-500">مجموع</div>
             </div>
             <div className="p-3 bg-amber-50 rounded-xl border border-amber-100">
-              <div className="text-xl font-bold text-amber-600">{percentage}%</div>
+              <div className="text-xl font-bold text-amber-600">{Math.round((currentSectionStats.correct / currentSectionStats.total) * 100)}%</div>
               <div className="text-xs text-slate-500">النسبة</div>
             </div>
           </div>
           
-          {/* Sections Info */}
-          <div className="bg-slate-50 p-4 rounded-xl border">
-            <div className="text-sm text-slate-600 mb-2">الأقسام المكتملة</div>
-            <div className="flex justify-center gap-2 flex-wrap">
-              {usedSections.map((sectionId, idx) => {
-                const section = sections.find(s => s.id === sectionId);
-                return section ? (
-                  <span key={idx} className="px-2 py-1 bg-white rounded-lg text-xs border shadow-sm">
-                    {section.icon} {section.name}
-                  </span>
-                ) : null;
-              })}
-            </div>
-          </div>
-          
           <div className="flex flex-col gap-3">
-            <Button asChild className="w-full h-12 text-lg font-bold rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:opacity-90 shadow-lg shadow-emerald-500/20">
-              <Link to="/games/stages" className="flex items-center justify-center">
-                <Sparkles className="w-5 h-5 ml-2" />
-                الانتقال للمرحلة التالية
-              </Link>
+            <Button onClick={startNextStage} className="w-full h-14 text-xl font-black rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-500 hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-emerald-500/20">
+              <Sparkles className="w-6 h-6 ml-3" />
+              الانتقال للمرحلة {stage + 1}
             </Button>
-            <Button onClick={restartGame} variant="outline" className="w-full h-12 text-lg rounded-xl font-bold border-2 text-slate-700">
-              <RotateCw className="w-5 h-5 ml-2" />
-              لعب مرة أخرى
-            </Button>
-            <Button asChild className="w-full h-12 text-lg rounded-xl bg-slate-800 text-white hover:bg-slate-900 transition-colors">
-              <Link to="/student/dashboard" className="flex items-center justify-center font-bold">العودة للقائمة</Link>
-            </Button>
+            
+            <div className="grid grid-cols-2 gap-3">
+              <Button onClick={restartGame} variant="outline" className="h-12 text-lg rounded-xl font-bold border-2">
+                <RotateCw className="w-5 h-5 ml-2" />
+                إعادة اللعبة
+              </Button>
+              <Button asChild className="h-12 text-lg rounded-xl bg-slate-800 text-white hover:bg-slate-900 transition-colors">
+                <Link to="/student/dashboard" className="flex items-center justify-center font-bold">القائمة الرئيسية</Link>
+              </Button>
+            </div>
           </div>
         </Card>
       </div>
@@ -648,7 +665,7 @@ export default function WheelGame() {
                 <Sparkles className="w-4 h-4 text-white" />
               </div>
               <div>
-                <h1 className="font-bold text-base text-slate-800">عجلة العلوم</h1>
+                <h1 className="font-bold text-base text-slate-800">عجلة العلوم - المرحلة {stage}</h1>
               </div>
             </div>
 
@@ -664,22 +681,22 @@ export default function WheelGame() {
           <div className="flex items-center gap-4 text-sm">
             <div className="flex-1">
               <div className="flex items-center justify-between mb-1">
-                <span className="text-slate-600">تقدم الأقسام</span>
-                <span className="font-bold text-primary">{usedSections.length} / {sections.length}</span>
+                <span className="text-slate-600">الأقسام المكتملة</span>
+                <span className="font-bold text-primary">{Math.min(usedSections.length, sections.length)} / {sections.length}</span>
               </div>
               <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
                 <div 
                   className="h-full bg-gradient-to-r from-primary to-purple-500 transition-all duration-500"
-                  style={{ width: `${sections.length > 0 ? (usedSections.length / sections.length) * 100 : 0}%` }}
+                  style={{ width: `${sections.length > 0 ? (Math.min(usedSections.length, sections.length) / sections.length) * 100 : 0}%` }}
                 />
               </div>
             </div>
             
             {currentSection && showQuestion && (
               <div className="px-3 py-1 bg-slate-100 rounded-lg">
-                <span className="text-xs text-slate-500">{currentSection.icon} {currentSection.name}</span>
+                <span className="text-xs text-slate-500">{currentSection.icon} التقدم</span>
                 <span className="font-bold text-primary mr-1">
-                  {sectionProgress.current}/{sectionProgress.total}
+                  {answeredCount + 1}/5
                 </span>
               </div>
             )}

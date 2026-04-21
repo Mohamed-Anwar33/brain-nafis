@@ -146,7 +146,7 @@ export default function SpeedChallenge() {
             let availableQuestions = allQuestions.filter(q => !seenIds.has(q.id));
 
             // 4. Reset if needed (need at least 20 questions)
-            const requiredCount = 20;
+            const requiredCount = 5;
             if (availableQuestions.length < requiredCount) {
                 await resetScopedHistory(session.user.id, "speed", selectionContext);
 
@@ -310,7 +310,7 @@ export default function SpeedChallenge() {
                         selection_context: getSelectionDisplayText(selectionContext),
                         game_name: "تحدي السرعة"
                     }
-                }).select().single();
+                }).select().single() as any;
 
                 // Send email notification
                 if (attemptData && !insertError) {
@@ -424,6 +424,12 @@ export default function SpeedChallenge() {
                         </div>
                         
                         <div className="flex flex-col gap-3">
+                            <Button asChild className="w-full h-12 font-bold rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:opacity-90 shadow-lg shadow-emerald-500/20">
+                                <Link to="/games/stages" className="flex items-center justify-center">
+                                    <Sparkles className="w-5 h-5 ml-2" />
+                                    الانتقال للمرحلة التالية
+                                </Link>
+                            </Button>
                             <Button onClick={fetchQuestions} variant="outline" className="w-full h-12 font-bold rounded-xl border-2">
                                 <RefreshCw className="w-5 h-5 ml-2" />
                                 إعادة اللعب

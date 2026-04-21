@@ -364,8 +364,8 @@ export default function WheelGame() {
       // Check if there are more questions in this section
       const nextIndex = currentQuestionIndex + 1;
       setTimeout(() => {
-        if (nextIndex < sectionQuestions.length) {
-          // More questions in this section
+          if (nextIndex < sectionQuestions.length && answeredCount + 1 < 5) {
+          // More questions in this section and total limit not reached
           setCurrentQuestionIndex(nextIndex);
           setCurrentQuestion(sectionQuestions[nextIndex]);
           setSectionProgress({ current: nextIndex + 1, total: sectionQuestions.length });
@@ -377,7 +377,10 @@ export default function WheelGame() {
           // Update question type
           setCurrentQuestionType(sectionQuestions[nextIndex].choices.length === 2 ? 'true_false' : 'multiple_choice');
         } else {
-          // Section complete - show results
+          // Section complete or 5 questions reached - show results
+          const isTotalLimitReached = answeredCount + 1 >= 5;
+          const isRemainingSectionsEmpty = sections.filter(s => !usedSections.includes(s.id)).length === 1; // current is already in usedSections
+
           // Save section results
           if (currentSection) {
             setSectionResults(prev => new Map(prev).set(currentSection.id, nextSectionStats));
@@ -388,6 +391,14 @@ export default function WheelGame() {
           
           // Save attempt after each section
           void saveSectionAttempt(nextSectionStats, nextSectionScore);
+
+          // If total limit reached, set game over after a delay
+          if (isTotalLimitReached) {
+            setTimeout(() => {
+                setShowSectionResults(false);
+                setGameOver(true);
+            }, 3000);
+          }
         }
       }, 1500);
       
@@ -455,7 +466,7 @@ export default function WheelGame() {
             game_name: "عجلة العلوم الدوارة",
             is_section_result: true
           }
-        }).select().single();
+        }).select().single() as any;
         
         if (insertError) {
           console.error("Error saving wheel section attempt", insertError);
@@ -594,12 +605,18 @@ export default function WheelGame() {
           </div>
           
           <div className="flex flex-col gap-3">
-            <Button onClick={restartGame} variant="outline" className="w-full h-12 text-lg rounded-xl">
+            <Button asChild className="w-full h-12 text-lg font-bold rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:opacity-90 shadow-lg shadow-emerald-500/20">
+              <Link to="/games/stages" className="flex items-center justify-center">
+                <Sparkles className="w-5 h-5 ml-2" />
+                الانتقال للمرحلة التالية
+              </Link>
+            </Button>
+            <Button onClick={restartGame} variant="outline" className="w-full h-12 text-lg rounded-xl font-bold border-2 text-slate-700">
               <RotateCw className="w-5 h-5 ml-2" />
               لعب مرة أخرى
             </Button>
-            <Button asChild className="w-full h-12 text-lg rounded-xl bg-gradient-to-r from-primary to-purple-600">
-              <Link to="/student/dashboard">العودة للقائمة</Link>
+            <Button asChild className="w-full h-12 text-lg rounded-xl bg-slate-800 text-white hover:bg-slate-900 transition-colors">
+              <Link to="/student/dashboard" className="flex items-center justify-center font-bold">العودة للقائمة</Link>
             </Button>
           </div>
         </Card>

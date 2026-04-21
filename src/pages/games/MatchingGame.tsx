@@ -79,8 +79,7 @@ export default function MatchingGame() {
             }
 
             // Get Config
-            const { data: setting } = await supabase.from("app_settings").select("value").eq("key", "matching_pairs_count").maybeSingle();
-            const limit = setting ? parseInt(setting.value) : 6;
+            const limit = 5;
 
             // 1. Fetch all active questions (IDs only)
             const { data: allQuestions, error } = await applySelectionFilters(
@@ -386,6 +385,12 @@ export default function MatchingGame() {
                         <p className="text-slate-400">نقطة</p>
                         
                         <div className="flex flex-col gap-3">
+                            <Button asChild className="w-full h-12 font-bold rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:opacity-90 shadow-lg shadow-emerald-500/20">
+                                <Link to="/games/stages" className="flex items-center justify-center">
+                                    <Sparkles className="w-5 h-5 ml-2" />
+                                    الانتقال للمرحلة التالية
+                                </Link>
+                            </Button>
                             <Button onClick={() => window.location.reload()} variant="outline" className="w-full h-12 font-bold rounded-xl border-2">
                                 <RefreshCw className="w-5 h-5 ml-2" />
                                 إعادة اللعب

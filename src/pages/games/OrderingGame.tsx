@@ -229,8 +229,7 @@ export default function OrderingGame() {
             }
 
             // Get Config
-            const { data: setting } = await supabase.from("app_settings").select("value").eq("key", "ordering_questions_limit").maybeSingle();
-            const limit = setting ? parseInt(setting.value) : 10;
+            const limit = 5;
 
             // 1. Fetch active
             const { data: allQuestions, error } = await applySelectionFilters(
@@ -528,6 +527,12 @@ export default function OrderingGame() {
                     </div>
 
                     <div className="flex flex-col gap-3">
+                        <Button asChild className="w-full h-12 text-lg font-bold rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:opacity-90 shadow-lg shadow-emerald-500/20">
+                            <Link to="/games/stages" className="flex items-center justify-center">
+                                <Sparkles className="w-5 h-5 ml-2" />
+                                الانتقال للمرحلة التالية
+                            </Link>
+                        </Button>
                         <Button onClick={restartGame} variant="outline" className="w-full h-12 text-lg rounded-xl font-bold border-2">
                             <RotateCcw className="w-5 h-5 ml-2" />
                             العب مرة أخرى

@@ -608,7 +608,7 @@ export default function OrderingGame() {
                     </div>
                 </div>
 
-                <main className="flex-1 container max-w-4xl mx-auto p-4 md:p-8 flex flex-col items-center relative z-10">
+                <main className="flex-1 container max-w-4xl mx-auto p-2 md:p-8 flex flex-col items-center relative z-10">
                     {loading ? (
                         <div className="flex flex-col items-center justify-center py-12">
                             <div className="w-16 h-16 border-4 border-emerald-300 border-t-emerald-600 rounded-full animate-spin mb-4"></div>
@@ -620,10 +620,10 @@ export default function OrderingGame() {
                             <Button onClick={fetchQuestions} className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-bold px-8">تحديث</Button>
                         </Card>
                     ) : (
-                        <div className="w-full space-y-8 animate-fade-in">
-                            <div className="text-center space-y-4">
+                        <div className="w-full space-y-4 md:space-y-8 animate-fade-in">
+                            <div className="text-center space-y-2 md:space-y-4">
                                 <div className="inline-flex items-center justify-center">
-                                    <span className="inline-block px-4 py-1 rounded-full bg-gradient-to-r from-emerald-100 to-teal-100 text-emerald-700 font-bold text-sm">
+                                    <span className="inline-block px-4 py-1 rounded-full bg-gradient-to-r from-emerald-100 to-teal-100 text-emerald-700 font-bold text-xs md:text-sm">
                                         سؤال {currentQuestionIndex + 1} / {questions.length}
                                     </span>
                                 </div>
@@ -633,18 +633,18 @@ export default function OrderingGame() {
                                         <img
                                             src={questions[currentQuestionIndex].image_url}
                                             alt="Question"
-                                            className="max-h-48 rounded-xl shadow-lg object-contain bg-white"
+                                            className="max-h-32 md:max-h-48 rounded-xl shadow-lg object-contain bg-white"
                                         />
                                     </div>
                                 )}
                                 
-                                <h2 className="text-2xl md:text-3xl font-black text-slate-800">
+                                <h2 className="text-xl md:text-3xl font-black text-slate-800">
                                     {questions[currentQuestionIndex].title || "رتب العناصر التالية"}
                                 </h2>
-                                <p className="text-slate-500">اسحب العناصر إلى الخانات الصحيحة</p>
+                                <p className="text-slate-500 text-sm md:text-base">اسحب العناصر إلى الخانات الصحيحة</p>
                             </div>
 
-                            <Card className="p-6 bg-white/90 backdrop-blur-xl border-0 shadow-xl min-h-[140px] flex flex-wrap justify-center gap-4">
+                            <Card className="p-4 md:p-6 bg-white/90 backdrop-blur-xl border-0 shadow-xl min-h-[100px] md:min-h-[140px] flex flex-wrap justify-center gap-2 md:gap-4">
                                 {availableItems.length === 0 && !isChecked && (
                                     <div className="flex flex-col items-center justify-center w-full h-full text-slate-400 py-4">
                                         <Check className="w-12 h-12 mb-2 opacity-50" />
@@ -661,7 +661,7 @@ export default function OrderingGame() {
                                 ))}
                             </Card>
 
-                            <div className="grid gap-4 grid-cols-2 md:flex md:justify-center md:gap-6">
+                            <div className="grid gap-2 md:gap-4 grid-cols-2 md:flex md:justify-center md:gap-6">
                                 {placedItems.map((item, index) => (
                                     <DroppableSlot
                                         key={`slot-${index}`}

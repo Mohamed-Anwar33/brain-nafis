@@ -651,29 +651,24 @@ export default function WheelGame() {
       {/* Header */}
       <div className="bg-white border-b py-3 px-6 shadow-sm sticky top-0 z-20">
         <div className="max-w-5xl mx-auto">
-          {/* Top Row */}
-          <div className="flex items-center justify-between mb-2">
-            <Button variant="ghost" size="sm" asChild className="rounded-full">
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <Button variant="ghost" size="sm" asChild className="rounded-full px-2 md:px-4">
               <Link to="/central-exam/games">
-                <ArrowRight className="w-5 h-5 ml-1" />
-                العودة
+                <ArrowRight className="w-5 h-5 md:ml-1" />
+                <span className="hidden md:inline">العودة</span>
               </Link>
             </Button>
             
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-rose-500 to-pink-600 flex items-center justify-center">
-                <Sparkles className="w-4 h-4 text-white" />
+              <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-gradient-to-br from-rose-500 to-pink-600 flex items-center justify-center">
+                <Sparkles className="w-4 h-4 md:w-5 md:h-5 text-white" />
               </div>
-              <div>
-                <h1 className="font-bold text-base text-slate-800">عجلة العلوم - المرحلة {stage}</h1>
-              </div>
+              <h1 className="font-bold text-sm md:text-lg text-slate-800 line-clamp-1">عجلة العلوم - {stage}</h1>
             </div>
 
-            <div className="flex items-center gap-3 bg-slate-100 px-3 py-1.5 rounded-full">
-              <div className="text-center">
-                <span className="text-xs text-muted-foreground uppercase font-bold">النقاط</span>
-                <span className="font-bold text-base leading-none text-rose-600 mr-1">{score}</span>
-              </div>
+            <div className="flex items-center gap-2 bg-slate-100 px-3 py-1 md:py-1.5 rounded-full">
+              <span className="text-[10px] md:text-xs text-muted-foreground font-bold">النقاط</span>
+              <span className="font-bold text-sm md:text-base text-rose-600">{score}</span>
             </div>
           </div>
           
@@ -735,7 +730,7 @@ export default function WheelGame() {
                 <div 
                   ref={wheelRef}
                   onClick={() => !isSpinning && availableSections.length > 0 && !waitingForNextSpin && spinWheel()}
-                  className={`relative w-80 h-80 md:w-[28rem] md:h-[28rem] p-4 ${!isSpinning && availableSections.length > 0 && !waitingForNextSpin ? 'cursor-pointer' : ''}`}
+                  className={`relative w-[85vw] h-[85vw] max-w-[320px] max-h-[320px] md:max-w-none md:max-h-none md:w-[28rem] md:h-[28rem] p-4 ${!isSpinning && availableSections.length > 0 && !waitingForNextSpin ? 'cursor-pointer' : ''}`}
                   style={{ 
                     transform: `rotate(${rotation}deg)`,
                     willChange: 'transform'

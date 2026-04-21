@@ -421,20 +421,20 @@ export default function MatchingGame() {
                                     key={item.id}
                                     onClick={() => handleSelectLeft(item.id)}
                                     className={`
-                                        p-4 text-center cursor-pointer transition-all duration-300 border-0 shadow-lg
+                                        p-2 md:p-4 text-center cursor-pointer transition-all duration-300 border-0 shadow-lg
                                         ${item.matched ? "opacity-0 pointer-events-none" : "hover:scale-105 hover:shadow-xl hover:-translate-y-1"}
                                         ${selectedLeft === item.id 
                                             ? "bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white shadow-xl shadow-purple-500/30 scale-105" 
                                             : "bg-white/90 backdrop-blur hover:bg-white"}
-                                        ${questions.length > 8 ? 'text-base p-3' : 'text-lg md:text-xl md:p-6'} 
+                                        ${questions.length > 8 ? 'text-[10px] md:text-base p-1.5 md:p-3' : 'text-sm md:text-xl md:p-6'} 
                                     `}
                                 >
                                     {item.imageUrl ? (
-                                        <div className="w-full h-full flex items-center justify-center min-h-[100px] md:min-h-[140px]">
+                                        <div className="w-full h-full flex items-center justify-center min-h-[60px] md:min-h-[140px]">
                                             <img
                                                 src={item.imageUrl}
                                                 alt="question"
-                                                className="w-full h-full object-contain max-h-32 md:max-h-48 mix-blend-multiply transition-transform hover:scale-110 duration-300"
+                                                className="w-full h-full object-contain max-h-20 md:max-h-48 mix-blend-multiply transition-transform hover:scale-110 duration-300"
                                             />
                                         </div>
                                     ) : (
@@ -451,20 +451,20 @@ export default function MatchingGame() {
                                     key={item.id}
                                     onClick={() => handleSelectRight(item.id)}
                                     className={`
-                                        p-4 text-center cursor-pointer transition-all duration-300 border-0 shadow-lg
+                                        p-2 md:p-4 text-center cursor-pointer transition-all duration-300 border-0 shadow-lg
                                         ${item.matched ? "opacity-0 pointer-events-none" : "hover:scale-105 hover:shadow-xl hover:-translate-y-1"}
                                         ${selectedRight === item.id 
                                             ? "bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white shadow-xl shadow-purple-500/30 scale-105" 
                                             : "bg-white/90 backdrop-blur hover:bg-white"}
-                                        ${questions.length > 8 ? 'text-base p-3' : 'text-lg md:text-xl md:p-6'} 
+                                        ${questions.length > 8 ? 'text-[10px] md:text-base p-1.5 md:p-3' : 'text-sm md:text-xl md:p-6'} 
                                     `}
                                 >
                                     {item.imageUrl ? (
-                                        <div className="w-full h-full flex items-center justify-center min-h-[100px] md:min-h-[140px]">
+                                        <div className="w-full h-full flex items-center justify-center min-h-[60px] md:min-h-[140px]">
                                             <img
                                                 src={item.imageUrl}
                                                 alt="answer"
-                                                className="w-full h-full object-contain max-h-32 md:max-h-48 mix-blend-multiply transition-transform hover:scale-110 duration-300"
+                                                className="w-full h-full object-contain max-h-20 md:max-h-48 mix-blend-multiply transition-transform hover:scale-110 duration-300"
                                             />
                                         </div>
                                     ) : (

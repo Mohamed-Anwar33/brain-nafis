@@ -471,7 +471,7 @@ export default function SpeedChallenge() {
                         </Card>
 
                         {/* Choices Grid */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-2 gap-3 md:gap-4">
                             {[1, 2, 3, 4].map((idx) => {
                                 const choiceKey = `choice${idx}` as keyof Question;
                                 const choiceImageKey = `choice${idx}_image_url` as keyof Question;
@@ -483,12 +483,12 @@ export default function SpeedChallenge() {
                                     <Card
                                         key={idx}
                                         onClick={() => handleAnswer(idx)}
-                                        className="cursor-pointer p-4 md:p-6 bg-white/90 backdrop-blur border-0 shadow-lg hover:shadow-2xl hover:scale-105 hover:-translate-y-1 transition-all duration-300 flex flex-col gap-3 items-center justify-center min-h-[120px]"
+                                        className="cursor-pointer p-3 md:p-6 bg-white/90 backdrop-blur border-0 shadow-lg hover:shadow-2xl hover:scale-105 hover:-translate-y-1 transition-all duration-300 flex flex-col gap-2 items-center justify-center min-h-[100px] md:min-h-[120px]"
                                     >
                                         {imageUrl && (
-                                            <img src={(imageUrl as string)} alt={`Choice ${idx}`} className="h-24 w-auto object-contain bg-white rounded-lg" />
+                                            <img src={(imageUrl as string)} alt={`Choice ${idx}`} className="h-16 md:h-24 w-auto object-contain bg-white rounded-lg" />
                                         )}
-                                        {text && <span className="text-xl font-bold text-slate-700">{text}</span>}
+                                        {text && <span className="text-sm md:text-xl font-bold text-slate-700 text-center line-clamp-2">{text}</span>}
                                     </Card>
                                 );
                             })}

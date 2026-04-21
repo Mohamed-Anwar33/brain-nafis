@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { SaudiLoader } from "@/components/ui/SaudiLoader";
+import PremiumBackground from "@/components/ui/PremiumBackground";
 import { useAcademicCatalog } from "@/hooks/use-academic-catalog";
 import {
   clearSelectionContext,
@@ -514,34 +515,32 @@ export default function StudentDashboard() {
   }
 
   return (
-    <div
-      className="min-h-screen bg-[radial-gradient(circle_at_top_right,_rgba(59,130,246,0.14),_transparent_28%),radial-gradient(circle_at_bottom_left,_rgba(16,185,129,0.14),_transparent_25%),linear-gradient(135deg,#f8fafc,#eef2ff,#ecfeff)]"
-      dir="rtl"
-    >
-      <header className="sticky top-0 z-20 border-b border-white/70 bg-white/80 backdrop-blur-xl">
-        <div className="container mx-auto flex items-center justify-between px-4 py-4">
+    <PremiumBackground>
+      <div className="min-h-screen" dir="rtl">
+      <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/60 backdrop-blur-3xl">
+        <div className="container mx-auto flex items-center justify-between px-6 py-5">
           <div className="space-y-1">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-4">
               {step > 1 && (
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={handleBack}
-                  className="h-9 w-9 rounded-xl text-slate-500 hover:bg-slate-100 mr-2"
+                  className="h-12 w-12 rounded-2xl text-slate-500 hover:bg-slate-100"
                   title="العودة للخطوة السابقة"
                 >
-                  <ChevronRight className="h-5 w-5" />
+                  <ChevronRight className="h-7 w-7" />
                 </Button>
               )}
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-lg">
-                <Brain className="h-5 w-5" />
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-600 text-white shadow-[0_8px_20px_rgba(79,70,229,0.2)]">
+                <Brain className="h-7 w-7" />
               </div>
               <div>
-                <h1 className="text-lg font-black text-slate-900">
+                <h1 className="text-2xl font-black text-slate-900">
                   {studentName ? `أهلًا ${studentName}` : "لوحة الطالب"}
                 </h1>
-                <p className="text-sm text-slate-500">
-                  {step === 1 ? "اختر المسار التعليمي" : step === 2 && selection.trackType === 'central' ? "اختر التخصص" : "اختر نوع التجربة"}
+                <p className="text-base text-slate-500 font-medium">
+                  {step === 1 ? "اختر المسار التعليمي" : step === 2 && selection.trackType === 'central' ? "اختر التخصص" : "اختر نوع التحدي"}
                 </p>
               </div>
             </div>
@@ -550,71 +549,77 @@ export default function StudentDashboard() {
           <Button
             variant="ghost"
             onClick={handleLogout}
-            className="gap-2 rounded-full text-slate-600 hover:bg-slate-100"
+            className="gap-3 rounded-2xl text-slate-600 hover:bg-slate-100 h-12 px-6 font-bold border border-slate-200"
           >
-            <LogOut className="h-4 w-4" />
+            <LogOut className="h-5 w-5" />
             تسجيل الخروج
           </Button>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-12">
-        <div className="mx-auto max-w-2xl">
-          <Card className="border-0 bg-white p-8 shadow-2xl shadow-slate-200/50 rounded-3xl">
+      <main className="container mx-auto px-4 py-16">
+        <div className="mx-auto max-w-4xl">
+          <Card className="border-0 bg-white/40 backdrop-blur-[40px] p-10 md:p-16 shadow-[0_32px_128px_-12px_rgba(0,0,0,0.08)] rounded-[4rem] border border-white/60">
             <div className="space-y-8">
               {step === 1 ? (
                 <>
-                  <div className="text-center space-y-4">
-                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-600 to-emerald-400 text-white mb-2 shadow-lg shadow-emerald-100">
-                      <Zap className="h-8 w-8" />
+                  <div className="text-center space-y-8 mb-20 animate-in fade-in slide-in-from-bottom-10 duration-1000">
+                    <div className="inline-flex items-center justify-center w-28 h-28 rounded-[2.5rem] bg-gradient-to-br from-amber-400 via-orange-400 to-rose-400 text-white mb-4 shadow-[0_15px_40px_rgba(251,191,36,0.4)] animate-bounce duration-[3s]">
+                      <Zap className="h-14 w-14" />
                     </div>
-                    <h2 className="text-3xl font-black text-slate-900">
-                      اختر مسارك الدراسي
+                    <h2 className="text-5xl md:text-7xl font-black text-slate-900 tracking-tighter leading-tight">
+                      اختر <span className="text-indigo-600">تحديك الجبار</span>
                     </h2>
-                    <p className="text-slate-500 max-w-md mx-auto leading-relaxed">
-                      ابدأ رحلتك التعليمية باختيار المسار المناسب لك اليوم
+                    <p className="text-slate-600 text-2xl max-w-2xl mx-auto leading-relaxed font-semibold">
+                      مرحباً بك في عالم المعرفة! اختر المسار المفعم بالحيوية اليوم
                     </p>
                   </div>
 
-                  <div className="grid gap-4 md:grid-cols-2">
+                  <div className="grid gap-8 md:grid-cols-2">
+                    {/* Central Exam */}
                     <button
                       type="button"
-                      onClick={() => handleTrackChange("nafis")}
-                      className="group relative overflow-hidden rounded-2xl border-2 border-slate-100 bg-white p-6 text-right transition-all duration-300 hover:border-emerald-500 hover:shadow-xl hover:shadow-emerald-100/50"
+                      onClick={() => handleTrackChange("central")}
+                      className="group relative overflow-hidden rounded-[3rem] border-4 border-slate-100 bg-white/80 p-10 text-right transition-all duration-500 hover:border-indigo-500 hover:shadow-[0_20px_60px_rgba(99,102,241,0.2)] hover:scale-[1.05] active:scale-95 shadow-sm"
                     >
-                      <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-50 rounded-full -translate-y-1/2 translate-x-1/2 group-hover:bg-emerald-100 transition-colors" />
+                      <div className="absolute top-0 right-0 w-48 h-48 bg-indigo-500/5 rounded-full -translate-y-1/2 translate-x-1/2 group-hover:scale-150 transition-transform duration-700" />
                       <div className="relative">
-                        <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600 group-hover:bg-emerald-500 group-hover:text-white transition-all duration-300 shadow-sm">
-                          <Zap className="h-6 w-6" />
+                        <div className="mb-8 flex h-24 w-24 items-center justify-center rounded-[2rem] bg-indigo-600 text-white group-hover:rotate-[360deg] transition-all duration-700 shadow-xl shadow-indigo-500/30">
+                          <Target className="h-12 w-12" />
                         </div>
-                        <h3 className="text-xl font-bold text-slate-900">نافس</h3>
-                        <p className="mt-2 text-sm text-slate-500 leading-relaxed">
-                          استمتع ببنك الأسئلة والألعاب التعليمية العامة لتطوير مهاراتك
+                        <h3 className="text-3xl md:text-4xl font-black text-slate-900 mb-4 tracking-tight">الاختبار المركزي</h3>
+                        <p className="text-lg text-slate-500 leading-relaxed font-bold">
+                          أثبت قوتك العلمية في تخصصات دقيقة وشاملة وممتعة
                         </p>
-                        <div className="mt-4 flex items-center text-emerald-600 font-bold text-sm">
-                          <span>ابدأ الآن</span>
-                          <span className="mr-1 group-hover:translate-x-[-4px] transition-transform">←</span>
+                        <div className="mt-10 flex items-center justify-between">
+                          <div className="flex items-center text-indigo-600 font-black text-xl">
+                            <span>انطلق للاكتساح</span>
+                            <span className="mr-3 group-hover:translate-x-[-12px] transition-transform duration-300">←</span>
+                          </div>
                         </div>
                       </div>
                     </button>
 
+                    {/* Nafis */}
                     <button
                       type="button"
-                      onClick={() => handleTrackChange("central")}
-                      className="group relative overflow-hidden rounded-2xl border-2 border-slate-100 bg-white p-6 text-right transition-all duration-300 hover:border-blue-500 hover:shadow-xl hover:shadow-blue-100/50"
+                      onClick={() => handleTrackChange("nafis")}
+                      className="group relative overflow-hidden rounded-[3rem] border-4 border-slate-100 bg-white/80 p-10 text-right transition-all duration-500 hover:border-emerald-500 hover:shadow-[0_20px_60px_rgba(16,185,129,0.2)] hover:scale-[1.05] active:scale-95 shadow-sm"
                     >
-                      <div className="absolute top-0 right-0 w-24 h-24 bg-blue-50 rounded-full -translate-y-1/2 translate-x-1/2 group-hover:bg-blue-100 transition-colors" />
+                      <div className="absolute top-0 right-0 w-48 h-48 bg-emerald-500/5 rounded-full -translate-y-1/2 translate-x-1/2 group-hover:scale-150 transition-transform duration-700" />
                       <div className="relative">
-                        <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-blue-100 text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all duration-300 shadow-sm">
-                          <Target className="h-6 w-6" />
+                        <div className="mb-8 flex h-24 w-24 items-center justify-center rounded-[2rem] bg-emerald-500 text-white group-hover:rotate-[360deg] transition-all duration-700 shadow-xl shadow-emerald-500/30">
+                          <Zap className="h-12 w-12" />
                         </div>
-                        <h3 className="text-xl font-bold text-slate-900">الاختبار المركزي</h3>
-                        <p className="mt-2 text-sm text-slate-500 leading-relaxed">
-                          اختبر معلوماتك في مجالات علمية محددة ومنظمة
+                        <h3 className="text-3xl md:text-4xl font-black text-slate-900 mb-4 tracking-tight">بنك نافس</h3>
+                        <p className="text-lg text-slate-500 leading-relaxed font-bold">
+                          تعلم بذكاء من خلال ألعاب وتحديات تفاعلية مشوقة جداً
                         </p>
-                        <div className="mt-4 flex items-center text-blue-600 font-bold text-sm">
-                          <span>ابدأ الآن</span>
-                          <span className="mr-1 group-hover:translate-x-[-4px] transition-transform">←</span>
+                        <div className="mt-10 flex items-center justify-between">
+                          <div className="flex items-center text-emerald-600 font-black text-xl">
+                            <span>ابدأ المغامرة</span>
+                            <span className="mr-3 group-hover:translate-x-[-12px] transition-transform duration-300">←</span>
+                          </div>
                         </div>
                       </div>
                     </button>
@@ -622,94 +627,97 @@ export default function StudentDashboard() {
                 </>
               ) : step === 2 && selection.trackType === "central" ? (
                 <>
-                  <div className="text-center space-y-4">
-                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-600 to-blue-400 text-white mb-2 shadow-lg shadow-blue-100">
-                      <Target className="h-8 w-8" />
+                  <div className="text-center space-y-8 mb-20 animate-in fade-in slide-in-from-top-10 duration-1000">
+                    <div className="inline-flex items-center justify-center w-28 h-28 rounded-[2.5rem] bg-indigo-600 text-white shadow-[0_10px_30px_rgba(79,70,229,0.3)]">
+                      <Target className="h-14 w-14 animate-bounce" />
                     </div>
-                    <h2 className="text-3xl font-black text-slate-900">
+                    <h2 className="text-5xl md:text-7xl font-black text-slate-900 tracking-tighter">
                       اختر التخصص
                     </h2>
-                    <p className="text-slate-500 max-w-md mx-auto leading-relaxed">
-                      حدد المجال العلمي الذي ترغب في البدء به للاختبار المركزي
+                    <p className="text-slate-600 text-2xl max-w-2xl mx-auto leading-relaxed font-semibold">
+                      بطل! حدد المجال العلمي الذي ترغب في اكتساحه اليوم بتفاؤل
                     </p>
                   </div>
 
-                  <div className="grid gap-4 md:grid-cols-2">
+                  <div className="grid gap-8 md:grid-cols-2">
                     {availableDomains.length > 0 ? (
-                      availableDomains.map((domain) => (
+                      availableDomains.map((domain, idx) => (
                         <button
                           key={domain.id}
                           type="button"
                           onClick={() => handleDomainSelection(domain.id)}
-                          className="group relative overflow-hidden rounded-2xl border-2 border-slate-100 bg-white p-6 text-right transition-all duration-300 hover:border-blue-500 hover:shadow-xl hover:shadow-blue-100/50"
+                          className="group relative overflow-hidden rounded-[2.5rem] border-4 border-slate-100 bg-white/80 p-10 text-right transition-all duration-500 hover:border-indigo-400 hover:shadow-[0_20px_60px_rgba(99,102,241,0.15)] hover:scale-[1.05] shadow-sm"
+                          style={{ animationDelay: `${idx * 100}ms` }}
                         >
-                          <div className="absolute top-0 right-0 w-20 h-20 bg-blue-50 rounded-full -translate-y-1/2 translate-x-1/2 group-hover:bg-blue-100 transition-colors" />
+                          <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full -translate-y-1/2 translate-x-1/2 group-hover:scale-110 transition-transform" />
                           <div className="relative">
-                            <div className="mb-4 flex h-13 w-13 items-center justify-center rounded-xl bg-blue-100 text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all duration-300">
-                              <Target className="h-5 w-5" />
+                            <div className="mb-8 flex h-20 w-20 items-center justify-center rounded-2xl bg-indigo-100 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-all duration-500 shadow-md">
+                              <Target className="h-10 w-10" />
                             </div>
-                            <h3 className="text-lg font-bold text-slate-900">
+                            <h3 className="text-3xl font-black text-slate-900 mb-4">
                               {domain.name}
                             </h3>
-                            <p className="mt-2 text-sm text-slate-500 leading-relaxed line-clamp-2">
-                              اختبر مهاراتك في هذا المجال المحدد
+                            <p className="text-slate-500 text-lg leading-relaxed font-bold">
+                              أثبت جدارتك في هذا المجال العلمي المتميز والمشوق
                             </p>
                           </div>
                         </button>
                       ))
                     ) : (
-                      <div className="col-span-full py-12 text-center text-slate-500">
-                        لا توجد مجالات متاحة حالياً لهذا التخصص.
+                      <div className="col-span-full py-40 text-center">
+                         <p className="text-4xl font-black text-slate-400">لا توجد تخصصات متاحة الآن</p>
                       </div>
                     )}
                   </div>
 
-                  <div className="mt-6 flex justify-center">
+                  <div className="mt-20 flex justify-center">
                     <Button
                       variant="ghost"
                       onClick={handleBack}
-                      className="text-slate-500 hover:text-slate-900 gap-2"
+                      className="text-slate-500 hover:text-indigo-600 gap-4 text-2xl font-black px-12 h-16 rounded-[2rem] hover:bg-white/10 transition-all border border-slate-200"
                     >
-                      <ArrowRight className="h-4 w-4" />
+                      <ArrowRight className="h-8 w-8" />
                       العودة للمسارات
                     </Button>
                   </div>
                 </>
               ) : (
                 <>
-                  <div className="text-center space-y-4">
-                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-400 text-white mb-2 shadow-lg shadow-amber-100">
-                      <BookOpen className="h-8 w-8" />
+                  <div className="text-center space-y-12 mb-20 animate-in zoom-in duration-1000">
+                    <div className="inline-flex items-center justify-center w-36 h-36 rounded-[3.5rem] bg-gradient-to-br from-amber-400 to-orange-500 text-white mb-6 shadow-[0_15px_40px_rgba(245,158,11,0.3)]">
+                      <Gamepad2 className="h-18 w-18 animate-pulse text-white" />
                     </div>
-                    <h2 className="text-3xl font-black text-slate-900">
-                      اختر نوع التجربة
+                    <h2 className="text-6xl md:text-8xl font-black text-slate-900 tracking-tight">
+                      اختر <span className="text-amber-500">نوع التحدي</span>
                     </h2>
-                    <p className="text-slate-500 max-w-md mx-auto leading-relaxed">
-                      {selection.trackType === 'central' && selectedDomain ? (
-                        <>التخصص: <span className="font-bold text-slate-900">{selectedDomain.name}</span></>
-                      ) : (
-                        <>المسار المختار: <span className="font-bold text-slate-900">{selection.trackType === 'nafis' ? 'نافس' : 'الاختبار المركزي'}</span></>
-                      )}
-                    </p>
+                    <div className="bg-white/60 inline-block px-14 py-6 rounded-[2.5rem] border border-slate-200 backdrop-blur-3xl shadow-xl">
+                      <p className="text-slate-600 text-3xl font-bold">
+                        {selection.trackType === 'central' && selectedDomain ? (
+                          <>المجال: <span className="font-black text-indigo-600 text-4xl">{selectedDomain.name}</span></>
+                        ) : (
+                          <>المسار: <span className="font-black text-emerald-600 text-4xl">{selection.trackType === 'nafis' ? 'نافس' : 'الاختبار المركزي'}</span></>
+                        )}
+                      </p>
+                    </div>
                   </div>
 
-                  <div className="grid gap-4 md:grid-cols-2">
+                  <div className="grid gap-10 md:grid-cols-2">
                     <button
                       type="button"
                       disabled={isActionLoading}
                       onClick={() => handleExperienceChange("quick-quiz")}
-                      className="group relative overflow-hidden rounded-2xl border-2 border-slate-100 bg-white p-6 text-right transition-all duration-300 hover:border-amber-500 hover:shadow-xl hover:shadow-amber-100/50 disabled:opacity-50"
+                      className="group relative overflow-hidden rounded-[4rem] border-4 border-slate-100 bg-white/80 p-14 text-right transition-all duration-500 hover:border-amber-400 hover:shadow-[0_20px_80px_rgba(245,158,11,0.15)] hover:scale-[1.05] disabled:opacity-50 shadow-sm"
                     >
-                      <div className="absolute top-0 right-0 w-20 h-20 bg-amber-50 rounded-full -translate-y-1/2 translate-x-1/2 group-hover:bg-amber-100 transition-colors" />
+                      <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/5 rounded-full -translate-y-1/2 translate-x-1/2" />
                       <div className="relative">
-                        <div className="mb-4 flex h-13 w-13 items-center justify-center rounded-xl bg-amber-100 text-amber-600 group-hover:bg-amber-500 group-hover:text-white transition-all duration-300">
-                          <Zap className="h-5 w-5" />
+                        <div className="mb-10 flex h-28 w-28 items-center justify-center rounded-[2.5rem] bg-amber-500 text-white group-hover:scale-110 group-hover:rotate-12 transition-all duration-500 shadow-xl shadow-amber-500/30">
+                          <Zap className="h-14 w-14" />
                         </div>
-                        <h3 className="text-lg font-bold text-slate-900">
-                          اختبار سريع
+                        <h3 className="text-4xl font-black text-slate-900 mb-6 tracking-tight">
+                          اختبار جبار
                         </h3>
-                        <p className="mt-2 text-sm text-slate-500 leading-relaxed">
-                          أسئلة مباشرة وسريعة لقياس مستواك بشكل حصري
+                        <p className="text-2xl text-slate-500 leading-relaxed font-bold">
+                          أسئلة سريعة ومركزة لقياس قوتك الحقيقية بمتعة
                         </p>
                       </div>
                     </button>
@@ -718,31 +726,31 @@ export default function StudentDashboard() {
                       type="button"
                       disabled={isActionLoading}
                       onClick={() => handleExperienceChange("interactive-games")}
-                      className="group relative overflow-hidden rounded-2xl border-2 border-slate-100 bg-white p-6 text-right transition-all duration-300 hover:border-fuchsia-500 hover:shadow-xl hover:shadow-fuchsia-100/50 disabled:opacity-50"
+                      className="group relative overflow-hidden rounded-[4rem] border-4 border-slate-100 bg-white/80 p-14 text-right transition-all duration-500 hover:border-fuchsia-400 hover:shadow-[0_20px_80px_rgba(192,38,211,0.15)] hover:scale-[1.05] disabled:opacity-50 shadow-sm"
                     >
-                      <div className="absolute top-0 right-0 w-20 h-20 bg-fuchsia-100/50 rounded-full -translate-y-1/2 translate-x-1/2 group-hover:bg-fuchsia-100 transition-colors" />
+                      <div className="absolute top-0 right-0 w-64 h-64 bg-fuchsia-500/5 rounded-full -translate-y-1/2 translate-x-1/2" />
                       <div className="relative">
-                        <div className="mb-4 flex h-13 w-13 items-center justify-center rounded-xl bg-fuchsia-100 text-fuchsia-600 group-hover:bg-fuchsia-600 group-hover:text-white transition-all duration-300">
-                          <Gamepad2 className="h-5 w-5" />
+                        <div className="mb-10 flex h-28 w-28 items-center justify-center rounded-[2.5rem] bg-fuchsia-600 text-white group-hover:scale-110 group-hover:-rotate-12 transition-all duration-500 shadow-xl shadow-fuchsia-500/30">
+                          <Gamepad2 className="h-14 w-14" />
                         </div>
-                        <h3 className="text-lg font-bold text-slate-900">
-                          ألعاب تفاعلية
+                        <h3 className="text-4xl font-black text-slate-900 mb-6 tracking-tight">
+                          ألعاب نارية
                         </h3>
-                        <p className="mt-2 text-sm text-slate-500 leading-relaxed">
-                          تعلم بطريقة ممتعة وتفاعلية من خلال الألعاب التعليمية
+                        <p className="text-2xl text-slate-500 leading-relaxed font-bold">
+                          تعلم واستمتع في عالم من الألعاب التفاعلية المبهجة
                         </p>
                       </div>
                     </button>
                   </div>
 
-                  <div className="mt-6 flex justify-center">
+                  <div className="mt-24 flex justify-center">
                     <Button
                       variant="ghost"
                       onClick={handleBack}
-                      className="text-slate-500 hover:text-slate-900 gap-2"
+                      className="text-slate-500 hover:text-slate-900 gap-5 text-3xl font-black px-14 h-20 rounded-[2.5rem] hover:bg-slate-100 transition-all border border-slate-200"
                     >
-                      <ArrowRight className="h-4 w-4" />
-                      {selection.trackType === 'central' ? 'تغيير التخصص المختار' : 'تغيير المسار المختار'}
+                      <ArrowRight className="h-10 w-10" />
+                      العودة للخلف
                     </Button>
                   </div>
                 </>
@@ -765,6 +773,7 @@ export default function StudentDashboard() {
           </Card>
         </div>
       </main>
-    </div>
+      </div>
+    </PremiumBackground>
   );
 }

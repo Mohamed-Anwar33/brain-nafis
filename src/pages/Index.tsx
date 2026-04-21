@@ -4,6 +4,7 @@ import { StartScreen } from "@/components/exam/StartScreen";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { SaudiLoader } from "@/components/ui/SaudiLoader";
+import PremiumBackground from "@/components/ui/PremiumBackground";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -158,15 +159,17 @@ const Index = () => {
     }, 15000);
 
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 flex-col gap-4">
-        <SaudiLoader text="جاري تجهيز التحدي..." />
-        <button
-          onClick={() => window.location.reload()}
-          className="text-sm text-blue-500 hover:underline mt-4 bg-transparent border-none cursor-pointer"
-        >
-          تحديث الصفحة إذا تأخر التحميل
-        </button>
-      </div>
+      <PremiumBackground>
+        <div className="min-h-screen flex items-center justify-center flex-col gap-8">
+          <SaudiLoader text="جاري تجهيز عالم التحدي برين ساينس..." />
+          <button
+            onClick={() => window.location.reload()}
+            className="text-lg text-slate-400 hover:text-white hover:underline transition-colors mt-8 bg-transparent border-none cursor-pointer font-bold"
+          >
+            تحديث الصفحة إذا تأخر التحميل
+          </button>
+        </div>
+      </PremiumBackground>
     );
   }
 

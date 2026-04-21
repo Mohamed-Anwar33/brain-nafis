@@ -568,7 +568,7 @@ export default function StudentDashboard() {
                       <Zap className="h-14 w-14" />
                     </div>
                     <h2 className="text-5xl md:text-7xl font-black text-slate-900 tracking-tighter leading-tight">
-                      اختر <span className="text-indigo-600">تحديك الجبار</span>
+                      اختر <span className="text-indigo-600">تحديك</span>
                     </h2>
                     <p className="text-slate-600 text-2xl max-w-2xl mx-auto leading-relaxed font-semibold">
                       مرحباً بك في عالم المعرفة! اختر المسار المفعم بالحيوية اليوم
@@ -714,10 +714,10 @@ export default function StudentDashboard() {
                           <Zap className="h-14 w-14" />
                         </div>
                         <h3 className="text-4xl font-black text-slate-900 mb-6 tracking-tight">
-                          اختبار جبار
+                          اختبار سريع
                         </h3>
                         <p className="text-2xl text-slate-500 leading-relaxed font-bold">
-                          أسئلة سريعة ومركزة لقياس قوتك الحقيقية بمتعة
+                          أسئلة سريعة ومنوعة لقياس مستواك العلمي بطريقة ممتعة
                         </p>
                       </div>
                     </button>
@@ -734,10 +734,10 @@ export default function StudentDashboard() {
                           <Gamepad2 className="h-14 w-14" />
                         </div>
                         <h3 className="text-4xl font-black text-slate-900 mb-6 tracking-tight">
-                          ألعاب نارية
+                          ألعاب تفاعلية
                         </h3>
                         <p className="text-2xl text-slate-500 leading-relaxed font-bold">
-                          تعلم واستمتع في عالم من الألعاب التفاعلية المبهجة
+                          تعلم واستمتع من خلال مجموعة من الألعاب التعليمية المشوقة
                         </p>
                       </div>
                     </button>

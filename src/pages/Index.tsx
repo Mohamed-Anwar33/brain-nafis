@@ -161,7 +161,7 @@ const Index = () => {
     return (
       <PremiumBackground>
         <div className="min-h-screen flex items-center justify-center flex-col gap-8">
-          <SaudiLoader text="جاري تجهيز عالم التحدي برين ساينس..." />
+          <SaudiLoader text="جاري تجهيز عالم التحدي..." />
           <button
             onClick={() => window.location.reload()}
             className="text-lg text-slate-400 hover:text-white hover:underline transition-colors mt-8 bg-transparent border-none cursor-pointer font-bold"

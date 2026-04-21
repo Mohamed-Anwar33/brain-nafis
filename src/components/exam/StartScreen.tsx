@@ -168,7 +168,7 @@ export function StartScreen({ onStart, isLoading, existingName, onLogout }: Star
                     ) : (
                       <span className="flex items-center gap-4 text-white">
                         <Sparkles className="w-10 h-10" />
-                        ادخل العالم الجبار
+                        انطلق للتحدي
                       </span>
                     )}
                   </Button>

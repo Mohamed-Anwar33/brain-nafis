@@ -536,10 +536,10 @@ export default function StudentDashboard() {
                 <Brain className="h-7 w-7" />
               </div>
               <div>
-                <h1 className="text-2xl font-black text-slate-900">
+                <h1 className="text-xl sm:text-2xl font-black text-slate-900">
                   {studentName ? `أهلًا ${studentName}` : "لوحة الطالب"}
                 </h1>
-                <p className="text-base text-slate-500 font-medium">
+                <p className="text-sm sm:text-base text-slate-500 font-medium">
                   {step === 1 ? "اختر المسار التعليمي" : step === 2 && selection.trackType === 'central' ? "اختر التخصص" : "اختر نوع التحدي"}
                 </p>
               </div>
@@ -557,42 +557,42 @@ export default function StudentDashboard() {
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-16">
+      <main className="container mx-auto px-4 py-8 sm:py-16">
         <div className="mx-auto max-w-4xl">
-          <Card className="border-0 bg-white/40 backdrop-blur-[40px] p-10 md:p-16 shadow-[0_32px_128px_-12px_rgba(0,0,0,0.08)] rounded-[4rem] border border-white/60">
+          <Card className="border-0 bg-white/40 backdrop-blur-[40px] p-6 sm:p-10 md:p-16 shadow-[0_32px_128px_-12px_rgba(0,0,0,0.08)] rounded-[2.5rem] md:rounded-[4rem] border border-white/60">
             <div className="space-y-8">
               {step === 1 ? (
                 <>
-                  <div className="text-center space-y-8 mb-20 animate-in fade-in slide-in-from-bottom-10 duration-1000">
-                    <div className="inline-flex items-center justify-center w-28 h-28 rounded-[2.5rem] bg-gradient-to-br from-amber-400 via-orange-400 to-rose-400 text-white mb-4 shadow-[0_15px_40px_rgba(251,191,36,0.4)] animate-bounce duration-[3s]">
-                      <Zap className="h-14 w-14" />
+                  <div className="text-center space-y-6 sm:space-y-8 mb-12 sm:mb-20 animate-in fade-in slide-in-from-bottom-10 duration-1000">
+                    <div className="inline-flex items-center justify-center w-20 h-20 sm:w-28 sm:h-28 rounded-[2rem] sm:rounded-[2.5rem] bg-gradient-to-br from-amber-400 via-orange-400 to-rose-400 text-white mb-2 sm:mb-4 shadow-[0_15px_40px_rgba(251,191,36,0.4)] animate-bounce duration-[3s]">
+                      <Zap className="h-10 w-10 sm:h-14 sm:w-14" />
                     </div>
-                    <h2 className="text-5xl md:text-7xl font-black text-slate-900 tracking-tighter leading-tight">
+                    <h2 className="text-3xl sm:text-5xl md:text-7xl font-black text-slate-900 tracking-tighter leading-tight">
                       اختر <span className="text-indigo-600">تحديك</span>
                     </h2>
-                    <p className="text-slate-600 text-2xl max-w-2xl mx-auto leading-relaxed font-semibold">
+                    <p className="text-slate-600 text-lg sm:text-2xl max-w-2xl mx-auto leading-relaxed font-semibold">
                       مرحباً بك في عالم المعرفة! اختر المسار المفعم بالحيوية اليوم
                     </p>
                   </div>
 
-                  <div className="grid gap-8 md:grid-cols-2">
+                  <div className="grid gap-6 sm:gap-8 md:grid-cols-2">
                     {/* Central Exam */}
                     <button
                       type="button"
                       onClick={() => handleTrackChange("central")}
-                      className="group relative overflow-hidden rounded-[3rem] border-4 border-slate-100 bg-white/80 p-10 text-right transition-all duration-500 hover:border-indigo-500 hover:shadow-[0_20px_60px_rgba(99,102,241,0.2)] hover:scale-[1.05] active:scale-95 shadow-sm"
+                      className="group relative overflow-hidden rounded-[2rem] sm:rounded-[3rem] border-4 border-slate-100 bg-white/80 p-6 sm:p-10 text-right transition-all duration-500 hover:border-indigo-500 hover:shadow-[0_20px_60px_rgba(99,102,241,0.2)] hover:scale-[1.05] active:scale-95 shadow-sm"
                     >
                       <div className="absolute top-0 right-0 w-48 h-48 bg-indigo-500/5 rounded-full -translate-y-1/2 translate-x-1/2 group-hover:scale-150 transition-transform duration-700" />
                       <div className="relative">
-                        <div className="mb-8 flex h-24 w-24 items-center justify-center rounded-[2rem] bg-indigo-600 text-white group-hover:rotate-[360deg] transition-all duration-700 shadow-xl shadow-indigo-500/30">
-                          <Target className="h-12 w-12" />
+                        <div className="mb-6 sm:mb-8 flex h-16 w-16 sm:h-24 sm:w-24 items-center justify-center rounded-[1.25rem] sm:rounded-[2rem] bg-indigo-600 text-white group-hover:rotate-[360deg] transition-all duration-700 shadow-xl shadow-indigo-500/30">
+                          <Target className="h-8 w-8 sm:h-12 sm:w-12" />
                         </div>
-                        <h3 className="text-3xl md:text-4xl font-black text-slate-900 mb-4 tracking-tight">الاختبار المركزي</h3>
-                        <p className="text-lg text-slate-500 leading-relaxed font-bold">
+                        <h3 className="text-2xl sm:text-3xl md:text-4xl font-black text-slate-900 mb-3 sm:mb-4 tracking-tight">الاختبار المركزي</h3>
+                        <p className="text-base sm:text-lg text-slate-500 leading-relaxed font-bold">
                           أثبت قوتك العلمية في تخصصات دقيقة وشاملة وممتعة
                         </p>
-                        <div className="mt-10 flex items-center justify-between">
-                          <div className="flex items-center text-indigo-600 font-black text-xl">
+                        <div className="mt-8 sm:mt-10 flex items-center justify-between">
+                          <div className="flex items-center text-indigo-600 font-black text-lg sm:text-xl">
                             <span>انطلق للاكتساح</span>
                             <span className="mr-3 group-hover:translate-x-[-12px] transition-transform duration-300">←</span>
                           </div>
@@ -604,37 +604,38 @@ export default function StudentDashboard() {
                     <button
                       type="button"
                       onClick={() => handleTrackChange("nafis")}
-                      className="group relative overflow-hidden rounded-[3rem] border-4 border-slate-100 bg-white/80 p-10 text-right transition-all duration-500 hover:border-emerald-500 hover:shadow-[0_20px_60px_rgba(16,185,129,0.2)] hover:scale-[1.05] active:scale-95 shadow-sm"
+                      className="group relative overflow-hidden rounded-[2rem] sm:rounded-[3rem] border-4 border-slate-100 bg-white/80 p-6 sm:p-10 text-right transition-all duration-500 hover:border-emerald-500 hover:shadow-[0_20px_60px_rgba(16,185,129,0.2)] hover:scale-[1.05] active:scale-95 shadow-sm"
                     >
                       <div className="absolute top-0 right-0 w-48 h-48 bg-emerald-500/5 rounded-full -translate-y-1/2 translate-x-1/2 group-hover:scale-150 transition-transform duration-700" />
                       <div className="relative">
-                        <div className="mb-8 flex h-24 w-24 items-center justify-center rounded-[2rem] bg-emerald-500 text-white group-hover:rotate-[360deg] transition-all duration-700 shadow-xl shadow-emerald-500/30">
-                          <Zap className="h-12 w-12" />
+                        <div className="mb-6 sm:mb-8 flex h-16 w-16 sm:h-24 sm:w-24 items-center justify-center rounded-[1.25rem] sm:rounded-[2rem] bg-emerald-500 text-white group-hover:rotate-[360deg] transition-all duration-700 shadow-xl shadow-emerald-500/30">
+                          <Zap className="h-8 w-8 sm:h-12 sm:w-12" />
                         </div>
-                        <h3 className="text-3xl md:text-4xl font-black text-slate-900 mb-4 tracking-tight">بنك نافس</h3>
-                        <p className="text-lg text-slate-500 leading-relaxed font-bold">
+                        <h3 className="text-2xl sm:text-3xl md:text-4xl font-black text-slate-900 mb-3 sm:mb-4 tracking-tight">بنك نافس</h3>
+                        <p className="text-base sm:text-lg text-slate-500 leading-relaxed font-bold">
                           تعلم بذكاء من خلال ألعاب وتحديات تفاعلية مشوقة جداً
                         </p>
-                        <div className="mt-10 flex items-center justify-between">
-                          <div className="flex items-center text-emerald-600 font-black text-xl">
+                        <div className="mt-8 sm:mt-10 flex items-center justify-between">
+                          <div className="flex items-center text-emerald-600 font-black text-lg sm:text-xl">
                             <span>ابدأ المغامرة</span>
                             <span className="mr-3 group-hover:translate-x-[-12px] transition-transform duration-300">←</span>
                           </div>
                         </div>
                       </div>
                     </button>
+
                   </div>
                 </>
               ) : step === 2 && selection.trackType === "central" ? (
                 <>
-                  <div className="text-center space-y-8 mb-20 animate-in fade-in slide-in-from-top-10 duration-1000">
-                    <div className="inline-flex items-center justify-center w-28 h-28 rounded-[2.5rem] bg-indigo-600 text-white shadow-[0_10px_30px_rgba(79,70,229,0.3)]">
-                      <Target className="h-14 w-14 animate-bounce" />
+                  <div className="text-center space-y-6 sm:space-y-8 mb-12 sm:mb-20 animate-in fade-in slide-in-from-top-10 duration-1000">
+                    <div className="inline-flex items-center justify-center w-20 h-20 sm:w-28 sm:h-28 rounded-[2rem] sm:rounded-[2.5rem] bg-indigo-600 text-white shadow-[0_10px_30px_rgba(79,70,229,0.3)]">
+                      <Target className="h-10 w-10 sm:h-14 sm:w-14 animate-bounce" />
                     </div>
-                    <h2 className="text-5xl md:text-7xl font-black text-slate-900 tracking-tighter">
+                    <h2 className="text-3xl sm:text-5xl md:text-7xl font-black text-slate-900 tracking-tighter">
                       اختر التخصص
                     </h2>
-                    <p className="text-slate-600 text-2xl max-w-2xl mx-auto leading-relaxed font-semibold">
+                    <p className="text-slate-600 text-lg sm:text-2xl max-w-2xl mx-auto leading-relaxed font-semibold">
                       بطل! حدد المجال العلمي الذي ترغب في اكتساحه اليوم بتفاؤل
                     </p>
                   </div>
@@ -646,18 +647,18 @@ export default function StudentDashboard() {
                           key={domain.id}
                           type="button"
                           onClick={() => handleDomainSelection(domain.id)}
-                          className="group relative overflow-hidden rounded-[2.5rem] border-4 border-slate-100 bg-white/80 p-10 text-right transition-all duration-500 hover:border-indigo-400 hover:shadow-[0_20px_60px_rgba(99,102,241,0.15)] hover:scale-[1.05] shadow-sm"
+                          className="group relative overflow-hidden rounded-[1.5rem] sm:rounded-[2.5rem] border-4 border-slate-100 bg-white/80 p-6 sm:p-10 text-right transition-all duration-500 hover:border-indigo-400 hover:shadow-[0_20px_60px_rgba(99,102,241,0.15)] hover:scale-[1.05] shadow-sm"
                           style={{ animationDelay: `${idx * 100}ms` }}
                         >
                           <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full -translate-y-1/2 translate-x-1/2 group-hover:scale-110 transition-transform" />
                           <div className="relative">
-                            <div className="mb-8 flex h-20 w-20 items-center justify-center rounded-2xl bg-indigo-100 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-all duration-500 shadow-md">
-                              <Target className="h-10 w-10" />
+                            <div className="mb-4 sm:mb-8 flex h-16 w-16 sm:h-20 sm:w-20 items-center justify-center rounded-2xl bg-indigo-100 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-all duration-500 shadow-md">
+                              <Target className="h-8 w-8 sm:h-10 sm:w-10" />
                             </div>
-                            <h3 className="text-3xl font-black text-slate-900 mb-4">
+                            <h3 className="text-2xl sm:text-3xl font-black text-slate-900 mb-3 sm:mb-4">
                               {domain.name}
                             </h3>
-                            <p className="text-slate-500 text-lg leading-relaxed font-bold">
+                            <p className="text-slate-500 text-base sm:text-lg leading-relaxed font-bold">
                               أثبت جدارتك في هذا المجال العلمي المتميز والمشوق
                             </p>
                           </div>
@@ -674,28 +675,28 @@ export default function StudentDashboard() {
                     <Button
                       variant="ghost"
                       onClick={handleBack}
-                      className="text-slate-500 hover:text-indigo-600 gap-4 text-2xl font-black px-12 h-16 rounded-[2rem] hover:bg-white/10 transition-all border border-slate-200"
+                      className="text-slate-500 hover:text-indigo-600 gap-3 sm:gap-4 text-lg sm:text-2xl font-black px-8 sm:px-12 h-12 sm:h-16 rounded-[1.5rem] sm:rounded-[2rem] hover:bg-white/10 transition-all border border-slate-200"
                     >
-                      <ArrowRight className="h-8 w-8" />
+                      <ArrowRight className="h-6 w-6 sm:h-8 sm:w-8" />
                       العودة للمسارات
                     </Button>
                   </div>
                 </>
               ) : (
                 <>
-                  <div className="text-center space-y-12 mb-20 animate-in zoom-in duration-1000">
-                    <div className="inline-flex items-center justify-center w-36 h-36 rounded-[3.5rem] bg-gradient-to-br from-amber-400 to-orange-500 text-white mb-6 shadow-[0_15px_40px_rgba(245,158,11,0.3)]">
-                      <Gamepad2 className="h-18 w-18 animate-pulse text-white" />
+                  <div className="text-center space-y-8 sm:space-y-12 mb-12 sm:mb-20 animate-in zoom-in duration-1000">
+                    <div className="inline-flex items-center justify-center w-24 h-24 sm:w-36 sm:h-36 rounded-[2.5rem] sm:rounded-[3.5rem] bg-gradient-to-br from-amber-400 to-orange-500 text-white mb-4 sm:mb-6 shadow-[0_15px_40px_rgba(245,158,11,0.3)]">
+                      <Gamepad2 className="h-12 w-12 sm:h-18 sm:w-18 animate-pulse text-white" />
                     </div>
-                    <h2 className="text-6xl md:text-8xl font-black text-slate-900 tracking-tight">
+                    <h2 className="text-3xl sm:text-6xl md:text-8xl font-black text-slate-900 tracking-tight">
                       اختر <span className="text-amber-500">نوع التحدي</span>
                     </h2>
-                    <div className="bg-white/60 inline-block px-14 py-6 rounded-[2.5rem] border border-slate-200 backdrop-blur-3xl shadow-xl">
-                      <p className="text-slate-600 text-3xl font-bold">
+                    <div className="bg-white/60 inline-block px-8 sm:px-14 py-4 sm:py-6 rounded-[1.5rem] sm:rounded-[2.5rem] border border-slate-200 backdrop-blur-3xl shadow-xl">
+                      <p className="text-slate-600 text-xl sm:text-3xl font-bold">
                         {selection.trackType === 'central' && selectedDomain ? (
-                          <>المجال: <span className="font-black text-indigo-600 text-4xl">{selectedDomain.name}</span></>
+                          <>المجال: <span className="font-black text-indigo-600 text-2xl sm:text-4xl">{selectedDomain.name}</span></>
                         ) : (
-                          <>المسار: <span className="font-black text-emerald-600 text-4xl">{selection.trackType === 'nafis' ? 'نافس' : 'الاختبار المركزي'}</span></>
+                          <>المسار: <span className="font-black text-emerald-600 text-2xl sm:text-4xl">{selection.trackType === 'nafis' ? 'نافس' : 'الاختبار المركزي'}</span></>
                         )}
                       </p>
                     </div>
@@ -706,17 +707,17 @@ export default function StudentDashboard() {
                       type="button"
                       disabled={isActionLoading}
                       onClick={() => handleExperienceChange("quick-quiz")}
-                      className="group relative overflow-hidden rounded-[4rem] border-4 border-slate-100 bg-white/80 p-14 text-right transition-all duration-500 hover:border-amber-400 hover:shadow-[0_20px_80px_rgba(245,158,11,0.15)] hover:scale-[1.05] disabled:opacity-50 shadow-sm"
+                      className="group relative overflow-hidden rounded-[2.5rem] sm:rounded-[4rem] border-4 border-slate-100 bg-white/80 p-8 sm:p-14 text-right transition-all duration-500 hover:border-amber-400 hover:shadow-[0_20px_80px_rgba(245,158,11,0.15)] hover:scale-[1.05] disabled:opacity-50 shadow-sm"
                     >
                       <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/5 rounded-full -translate-y-1/2 translate-x-1/2" />
                       <div className="relative">
-                        <div className="mb-10 flex h-28 w-28 items-center justify-center rounded-[2.5rem] bg-amber-500 text-white group-hover:scale-110 group-hover:rotate-12 transition-all duration-500 shadow-xl shadow-amber-500/30">
-                          <Zap className="h-14 w-14" />
+                        <div className="mb-6 sm:mb-10 flex h-20 w-20 sm:h-28 sm:w-28 items-center justify-center rounded-[1.5rem] sm:rounded-[2.5rem] bg-amber-500 text-white group-hover:scale-110 group-hover:rotate-12 transition-all duration-500 shadow-xl shadow-amber-500/30">
+                          <Zap className="h-10 w-10 sm:h-14 sm:w-14" />
                         </div>
-                        <h3 className="text-4xl font-black text-slate-900 mb-6 tracking-tight">
+                        <h3 className="text-2xl sm:text-4xl font-black text-slate-900 mb-4 sm:mb-6 tracking-tight">
                           اختبار سريع
                         </h3>
-                        <p className="text-2xl text-slate-500 leading-relaxed font-bold">
+                        <p className="text-lg sm:text-2xl text-slate-500 leading-relaxed font-bold">
                           أسئلة سريعة ومنوعة لقياس مستواك العلمي بطريقة ممتعة
                         </p>
                       </div>
@@ -726,30 +727,30 @@ export default function StudentDashboard() {
                       type="button"
                       disabled={isActionLoading}
                       onClick={() => handleExperienceChange("interactive-games")}
-                      className="group relative overflow-hidden rounded-[4rem] border-4 border-slate-100 bg-white/80 p-14 text-right transition-all duration-500 hover:border-fuchsia-400 hover:shadow-[0_20px_80px_rgba(192,38,211,0.15)] hover:scale-[1.05] disabled:opacity-50 shadow-sm"
+                      className="group relative overflow-hidden rounded-[2.5rem] sm:rounded-[4rem] border-4 border-slate-100 bg-white/80 p-8 sm:p-14 text-right transition-all duration-500 hover:border-fuchsia-400 hover:shadow-[0_20px_80px_rgba(192,38,211,0.15)] hover:scale-[1.05] disabled:opacity-50 shadow-sm"
                     >
                       <div className="absolute top-0 right-0 w-64 h-64 bg-fuchsia-500/5 rounded-full -translate-y-1/2 translate-x-1/2" />
                       <div className="relative">
-                        <div className="mb-10 flex h-28 w-28 items-center justify-center rounded-[2.5rem] bg-fuchsia-600 text-white group-hover:scale-110 group-hover:-rotate-12 transition-all duration-500 shadow-xl shadow-fuchsia-500/30">
-                          <Gamepad2 className="h-14 w-14" />
+                        <div className="mb-6 sm:mb-10 flex h-20 w-20 sm:h-28 sm:w-28 items-center justify-center rounded-[1.5rem] sm:rounded-[2.5rem] bg-fuchsia-600 text-white group-hover:scale-110 group-hover:-rotate-12 transition-all duration-500 shadow-xl shadow-fuchsia-500/30">
+                          <Gamepad2 className="h-10 w-10 sm:h-14 sm:w-14" />
                         </div>
-                        <h3 className="text-4xl font-black text-slate-900 mb-6 tracking-tight">
+                        <h3 className="text-2xl sm:text-4xl font-black text-slate-900 mb-4 sm:mb-6 tracking-tight">
                           ألعاب تفاعلية
                         </h3>
-                        <p className="text-2xl text-slate-500 leading-relaxed font-bold">
+                        <p className="text-lg sm:text-2xl text-slate-500 leading-relaxed font-bold">
                           تعلم واستمتع من خلال مجموعة من الألعاب التعليمية المشوقة
                         </p>
                       </div>
                     </button>
                   </div>
 
-                  <div className="mt-24 flex justify-center">
+                  <div className="mt-12 sm:mt-24 flex justify-center">
                     <Button
                       variant="ghost"
                       onClick={handleBack}
-                      className="text-slate-500 hover:text-slate-900 gap-5 text-3xl font-black px-14 h-20 rounded-[2.5rem] hover:bg-slate-100 transition-all border border-slate-200"
+                      className="text-slate-500 hover:text-slate-900 gap-3 sm:gap-5 text-xl sm:text-3xl font-black px-10 sm:px-14 h-14 sm:h-20 rounded-[1.5rem] sm:rounded-[2.5rem] hover:bg-slate-100 transition-all border border-slate-200"
                     >
-                      <ArrowRight className="h-10 w-10" />
+                      <ArrowRight className="h-7 w-7 sm:h-10 sm:w-10" />
                       العودة للخلف
                     </Button>
                   </div>

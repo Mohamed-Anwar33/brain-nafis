@@ -79,21 +79,7 @@ export function StartScreen({ onStart, isLoading, existingName, onLogout }: Star
                 </div>
               </div>
 
-              {/* Features - Bright style */}
-              <div className="grid grid-cols-2 gap-4 sm:gap-8 mb-12 sm:mb-16">
-                <div className="flex flex-col sm:flex-row items-center sm:items-center text-center sm:text-right gap-3 sm:gap-6 p-4 sm:p-8 rounded-[1.5rem] sm:rounded-[2rem] bg-indigo-50 border border-indigo-100/50 hover:bg-indigo-100 transition-colors shadow-sm">
-                  <div className="p-3 sm:p-4 bg-indigo-600 rounded-xl sm:rounded-2xl text-white shadow-lg shadow-indigo-600/20">
-                    <BookOpen className="w-6 h-6 sm:w-8 sm:h-8" />
-                  </div>
-                  <span className="text-base sm:text-2xl font-black text-slate-800">أسئلة ممتعة</span>
-                </div>
-                <div className="flex flex-col sm:flex-row items-center sm:items-center text-center sm:text-right gap-3 sm:gap-6 p-4 sm:p-8 rounded-[1.5rem] sm:rounded-[2rem] bg-emerald-50 border border-emerald-100/50 hover:bg-emerald-100 transition-colors shadow-sm">
-                  <div className="p-3 sm:p-4 bg-emerald-600 rounded-xl sm:rounded-2xl text-white shadow-lg shadow-emerald-600/20">
-                    <Zap className="w-6 h-6 sm:w-8 sm:h-8" />
-                  </div>
-                  <span className="text-base sm:text-2xl font-black text-slate-800">تحديات يومية</span>
-                </div>
-              </div>
+
 
               {existingName ? (
                 <div className="space-y-6 sm:space-y-10 text-center bg-white/60 p-8 sm:p-12 rounded-[2.5rem] sm:rounded-[3.5rem] border border-slate-100 backdrop-blur-xl shadow-lg">
@@ -136,7 +122,7 @@ export function StartScreen({ onStart, isLoading, existingName, onLogout }: Star
                 <form onSubmit={handleSubmit} className="space-y-8 sm:space-y-10">
                   <div className="space-y-3 sm:space-y-4">
                     <Label htmlFor="studentName" className="text-xl sm:text-3xl font-black text-slate-900 mb-2 sm:mb-4 block mr-2">
-                      اسمك بطل المستقبل:
+                      الاسم الثلاثي:
                     </Label>
                     <div className="relative group">
                       <Input

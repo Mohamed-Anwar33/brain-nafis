@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Trash2, Plus, Loader2, Sparkles, ChevronDown, ChevronUp } from "lucide-react";
+import { Trash2, Plus, Loader2, Sparkles, ChevronDown, ChevronUp, Pencil, Check, X } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -44,7 +44,11 @@ export default function NafisWheel() {
 
   const [newSection, setNewSection] = useState({ name: "", description: "" });
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
-  const [newQuestions, setNewQuestions] = useState<Record<string, { text: string; points: number }>>({});
+  const [newQuestions, setNewQuestions] = useState<Record<string, { text: string; points: number }>>({})
+
+  // Inline section rename state
+  const [editingSectionId, setEditingSectionId] = useState<string | null>(null);
+  const [editingSectionName, setEditingSectionName] = useState("");;
 
   useEffect(() => {
     fetchSections();
@@ -158,6 +162,29 @@ export default function NafisWheel() {
     }
   };
 
+  const handleRenameSection = async (sectionId: string) => {
+    const trimmed = editingSectionName.trim();
+    if (!trimmed) {
+      toast.error("اسم القسم لا يمكن أن يكون فارغاً");
+      return;
+    }
+    try {
+      const { error } = await supabase
+        .from("wheel_sections")
+        .update({ name: trimmed })
+        .eq("id", sectionId);
+      if (error) throw error;
+      setSections(prev => prev.map(s => s.id === sectionId ? { ...s, name: trimmed } : s));
+      toast.success("تم تعديل اسم القسم بنجاح");
+    } catch (err) {
+      console.error(err);
+      toast.error("فشل تعديل اسم القسم");
+    } finally {
+      setEditingSectionId(null);
+      setEditingSectionName("");
+    }
+  };
+
   const toggleActive = async (id: string, currentState: boolean, type: 'section' | 'question') => {
     try {
       const table = type === 'section' ? "wheel_sections" : "wheel_section_questions";
@@ -266,7 +293,37 @@ export default function NafisWheel() {
                         <Sparkles className="w-5 h-5 text-rose-600" />
                       </div>
                       <div className="text-right">
-                        <h3 className="font-bold text-slate-800">{section.name}</h3>
+                        {editingSectionId === section.id ? (
+                          <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                            <Input
+                              value={editingSectionName}
+                              onChange={(e) => setEditingSectionName(e.target.value)}
+                              className="h-8 text-sm font-bold rounded-md border-rose-300 focus-visible:ring-rose-500 w-48"
+                              autoFocus
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') handleRenameSection(section.id);
+                                if (e.key === 'Escape') { setEditingSectionId(null); setEditingSectionName(""); }
+                              }}
+                            />
+                            <Button
+                              size="icon"
+                              className="shrink-0 h-8 w-8 rounded-md bg-emerald-500 hover:bg-emerald-600 text-white"
+                              onClick={(e) => { e.stopPropagation(); handleRenameSection(section.id); }}
+                            >
+                              <Check className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="outline"
+                              className="shrink-0 h-8 w-8 rounded-md"
+                              onClick={(e) => { e.stopPropagation(); setEditingSectionId(null); setEditingSectionName(""); }}
+                            >
+                              <X className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <h3 className="font-bold text-slate-800">{section.name}</h3>
+                        )}
                         <p className="text-sm text-slate-500">
                           {questions[section.id]?.length || 0} سؤال
                           {section.description && ` • ${section.description}`}
@@ -281,6 +338,14 @@ export default function NafisWheel() {
                       >
                         {section.is_active ? "نشط" : "غير نشط"}
                       </Badge>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={(e) => { e.stopPropagation(); setEditingSectionId(section.id); setEditingSectionName(section.name); }}
+                        title="تعديل اسم القسم"
+                      >
+                        <Pencil className="w-4 h-4 text-blue-500" />
+                      </Button>
                       <Button 
                         variant="ghost" 
                         size="icon" 

@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Trash2, Plus, Loader2, CircleDot, CheckCircle2, Palette, Image as ImageIcon, Upload, X, Eye } from "lucide-react";
+import { Trash2, Plus, Loader2, CircleDot, CheckCircle2, Palette, Image as ImageIcon, Upload, X, Eye, Pencil, Check } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import {
@@ -67,6 +67,10 @@ export default function AdminWheel() {
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [itemToDelete, setItemToDelete] = useState<{id: string, type: 'section' | 'question'} | null>(null);
     const [showSectionForm, setShowSectionForm] = useState(false);
+
+    // Inline section rename state
+    const [editingSectionId, setEditingSectionId] = useState<string | null>(null);
+    const [editingSectionName, setEditingSectionName] = useState("");
     
     // Image upload states
     const [uploadingSectionImage, setUploadingSectionImage] = useState(false);
@@ -337,6 +341,32 @@ export default function AdminWheel() {
         }
     };
 
+    const handleRenameSection = async (sectionId: string) => {
+        const trimmed = editingSectionName.trim();
+        if (!trimmed) {
+            toast.error("اسم القسم لا يمكن أن يكون فارغاً");
+            return;
+        }
+        try {
+            const { error } = await supabase
+                .from("wheel_sections")
+                .update({ name: trimmed })
+                .eq("id", sectionId);
+            if (error) throw error;
+            setSections(prev => prev.map(s => s.id === sectionId ? { ...s, name: trimmed } : s));
+            if (selectedSection?.id === sectionId) {
+                setSelectedSection(prev => prev ? { ...prev, name: trimmed } : prev);
+            }
+            toast.success("تم تعديل اسم القسم بنجاح");
+        } catch (err) {
+            console.error(err);
+            toast.error("فشل تعديل اسم القسم");
+        } finally {
+            setEditingSectionId(null);
+            setEditingSectionName("");
+        }
+    };
+
     const toggleActive = async (id: string, currentState: boolean, type: 'section' | 'question') => {
         try {
             if (type === 'section') {
@@ -487,9 +517,44 @@ export default function AdminWheel() {
                                             ) : (
                                                 <div className="text-4xl mb-2">{section.icon}</div>
                                             )}
-                                            <div className="font-bold text-sm">{section.name}</div>
+                                            <div className="font-bold text-sm">
+                                                {editingSectionId === section.id ? (
+                                                    <div className="flex items-center gap-1 mt-1" onClick={(e) => e.stopPropagation()}>
+                                                        <Input
+                                                            value={editingSectionName}
+                                                            onChange={(e) => setEditingSectionName(e.target.value)}
+                                                            className="h-7 text-xs font-bold rounded-md border-rose-300 focus-visible:ring-rose-500"
+                                                            autoFocus
+                                                            onKeyDown={(e) => {
+                                                                if (e.key === 'Enter') handleRenameSection(section.id);
+                                                                if (e.key === 'Escape') { setEditingSectionId(null); setEditingSectionName(""); }
+                                                            }}
+                                                        />
+                                                        <Button
+                                                            size="icon"
+                                                            className="shrink-0 h-7 w-7 rounded-md bg-emerald-500 hover:bg-emerald-600 text-white"
+                                                            onClick={(e) => { e.stopPropagation(); handleRenameSection(section.id); }}
+                                                        >
+                                                            <Check className="w-3 h-3" />
+                                                        </Button>
+                                                        <Button
+                                                            size="icon"
+                                                            variant="outline"
+                                                            className="shrink-0 h-7 w-7 rounded-md"
+                                                            onClick={(e) => { e.stopPropagation(); setEditingSectionId(null); setEditingSectionName(""); }}
+                                                        >
+                                                            <X className="w-3 h-3" />
+                                                        </Button>
+                                                    </div>
+                                                ) : (
+                                                    <span>{section.name}</span>
+                                                )}
+                                            </div>
                                             <div className="flex items-center justify-center gap-2 mt-2">
                                                 <Switch checked={section.is_active} onCheckedChange={() => toggleActive(section.id, section.is_active, 'section')} onClick={(e) => e.stopPropagation()} className="data-[state=checked]:bg-green-500" />
+                                                <Button variant="ghost" size="icon" className="h-6 w-6 text-blue-500" onClick={(e) => { e.stopPropagation(); setEditingSectionId(section.id); setEditingSectionName(section.name); }} title="تعديل اسم القسم">
+                                                    <Pencil className="w-3 h-3" />
+                                                </Button>
                                                 <Button variant="ghost" size="icon" className="h-6 w-6 text-red-500" onClick={(e) => { e.stopPropagation(); setItemToDelete({ id: section.id, type: 'section' }); setDeleteDialogOpen(true); }}>
                                                     <Trash2 className="w-3 h-3" />
                                                 </Button>

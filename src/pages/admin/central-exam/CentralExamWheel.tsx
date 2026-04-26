@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Sparkles, AlertTriangle, Settings, Eye, EyeOff, LayoutGrid, HelpCircle, CheckCircle2, Image as ImageIcon, Upload, X, Edit, RotateCcw, Plus, Loader2, Trash2 } from "lucide-react";
+import { Sparkles, AlertTriangle, Settings, Eye, EyeOff, LayoutGrid, HelpCircle, CheckCircle2, Image as ImageIcon, Upload, X, Edit, RotateCcw, Plus, Loader2, Trash2, Pencil, Check } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { SelectionScopeFields } from "@/components/admin/SelectionScopeFields";
 import { validateSelectionScope } from "@/lib/selection-scope-validation";
@@ -64,6 +64,10 @@ export default function CentralExamWheel() {
   const [itemToDelete, setItemToDelete] = useState<{ id: string; type: 'section' | 'question' } | null>(null);
 
   const [newSection, setNewSection] = useState({ name: "" });
+
+  // Inline section rename state
+  const [editingSectionId, setEditingSectionId] = useState<string | null>(null);
+  const [editingSectionName, setEditingSectionName] = useState("");
 
   const [sectionScope, setSectionScope] = useState<SelectionScopeValue>({
     trackType: "central",
@@ -350,6 +354,29 @@ export default function CentralExamWheel() {
     }
   };
 
+  const handleRenameSection = async (sectionId: string) => {
+    const trimmed = editingSectionName.trim();
+    if (!trimmed) {
+      toast.error("اسم القسم لا يمكن أن يكون فارغاً");
+      return;
+    }
+    try {
+      const { error } = await supabase
+        .from("wheel_sections")
+        .update({ name: trimmed })
+        .eq("id", sectionId);
+      if (error) throw error;
+      setSections(prev => prev.map(s => s.id === sectionId ? { ...s, name: trimmed } : s));
+      toast.success("تم تعديل اسم القسم بنجاح");
+    } catch (err) {
+      console.error(err);
+      toast.error("فشل تعديل اسم القسم");
+    } finally {
+      setEditingSectionId(null);
+      setEditingSectionName("");
+    }
+  };
+
   const toggleActive = async (id: string, currentState: boolean, type: 'section' | 'question') => {
     if (type === 'section' && !currentState && activeSectionsCount >= MAX_ACTIVE_SECTIONS) {
       toast.error(`لا يمكن تفعيل القسم. الحد الأقصى هو ${MAX_ACTIVE_SECTIONS} أقسام نشطة في العجلة.`);
@@ -503,7 +530,46 @@ export default function CentralExamWheel() {
                         {section.is_active ? "مرئي للطلاب" : "مخفي"}
                       </Badge>
                     </div>
-                    <CardTitle className="mt-3 text-xl line-clamp-1 truncate" title={section.name}>{section.name}</CardTitle>
+                    {editingSectionId === section.id ? (
+                      <div className="mt-3 flex items-center gap-2">
+                        <Input
+                          value={editingSectionName}
+                          onChange={(e) => setEditingSectionName(e.target.value)}
+                          className="h-9 text-base font-bold rounded-lg border-rose-300 focus-visible:ring-rose-500"
+                          autoFocus
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleRenameSection(section.id);
+                            if (e.key === 'Escape') { setEditingSectionId(null); setEditingSectionName(""); }
+                          }}
+                        />
+                        <Button
+                          size="icon"
+                          className="shrink-0 h-9 w-9 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white"
+                          onClick={() => handleRenameSection(section.id)}
+                        >
+                          <Check className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          className="shrink-0 h-9 w-9 rounded-lg"
+                          onClick={() => { setEditingSectionId(null); setEditingSectionName(""); }}
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="mt-3 flex items-center gap-2">
+                        <CardTitle className="text-xl line-clamp-1 truncate" title={section.name}>{section.name}</CardTitle>
+                        <button
+                          onClick={() => { setEditingSectionId(section.id); setEditingSectionName(section.name); }}
+                          className="p-1 rounded-md hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
+                          title="تعديل اسم القسم"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    )}
                     <CardDescription className="font-semibold text-slate-500">
                       يحتوي على {qCount} سؤال
                     </CardDescription>
@@ -516,6 +582,15 @@ export default function CentralExamWheel() {
                     >
                       <Settings className="w-4 h-4 ml-2" />
                       إدارة الأسئلة
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="icon" 
+                      onClick={() => { setEditingSectionId(section.id); setEditingSectionName(section.name); }}
+                      className="shrink-0 text-blue-500 hover:text-blue-600 hover:bg-blue-50 border-blue-100 rounded-xl"
+                      title="تعديل اسم القسم"
+                    >
+                      <Pencil className="w-4 h-4" />
                     </Button>
                     <Button 
                       variant="outline" 

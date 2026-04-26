@@ -164,6 +164,7 @@ export default function CentralExamWheel() {
       const willBeActive = activeSectionsCount < MAX_ACTIVE_SECTIONS;
       const { error } = await supabase.from("wheel_sections").insert({
         name: newSection.name,
+        color: '#6366f1',
         is_active: willBeActive,
         track_type: "central",
         grade_subject_id: sectionScope.gradeSubjectId,

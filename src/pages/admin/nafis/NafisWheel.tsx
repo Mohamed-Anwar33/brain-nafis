@@ -93,6 +93,7 @@ export default function NafisWheel() {
     try {
       const { error } = await supabase.from("wheel_sections").insert({
         name: newSection.name,
+        color: '#6366f1',
         description: newSection.description || null,
         is_active: true,
         track_type: "nafis"

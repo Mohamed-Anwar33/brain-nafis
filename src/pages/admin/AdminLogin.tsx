@@ -1,15 +1,20 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { Lock, Mail } from "lucide-react";
+import { toast } from "sonner";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { toast } from "sonner";
-import { Lock, Mail, Shield } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import {
+  buildPasswordSignInPayload,
+  getPasswordSignInErrorMessage,
+} from "@/lib/auth/passwordSignIn";
 
 export default function AdminLogin() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -18,27 +23,24 @@ export default function AdminLogin() {
     setIsLoading(true);
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      const payload = buildPasswordSignInPayload(identifier, password);
+      const { data, error } = await supabase.auth.signInWithPassword(payload);
 
       if (error) {
         console.error("Login Error Details:", error);
-        toast.error(error.message || "بيانات الدخول غير صحيحة");
+        toast.error(getPasswordSignInErrorMessage(error, payload));
         return;
       }
 
       if (data.user) {
-        // Check role
         const { data: roleData, error: roleError } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', data.user.id)
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", data.user.id)
           .single();
 
-        if (roleError || !roleData || roleData.role !== 'admin') {
-          toast.error("عذراً، هذا الحساب لا يملك صلاحيات المسؤول");
+        if (roleError || !roleData || roleData.role !== "admin") {
+          toast.error("عذرًا، هذا الحساب لا يملك صلاحيات المسؤول");
           await supabase.auth.signOut();
           return;
         }
@@ -58,29 +60,33 @@ export default function AdminLogin() {
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="card-elevated p-8 animate-fade-in">
-          {/* Header */}
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center w-40 h-40 mb-4 animate-in zoom-in duration-500">
-              <img src="/logo.jpg" alt="Logo" className="w-full h-full object-contain mix-blend-multiply" />
+              <img
+                src="/logo.jpg"
+                alt="Logo"
+                className="w-full h-full object-contain mix-blend-multiply"
+              />
             </div>
             <h1 className="text-2xl font-bold text-foreground">لوحة الإدارة</h1>
-            <p className="text-muted-foreground mt-2">سجل دخولك للوصول إلى لوحة التحكم</p>
+            <p className="text-muted-foreground mt-2">
+              سجل دخولك للوصول إلى لوحة التحكم
+            </p>
           </div>
 
-          {/* Form */}
           <form onSubmit={handleLogin} className="space-y-5">
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-sm font-medium">
-                البريد الإلكتروني
+              <Label htmlFor="identifier" className="text-sm font-medium">
+                البريد الإلكتروني أو رقم الجوال
               </Label>
               <div className="relative">
                 <Mail className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <Input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="admin@example.com"
+                  id="identifier"
+                  type="text"
+                  value={identifier}
+                  onChange={(e) => setIdentifier(e.target.value)}
+                  placeholder="admin@example.com أو 01012345678"
                   className="h-12 pr-10 rounded-xl"
                   required
                 />

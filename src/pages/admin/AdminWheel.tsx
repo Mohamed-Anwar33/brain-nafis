@@ -109,8 +109,8 @@ export default function AdminWheel() {
         try {
             const { data, error } = await supabase.from("wheel_sections").select("*").order("order_index", { ascending: true });
             if (error) throw error;
-            setSections(data || []);
-            if (data && data.length > 0 && !selectedSection) setSelectedSection(data[0]);
+            setSections((data as WheelSection[]) || []);
+            if (data && data.length > 0 && !selectedSection) setSelectedSection(data[0] as WheelSection);
         } catch (err) {
             console.error("Error fetching sections:", err);
             toast.error("فشل تحميل الأقسام");
@@ -128,7 +128,7 @@ export default function AdminWheel() {
                 .eq("section_id", sectionId)
                 .order("created_at", { ascending: false });
             if (error) throw error;
-            setQuestions(data || []);
+            setQuestions((data as WheelQuestion[]) || []);
         } catch (err) {
             console.error("Error fetching questions:", err);
             toast.error("فشل تحميل الأسئلة");

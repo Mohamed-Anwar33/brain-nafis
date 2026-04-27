@@ -19,6 +19,22 @@ import {
     resetScopedHistory,
 } from "@/lib/selection-scope";
 
+interface MatchingItem {
+    left_text: string;
+    right_text: string;
+    left_image_url?: string;
+    right_image_url?: string;
+}
+
+interface RawQuestion {
+    id: string;
+    items?: MatchingItem[];
+    left_text?: string;
+    right_text?: string;
+    left_image_url?: string;
+    right_image_url?: string;
+}
+
 interface Question {
     id: string;
     left_text: string;
@@ -88,8 +104,7 @@ export default function MatchingGame() {
                 supabase
                     .from("matching_game_questions")
                     .select("id")
-                    .eq("is_active", true)
-                    .eq("level", gameState.level),
+                    .eq("is_active", true),
                 selectionContext,
             );
 
@@ -133,19 +148,54 @@ export default function MatchingGame() {
                 return;
             }
 
-            // 6. Shuffle
-            const shuffledQuestions = [...fullQuestions];
+            // 6. Flatten items JSONB into individual pairs
+            const flattenedQuestions: Question[] = [];
+            for (const raw of fullQuestions as RawQuestion[]) {
+                if (raw.items && Array.isArray(raw.items) && raw.items.length > 0) {
+                    // New format: items JSONB array
+                    for (const item of raw.items) {
+                        if ((item.left_text?.trim() || item.left_image_url) && (item.right_text?.trim() || item.right_image_url)) {
+                            flattenedQuestions.push({
+                                id: `${raw.id}_${flattenedQuestions.length}`,
+                                left_text: item.left_text || '',
+                                right_text: item.right_text || '',
+                                left_image_url: item.left_image_url,
+                                right_image_url: item.right_image_url,
+                            });
+                        }
+                    }
+                } else if ((raw.left_text?.trim() || raw.left_image_url) && (raw.right_text?.trim() || raw.right_image_url)) {
+                    // Old format: direct columns
+                    flattenedQuestions.push({
+                        id: raw.id,
+                        left_text: raw.left_text || '',
+                        right_text: raw.right_text || '',
+                        left_image_url: raw.left_image_url,
+                        right_image_url: raw.right_image_url,
+                    });
+                }
+            }
+
+            if (flattenedQuestions.length === 0) {
+                toast.error("لا توجد أسئلة صالحة");
+                setLoading(false);
+                return;
+            }
+
+            // 7. Shuffle
+            const shuffledQuestions = [...flattenedQuestions];
             for (let i = shuffledQuestions.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
                 [shuffledQuestions[i], shuffledQuestions[j]] = [shuffledQuestions[j], shuffledQuestions[i]];
             }
             const selectedQuestions = shuffledQuestions.slice(0, limit);
 
-            // 7. Record seen
+            // 8. Record seen (use original question IDs, not pair IDs)
+            const originalIds = [...new Set(fullQuestions.map((q: any) => q.id))] as string[];
             await recordScopedHistory(
                 session.user.id,
                 "matching",
-                selectedQuestions.map((question) => question.id),
+                originalIds,
                 selectionContext,
             );
 

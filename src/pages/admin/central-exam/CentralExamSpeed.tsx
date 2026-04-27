@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Trash2, Plus, Loader2, Timer, Edit, RotateCcw, Save } from "lucide-react";
+import { Trash2, Plus, Loader2, Timer, Edit, RotateCcw, Save, CheckCircle2 } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,11 +20,15 @@ import { Label } from "@/components/ui/label";
 import { SelectionScopeFields } from "@/components/admin/SelectionScopeFields";
 import { validateSelectionScope } from "@/lib/selection-scope-validation";
 import { SelectionScopeValue } from "@/types/selection";
+
 interface SpeedQuestion {
   id: string;
   question_text: string;
-  answer: string;
-  time_limit: number;
+  choice1: string;
+  choice2: string;
+  choice3: string;
+  choice4: string;
+  correct_choice_index: number;
   is_active: boolean;
   created_at: string;
 }
@@ -39,8 +43,11 @@ export default function CentralExamSpeed() {
   const defaultQuestionState = {
     id: undefined as string | undefined,
     question_text: "",
-    answer: "",
-    time_limit: 10,
+    choice1: "",
+    choice2: "",
+    choice3: "",
+    choice4: "",
+    correct_choice_index: 1,
   };
 
   const [questionForm, setQuestionForm] = useState(defaultQuestionState);
@@ -78,8 +85,23 @@ export default function CentralExamSpeed() {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!questionForm.question_text.trim() || !questionForm.answer.trim()) {
-      toast.error("يجب إدخال السؤال والإجابة الصحيحة");
+    if (!questionForm.question_text.trim()) {
+      toast.error("يجب إدخال نص السؤال");
+      return;
+    }
+
+    // Validate at least 2 choices have text
+    const filledChoices = [questionForm.choice1, questionForm.choice2, questionForm.choice3, questionForm.choice4]
+      .filter(c => c.trim() !== "");
+    if (filledChoices.length < 2) {
+      toast.error("يجب إدخال خيارين على الأقل");
+      return;
+    }
+
+    // Validate correct choice has text
+    const correctKey = `choice${questionForm.correct_choice_index}` as keyof typeof questionForm;
+    if (!(questionForm[correctKey] as string).trim()) {
+      toast.error("الإجابة الصحيحة المحددة فارغة");
       return;
     }
 
@@ -93,10 +115,14 @@ export default function CentralExamSpeed() {
     try {
       const payload = {
         question_text: questionForm.question_text.trim(),
-        answer: questionForm.answer.trim(),
-        time_limit: questionForm.time_limit,
+        choice1: questionForm.choice1.trim() || "-",
+        choice2: questionForm.choice2.trim() || "-",
+        choice3: questionForm.choice3.trim() || "-",
+        choice4: questionForm.choice4.trim() || "-",
+        correct_choice_index: questionForm.correct_choice_index,
         is_active: true,
         track_type: "central",
+        stage: "central",
         grade_subject_id: scope.gradeSubjectId,
         domain_id: scope.domainId
       };
@@ -126,8 +152,11 @@ export default function CentralExamSpeed() {
     setQuestionForm({
       id: q.id,
       question_text: q.question_text,
-      answer: q.answer,
-      time_limit: q.time_limit
+      choice1: q.choice1 || "",
+      choice2: q.choice2 || "",
+      choice3: q.choice3 || "",
+      choice4: q.choice4 || "",
+      correct_choice_index: q.correct_choice_index || 1,
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -186,7 +215,7 @@ export default function CentralExamSpeed() {
           </div>
           <div>
             <h1 className="text-3xl font-black text-slate-800 tracking-tight">تحدي السرعة</h1>
-            <p className="text-slate-500 font-medium mt-1">إعداد أسئلة تحتاج إلى إجابة فورية سريعة ضمن وقت محدد</p>
+            <p className="text-slate-500 font-medium mt-1">إعداد أسئلة اختيار من متعدد بأسلوب سريع ضمن وقت محدد</p>
           </div>
        </div>
       </div>
@@ -227,46 +256,54 @@ export default function CentralExamSpeed() {
           <form onSubmit={handleSave} className="space-y-6">
              <div className="bg-amber-50 text-amber-800 p-4 rounded-xl text-sm mb-4 border border-amber-100 flex gap-3">
                <Timer className="w-5 h-5 shrink-0 mt-0.5" />
-               <p>أدخل السؤال القصير وحدد وقته المناسب بالثواني. تحدي السرعة يعتمد على الإجابة النصية المباشرة بدون اختيارات.</p>
+               <p>أدخل السؤال وأربعة خيارات ثم حدد الإجابة الصحيحة بالضغط على الدائرة بجانبها. تحدي السرعة يعتمد على الاختيار من متعدد.</p>
              </div>
 
              <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 mb-6">
                <SelectionScopeFields value={scope} onChange={setScope} trackMode="central" />
              </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label className="text-sm font-bold text-slate-700">نص السؤال</Label>
-                <Input
-                  placeholder="مثال: كم عدد كواكب النظام الشمسي؟"
-                  value={questionForm.question_text}
-                  onChange={(e) => setQuestionForm({ ...questionForm, question_text: e.target.value })}
-                  className="h-12 rounded-xl border-slate-300 focus-visible:ring-amber-500 font-medium"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-sm font-bold text-slate-700">الإجابة الصحيحة الدقيقة</Label>
-                <Input
-                  placeholder="مثال: 8"
-                  value={questionForm.answer}
-                  onChange={(e) => setQuestionForm({ ...questionForm, answer: e.target.value })}
-                  className="h-12 rounded-xl border-slate-300 focus-visible:ring-amber-500 font-bold"
-                />
-              </div>
+            <div className="space-y-2">
+              <Label className="text-sm font-bold text-slate-700">نص السؤال</Label>
+              <Input
+                placeholder="مثال: كم عدد كواكب النظام الشمسي؟"
+                value={questionForm.question_text}
+                onChange={(e) => setQuestionForm({ ...questionForm, question_text: e.target.value })}
+                className="h-12 rounded-xl border-slate-300 focus-visible:ring-amber-500 font-medium"
+              />
             </div>
-            
-            <div className="space-y-2 md:w-1/2">
-              <Label className="text-sm font-bold text-slate-700">عداد الوقت (بالثواني)</Label>
-              <div className="relative">
-                 <Input
-                   type="number"
-                   min={5}
-                   max={120}
-                   value={questionForm.time_limit}
-                   onChange={(e) => setQuestionForm({ ...questionForm, time_limit: parseInt(e.target.value) || 10 })}
-                   className="h-12 border-slate-300 pl-12 rounded-xl font-bold"
-                 />
-                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-bold">ثواني</span>
+
+            {/* Choices */}
+            <div className="space-y-3">
+              <Label className="flex items-center gap-2 text-sm font-bold text-slate-700">
+                خيارات الإجابة 
+                <span className="text-xs text-slate-400 font-normal">(حدد علامة صح بجانب الإجابة الصحيحة)</span>
+              </Label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {[1, 2, 3, 4].map((idx) => {
+                  const choiceKey = `choice${idx}` as keyof typeof questionForm;
+                  const isCorrect = questionForm.correct_choice_index === idx;
+                  return (
+                    <div 
+                      key={idx} 
+                      className={`flex items-center gap-2 p-2 rounded-xl border transition-colors ${isCorrect ? 'bg-emerald-50 border-emerald-200' : 'bg-slate-50 border-transparent hover:bg-slate-100'}`}
+                    >
+                      <button 
+                        type="button" 
+                        onClick={() => setQuestionForm({ ...questionForm, correct_choice_index: idx })} 
+                        className={`w-8 h-8 rounded-full flex shrink-0 items-center justify-center transition-colors shadow-sm ${isCorrect ? 'bg-emerald-500 text-white' : 'bg-white border text-slate-300 hover:text-slate-400'}`}
+                      >
+                        <CheckCircle2 className="w-5 h-5" />
+                      </button>
+                      <Input 
+                        value={questionForm[choiceKey] as string} 
+                        onChange={(e) => setQuestionForm({ ...questionForm, [choiceKey]: e.target.value })} 
+                        placeholder={`الخيار ${idx}`} 
+                        className={`h-10 text-sm border-0 focus-visible:ring-1 bg-transparent ${isCorrect ? 'focus-visible:ring-emerald-400' : 'focus-visible:ring-slate-300'}`} 
+                      />
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
@@ -303,26 +340,30 @@ export default function CentralExamSpeed() {
                 <Card key={q.id} className="overflow-hidden shadow-sm hover:shadow-md transition-shadow border-slate-200">
                    <div className="bg-slate-50 border-b p-3 flex justify-between items-center">
                      <span className="font-bold text-sm text-slate-500">سؤال #{questions.length - idx}</span>
-                     <div className="flex items-center gap-2">
-                       <Badge variant="outline" className="flex items-center gap-1 bg-white text-orange-600 border-orange-200">
-                         <Timer className="w-3 h-3" /> {q.time_limit} ث
-                       </Badge>
-                       <Badge 
-                         variant={q.is_active ? "default" : "secondary"}
-                         className={`cursor-pointer ${q.is_active ? 'bg-emerald-500 hover:bg-emerald-600' : ''}`}
-                         onClick={() => toggleActive(q.id, q.is_active)}
-                       >
-                         {q.is_active ? "نشط" : "مخفي"}
-                       </Badge>
-                     </div>
+                     <Badge 
+                       variant={q.is_active ? "default" : "secondary"}
+                       className={`cursor-pointer ${q.is_active ? 'bg-emerald-500 hover:bg-emerald-600' : ''}`}
+                       onClick={() => toggleActive(q.id, q.is_active)}
+                     >
+                       {q.is_active ? "نشط" : "مخفي"}
+                     </Badge>
                    </div>
                    
                    <div className="p-4 space-y-3">
                       <div className="font-bold text-slate-800 text-base">{q.question_text}</div>
                       
-                      <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-sm">
-                         <span className="text-slate-500 font-medium">الإجابة:</span>
-                         <span className="font-black text-amber-600 px-3 py-1 bg-amber-50 rounded-lg">{q.answer}</span>
+                      <div className="space-y-1.5 pt-2 border-t border-slate-100">
+                        {[1, 2, 3, 4].map(i => {
+                          const text = q[`choice${i}` as keyof SpeedQuestion] as string;
+                          if (!text || text === "-") return null;
+                          const isCorrect = q.correct_choice_index === i;
+                          return (
+                            <div key={i} className={`text-sm px-3 py-1.5 rounded-lg flex items-center gap-2 ${isCorrect ? 'bg-emerald-50 text-emerald-700 font-bold' : 'bg-slate-50 text-slate-600'}`}>
+                              {isCorrect && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />}
+                              <span>{text}</span>
+                            </div>
+                          );
+                        })}
                       </div>
                    </div>
                    

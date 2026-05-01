@@ -31,6 +31,7 @@ interface Question {
     choice3_image_url?: string;
     choice4: string;
     choice4_image_url?: string;
+    answer_explanation?: string;
     correct_choice_index: number;
 }
 
@@ -63,6 +64,7 @@ export default function SpeedChallenge() {
 
     const [initialTime, setInitialTime] = useState(60);
     const [questionsWithErrors, setQuestionsWithErrors] = useState<Set<string>>(new Set());
+    const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
 
     // Refs to always have latest values for async saves
     const scoreRef = useRef(0);
@@ -198,6 +200,7 @@ export default function SpeedChallenge() {
             setCurrentIndex(0);
             setIsGameOver(false);
             setTimeLeft(initialTime);
+            setFeedbackMessage(null);
         } catch (error) {
             console.error(error);
             toast.error("فشل تحميل الأسئلة");
@@ -211,6 +214,7 @@ export default function SpeedChallenge() {
         setGameState({ score: 0, correctCount: 0, answeringCount: 0, level: 1, stage: 1 });
         setCurrentIndex(0);
         setIsGameOver(false);
+        setFeedbackMessage(null);
     };
 
     const startNextStage = () => {
@@ -219,6 +223,7 @@ export default function SpeedChallenge() {
             stage: prev.stage + 1
         }));
         setQuestionsWithErrors(new Set());
+        setFeedbackMessage(null);
         fetchQuestions();
     };
 
@@ -241,6 +246,7 @@ export default function SpeedChallenge() {
         const isCorrect = choiceIndex === currentQ.correct_choice_index;
 
         if (isCorrect) {
+            setFeedbackMessage(null);
             audioManager.playCorrect();
             toast.success("صح!", { duration: 500, position: 'top-center' });
             
@@ -269,7 +275,15 @@ export default function SpeedChallenge() {
             }
         } else {
             audioManager.playWrong();
-            toast.error("خطأ! حاول مرة أخرى", { duration: 500, position: 'top-center' });
+            const correctChoice = currentQ[`choice${currentQ.correct_choice_index}` as keyof Question] as string;
+            const explanation = currentQ.answer_explanation?.trim();
+            const message = explanation
+                ? explanation
+                : correctChoice
+                  ? `الإجابة الصحيحة هي: ${correctChoice}`
+                  : "خطأ! حاول مرة أخرى";
+            setFeedbackMessage(message);
+            toast.error(message, { duration: 2500, position: 'top-center' });
 
             // Only deduct score if this question hasn't been answered wrong before
             if (!questionsWithErrors.has(currentQ.id)) {
@@ -469,6 +483,12 @@ export default function SpeedChallenge() {
                                 </h2>
                             </div>
                         </Card>
+
+                        {feedbackMessage && (
+                            <Card className="border-0 bg-red-50 p-4 text-center shadow-lg shadow-red-500/10">
+                                <p className="font-bold text-red-700">{feedbackMessage}</p>
+                            </Card>
+                        )}
 
                         {/* Choices Grid */}
                         <div className="grid grid-cols-2 gap-3 md:gap-4">

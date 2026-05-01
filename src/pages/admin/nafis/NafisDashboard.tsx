@@ -6,7 +6,6 @@ import {
   CheckCircle,
   FileQuestion,
   Gamepad2,
-  LayoutList,
   Puzzle,
   Sparkles,
   Timer,
@@ -22,7 +21,6 @@ interface Stats {
   orderingQuestions: number;
   speedQuestions: number;
   wheelSections: number;
-  stagesQuestions: number;
   totalAttempts: number;
   gameAttempts: number;
 }
@@ -35,7 +33,6 @@ export default function NafisDashboard() {
     orderingQuestions: 0,
     speedQuestions: 0,
     wheelSections: 0,
-    stagesQuestions: 0,
     totalAttempts: 0,
     gameAttempts: 0,
   });
@@ -51,7 +48,6 @@ export default function NafisDashboard() {
           orderingQuestions,
           speedQuestions,
           wheelSections,
-          stagesQuestions,
           gameAttemptsResponse,
         ] = await Promise.all([
           // Questions - Nafis only (track_type = 'nafis' or null)
@@ -73,12 +69,9 @@ export default function NafisDashboard() {
           supabase.from("wheel_sections").select("*", { count: "exact", head: true })
             .eq("is_active", true)
             .or('track_type.eq.nafis,track_type.is.null'),
-          supabase.from("stages_game_questions").select("*", { count: "exact", head: true })
-            .eq("is_active", true)
-            .or('track_type.eq.nafis,track_type.is.null'),
           // Game attempts for Nafis games
           supabase.from("game_attempts").select("*", { count: "exact", head: true })
-            .in("game_type", ["matching", "ordering", "speed", "wheel_science", "stages"]),
+            .in("game_type", ["matching", "ordering", "speed", "wheel_science"]),
         ]);
 
         setStats({
@@ -88,7 +81,6 @@ export default function NafisDashboard() {
           orderingQuestions: orderingQuestions.count || 0,
           speedQuestions: speedQuestions.count || 0,
           wheelSections: wheelSections.count || 0,
-          stagesQuestions: stagesQuestions.count || 0,
           totalAttempts: (gameAttemptsResponse.count || 0),
           gameAttempts: gameAttemptsResponse.count || 0,
         });
@@ -167,15 +159,6 @@ export default function NafisDashboard() {
       textClass: "text-rose-700",
       href: "/admin/nafis/wheel"
     },
-    { 
-      title: "المراحل", 
-      value: stats.stagesQuestions, 
-      icon: LayoutList, 
-      className: "border-sky-100 bg-sky-50/30", 
-      iconClass: "bg-sky-100 text-sky-600", 
-      textClass: "text-sky-700",
-      href: "/admin/nafis/stages"
-    },
   ];
 
   return (
@@ -225,7 +208,7 @@ export default function NafisDashboard() {
           <Trophy className="w-6 h-6 text-slate-400" />
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 grid-cols-2 lg:grid-cols-5">
+          <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
             {gameCards.map((card) => (
               <Link key={card.title} to={card.href}>
                 <div className={`rounded-2xl border p-4 hover:shadow-md transition-all cursor-pointer ${card.className}`}>

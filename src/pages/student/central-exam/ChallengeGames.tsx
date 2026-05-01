@@ -5,8 +5,6 @@ import { Button } from "@/components/ui/button";
 import {
   Brain,
   ChevronRight,
-  Gamepad2,
-  ListOrdered,
   Puzzle,
   Sparkles,
   Target,
@@ -62,28 +60,6 @@ const games: GameCard[] = [
     shadow: "shadow-purple-500/30",
     path: "/games/matching",
     dotClass: "bg-violet-500",
-  },
-  {
-    id: "ordering",
-    title: "لعبة السحب والإفلات",
-    description: "اسحب العناصر ورتبها بالترتيب الصحيح حسب السؤال المعروض.",
-    features: ["تعلم التسلسل المنطقي", "تفاعل سحب وإفلات", "تعزيز الفهم العلمي"],
-    icon: <Gamepad2 className="h-10 w-10" />,
-    gradient: "from-emerald-500 to-teal-600",
-    shadow: "shadow-emerald-500/30",
-    path: "/games/ordering",
-    dotClass: "bg-emerald-500",
-  },
-  {
-    id: "stages",
-    title: "ترتيب المراحل",
-    description: "رتب المراحل العلمية بالترتيب الصحيح واختبر فهمك للتسلسل.",
-    features: ["فهم المراحل العلمية", "تسلسل منطقي دقيق", "تقييم المعرفة"],
-    icon: <ListOrdered className="h-10 w-10" />,
-    gradient: "from-blue-500 to-indigo-600",
-    shadow: "shadow-blue-500/30",
-    path: "/games/stages",
-    dotClass: "bg-blue-500",
   },
   {
     id: "speed",
@@ -152,7 +128,7 @@ export default function ChallengeGames() {
           <div className="inline-flex items-center gap-2 rounded-full border border-slate-100 bg-white px-4 py-2 shadow-sm">
             <Sparkles className="h-4 w-4 text-yellow-500" />
             <span className="text-sm font-medium text-slate-600">
-              5 ألعاب تفاعلية ممتعة
+              3 ألعاب تفاعلية ممتعة
             </span>
           </div>
 

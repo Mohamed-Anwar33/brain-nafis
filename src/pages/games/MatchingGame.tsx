@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ArrowRight, RefreshCw, Trophy, Sparkles, Zap, Target, Gamepad2 } from "lucide-react";
+import { ArrowRight, RefreshCw, Trophy, Zap, Target, Gamepad2 } from "lucide-react";
 import { toast } from "sonner";
 import confetti from "canvas-confetti";
 import { audioManager } from "@/lib/audio";
@@ -37,6 +37,7 @@ interface RawQuestion {
 
 interface Question {
     id: string;
+    source_id: string;
     left_text: string;
     right_text: string;
     left_image_url?: string;
@@ -47,7 +48,6 @@ interface GameState {
     score: number;
     correctAnswers: number;
     level: number;
-    stage: number;
 }
 
 export default function MatchingGame() {
@@ -64,8 +64,7 @@ export default function MatchingGame() {
     const [gameState, setGameState] = useState<GameState>({
         score: 0,
         correctAnswers: 0,
-        level: 1,
-        stage: 1
+        level: 1
     });
 
     const [attempts, setAttempts] = useState(0);
@@ -97,7 +96,7 @@ export default function MatchingGame() {
             }
 
             // Get Config
-            const limit = 5;
+            const limit = 10;
 
             // 1. Fetch all active questions (IDs only)
             const { data: allQuestions, error } = await applySelectionFilters(
@@ -157,6 +156,7 @@ export default function MatchingGame() {
                         if ((item.left_text?.trim() || item.left_image_url) && (item.right_text?.trim() || item.right_image_url)) {
                             flattenedQuestions.push({
                                 id: `${raw.id}_${flattenedQuestions.length}`,
+                                source_id: raw.id,
                                 left_text: item.left_text || '',
                                 right_text: item.right_text || '',
                                 left_image_url: item.left_image_url,
@@ -168,6 +168,7 @@ export default function MatchingGame() {
                     // Old format: direct columns
                     flattenedQuestions.push({
                         id: raw.id,
+                        source_id: raw.id,
                         left_text: raw.left_text || '',
                         right_text: raw.right_text || '',
                         left_image_url: raw.left_image_url,
@@ -191,7 +192,7 @@ export default function MatchingGame() {
             const selectedQuestions = shuffledQuestions.slice(0, limit);
 
             // 8. Record seen (use original question IDs, not pair IDs)
-            const originalIds = [...new Set(fullQuestions.map((q: any) => q.id))] as string[];
+            const originalIds = [...new Set(selectedQuestions.map((q) => q.source_id))];
             await recordScopedHistory(
                 session.user.id,
                 "matching",
@@ -381,16 +382,11 @@ export default function MatchingGame() {
                             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-lg shadow-purple-500/30">
                                 <Gamepad2 className="w-5 h-5 text-white" />
                             </div>
-                            <h1 className="text-xl font-black text-slate-800 hidden md:block">لعبة المطابقة - المرحلة {gameState.stage}</h1>
+                            <h1 className="text-xl font-black text-slate-800 hidden md:block">لعبة المطابقة</h1>
                         </div>
                     </div>
 
                     <div className="flex items-center gap-3 bg-white/80 backdrop-blur px-4 py-2 rounded-full shadow-lg border border-white/50">
-                        <div className="flex flex-col items-center">
-                            <span className="text-[10px] text-slate-500 font-bold">المرحلة</span>
-                            <span className="font-black text-lg leading-none text-violet-600">{gameState.stage}</span>
-                        </div>
-                        <div className="w-px h-8 bg-slate-200"></div>
                         <div className="flex flex-col items-center">
                             <span className="text-[10px] text-slate-500 font-bold">النقاط</span>
                             <span className="font-black text-lg leading-none text-emerald-600">{gameState.score}</span>
@@ -428,11 +424,11 @@ export default function MatchingGame() {
                         
                         <div>
                             <h2 className="text-3xl font-black bg-gradient-to-r from-violet-600 to-fuchsia-600 bg-clip-text text-transparent mb-2">أحسنت يا بطل!</h2>
-                            <p className="text-slate-500">أكملت المرحلة {gameState.stage} بنجاح.</p>
+                            <p className="text-slate-500">أكملت لعبة المطابقة بنجاح.</p>
                         </div>
                         
                         <div className="bg-gradient-to-r from-violet-50 to-fuchsia-50 p-6 rounded-2xl border border-violet-100">
-                            <div className="text-sm text-slate-500 mb-2 font-bold">نقاط المرحلة</div>
+                            <div className="text-sm text-slate-500 mb-2 font-bold">النقاط النهائية</div>
                             <div className="text-5xl font-black bg-gradient-to-r from-violet-600 via-fuchsia-600 to-pink-600 bg-clip-text text-transparent">
                                 {gameState.correctAnswers * 10 - (attempts > questions.length ? (attempts - questions.length) : 0)}
                             </div>
@@ -440,17 +436,6 @@ export default function MatchingGame() {
                         </div>
                         
                         <div className="flex flex-col gap-3">
-                            <Button 
-                                onClick={() => {
-                                    setGameState(prev => ({ ...prev, stage: prev.stage + 1 }));
-                                    fetchQuestions();
-                                }} 
-                                className="w-full h-14 text-xl font-black rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-emerald-500/20"
-                            >
-                                <Sparkles className="w-6 h-6 ml-3" />
-                                الانتقال للمرحلة {gameState.stage + 1}
-                            </Button>
-                            
                             <div className="grid grid-cols-2 gap-3">
                                 <Button onClick={() => window.location.reload()} variant="outline" className="h-12 text-lg rounded-xl font-bold border-2">
                                     <RefreshCw className="w-5 h-5 ml-2" />

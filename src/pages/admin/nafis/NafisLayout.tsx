@@ -13,7 +13,6 @@ import {
   Puzzle,
   Timer,
   Sparkles,
-  ListOrdered,
   ArrowRight,
   BookOpen
 } from "lucide-react";
@@ -85,7 +84,6 @@ export default function NafisLayout() {
     { path: "/admin/nafis/matching", icon: Gamepad2, label: "لعبة المطابقة" },
     { path: "/admin/nafis/ordering", icon: Puzzle, label: "لغز الترتيب" },
     { path: "/admin/nafis/speed", icon: Timer, label: "تحدي السرعة" },
-    { path: "/admin/nafis/stages", icon: ListOrdered, label: "لعبة المراحل" },
     { path: "/admin/nafis/wheel", icon: Sparkles, label: "عجلة العلوم" },
   ];
 

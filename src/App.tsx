@@ -15,7 +15,6 @@ import MatchingGame from "@/pages/games/MatchingGame";
 import OrderingGame from "@/pages/games/OrderingGame";
 import SpeedChallenge from "@/pages/games/SpeedChallenge";
 import WheelGame from "@/pages/games/WheelGame";
-import StagesGame from "@/pages/games/StagesGame";
 
 import { Footer } from "@/components/layout/Footer";
 
@@ -29,7 +28,6 @@ import NafisQuestions from "./pages/admin/nafis/NafisQuestions";
 import NafisMatching from "./pages/admin/nafis/NafisMatching";
 import NafisOrdering from "./pages/admin/nafis/NafisOrdering";
 import NafisSpeed from "./pages/admin/nafis/NafisSpeed";
-import NafisStages from "./pages/admin/nafis/NafisStages";
 import NafisWheel from "./pages/admin/nafis/NafisWheel";
 
 // Central Exam imports
@@ -44,9 +42,7 @@ import AdminCentralExamSettings from "./pages/admin/central-exam/AdminCentralExa
 import AdminCentralExamQuestions from "./pages/admin/central-exam/AdminCentralExamQuestions";
 import CentralExamWheel from "./pages/admin/central-exam/CentralExamWheel";
 import CentralExamMatching from "./pages/admin/central-exam/CentralExamMatching";
-import CentralExamOrdering from "./pages/admin/central-exam/CentralExamOrdering";
 import CentralExamSpeed from "./pages/admin/central-exam/CentralExamSpeed";
-import CentralExamStages from "./pages/admin/central-exam/CentralExamStages";
 import AdminResultsPage from "./pages/admin/AdminResultsPage";
 
 const queryClient = new QueryClient();
@@ -72,7 +68,7 @@ const App = () => (
             <Route path="/games/ordering" element={<OrderingGame />} />
             <Route path="/games/speed" element={<SpeedChallenge />} />
             <Route path="/games/wheel" element={<WheelGame />} />
-            <Route path="/games/stages" element={<StagesGame />} />
+            <Route path="/games/stages" element={<Navigate to="/student/dashboard" replace />} />
 
             {/* Central Exam Routes */}
             <Route path="/central-exam" element={<CentralExamIntro />} />
@@ -93,7 +89,7 @@ const App = () => (
               <Route path="matching" element={<NafisMatching />} />
               <Route path="ordering" element={<NafisOrdering />} />
               <Route path="speed" element={<NafisSpeed />} />
-              <Route path="stages" element={<NafisStages />} />
+              <Route path="stages" element={<Navigate to="/admin/nafis" replace />} />
               <Route path="wheel" element={<NafisWheel />} />
             </Route>
             
@@ -104,9 +100,9 @@ const App = () => (
               <Route path="questions" element={<AdminCentralExamQuestions />} />
               <Route path="wheel" element={<CentralExamWheel />} />
               <Route path="matching" element={<CentralExamMatching />} />
-              <Route path="ordering" element={<CentralExamOrdering />} />
+              <Route path="ordering" element={<Navigate to="/admin/central-exam" replace />} />
               <Route path="speed" element={<CentralExamSpeed />} />
-              <Route path="stages" element={<CentralExamStages />} />
+              <Route path="stages" element={<Navigate to="/admin/central-exam" replace />} />
             </Route>
             
             

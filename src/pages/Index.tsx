@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { StartScreen } from "@/components/exam/StartScreen";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,98 +9,65 @@ import PremiumBackground from "@/components/ui/PremiumBackground";
 const Index = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
-  const [existingName, setExistingName] = useState<string | null>(null);
+  const [authError, setAuthError] = useState<string | null>(null);
 
-  // Check for existing session on mount
   useEffect(() => {
     checkSession();
   }, []);
 
   async function checkSession() {
     try {
-      const { data, error } = await supabase.auth.getSession();
+      const { error } = await supabase.auth.getSession();
 
-      if (error) {
-        // If the refresh token is invalid, sign out to clear it
-        if (error.message.includes("Invalid Refresh Token") || error.message.includes("Refresh Token Not Found")) {
-          console.log("Stale session detected, clearing...");
-          await supabase.auth.signOut();
-        }
-        return;
-      }
-
-      if (data.session) {
-        // Check if profile exists
-        const { data: profile } = await supabase
-          .from("student_profiles")
-          .select("full_name")
-          .eq("id", data.session.user.id)
-          .single();
-
-        if (profile?.full_name) {
-          console.info(`Found existing session for: ${profile.full_name} (${data.session.user.id})`);
-          setExistingName(profile.full_name);
-        }
+      if (
+        error?.message.includes("Invalid Refresh Token") ||
+        error?.message.includes("Refresh Token Not Found")
+      ) {
+        console.log("Stale session detected, clearing...");
+        await supabase.auth.signOut();
       }
     } catch (error) {
       console.error("Session check error:", error);
-      // Failsafe: try to sign out if completely broken
-      await supabase.auth.signOut().catch(() => { });
+      await supabase.auth.signOut().catch(() => {});
     } finally {
       setIsLoading(false);
     }
   }
 
-
-  const [authError, setAuthError] = useState<string | null>(null);
-
   const handleStart = async (studentName: string) => {
     setIsLoading(true);
     setAuthError(null);
+
     try {
       console.log("Starting anonymous login flow...", { enteredName: studentName });
 
-      // If a different name is entered, sign out to get a new session ID
-      if (existingName && studentName.trim() !== existingName.trim()) {
-        console.info("Different name entered. Signing out previous session to get a fresh ID.");
-        await supabase.auth.signOut();
-      }
+      // Shared classroom devices can keep the previous student's anonymous session
+      // in localStorage. Always create a fresh user before saving the entered name.
+      await supabase.auth.signOut();
 
-      // 1. Ensure Auth Session (Anonymous)
-      let { data, error: sessionError } = await supabase.auth.getSession();
+      const { data, error: authErr } = await supabase.auth.signInAnonymously();
 
-      // Handle invalid session state before trying to sign in
-      if (sessionError) {
-        await supabase.auth.signOut();
-        data.session = null;
-      }
-
-      if (!data.session) {
-        console.log("No active session, signing in anonymously...");
-        const { data: authData, error: authErr } = await supabase.auth.signInAnonymously();
-
-        if (authErr) {
-          console.error("Anonymous Sign-in Error:", authErr);
-          if (authErr.message.includes("Anonymous sign-ins are disabled")) {
-            setAuthError("AuthDisabled");
-            setIsLoading(false);
-            return;
-          }
-          throw authErr;
+      if (authErr) {
+        console.error("Anonymous Sign-in Error:", authErr);
+        if (authErr.message.includes("Anonymous sign-ins are disabled")) {
+          setAuthError("AuthDisabled");
+          setIsLoading(false);
+          return;
         }
-        data.session = authData.session;
+        throw authErr;
       }
 
-      if (!data.session?.user) throw new Error("فشل إنشاء جلسة للمستخدم");
+      if (!data.session?.user) {
+        throw new Error("فشل إنشاء جلسة للمستخدم");
+      }
 
-      // 2. Create/Update Profile with Name
       const { error: profileError } = await supabase
         .from("student_profiles")
         .upsert({
           id: data.session.user.id,
           full_name: studentName,
-          stage: 'default',
-          created_at: new Date().toISOString()
+          stage: "default",
+          created_at: new Date().toISOString(),
         });
 
       if (profileError) {
@@ -110,8 +77,7 @@ const Index = () => {
       }
 
       navigate("/student/dashboard");
-
-    } catch (err: any) {
+    } catch (err) {
       console.error("Error in handleStart:", err);
       toast.error("حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى.");
       setIsLoading(false);
@@ -122,14 +88,16 @@ const Index = () => {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4" dir="rtl">
         <div className="bg-white p-8 rounded-xl shadow-lg max-w-md w-full border-r-4 border-red-500">
-          <h2 className="text-xl font-bold text-red-600 mb-4">⚠️ تنبيه هام للمطور</h2>
+          <h2 className="text-xl font-bold text-red-600 mb-4">تنبيه هام للمطور</h2>
           <p className="text-gray-700 mb-4">
-            خاصية <strong>Anonymous Sign-ins</strong> غير مفعلة في مشروع Supabase الخاص بك.
+            خاصية <strong>Anonymous Sign-ins</strong> غير مفعلة في مشروع Supabase.
           </p>
           <div className="bg-gray-100 p-4 rounded-md text-sm text-gray-800 mb-6">
-            1. اذهب إلى <strong>Supabase Dashboard</strong><br />
-            2. انتقل إلى <strong>Authentication</strong> &gt; <strong>Providers</strong><br />
-            3. اضغط على <strong>Anonymous</strong> وقم بتفعيله (Enable).
+            1. اذهب إلى <strong>Supabase Dashboard</strong>
+            <br />
+            2. انتقل إلى <strong>Authentication</strong> &gt; <strong>Providers</strong>
+            <br />
+            3. اضغط على <strong>Anonymous</strong> وقم بتفعيله.
           </div>
           <button
             onClick={() => window.location.reload()}
@@ -142,16 +110,7 @@ const Index = () => {
     );
   }
 
-  const handleLogout = async () => {
-    setIsLoading(true);
-    console.info("User requested logout from Start Screen.");
-    await supabase.auth.signOut();
-    setExistingName(null);
-    setIsLoading(false);
-  };
-
   if (isLoading) {
-    // Safety timeout: if loading takes too long (> 15s), show a retry button
     setTimeout(() => {
       if (isLoading) {
         setIsLoading(false);
@@ -173,14 +132,7 @@ const Index = () => {
     );
   }
 
-  return (
-    <StartScreen 
-      onStart={handleStart} 
-      isLoading={isLoading} 
-      existingName={existingName}
-      onLogout={handleLogout}
-    />
-  );
+  return <StartScreen onStart={handleStart} isLoading={isLoading} />;
 };
 
 export default Index;

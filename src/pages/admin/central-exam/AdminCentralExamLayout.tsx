@@ -12,10 +12,8 @@ import {
   Settings,
   ArrowRight,
   Sparkles,
-  ListOrdered,
   Puzzle,
-  Timer,
-  Gamepad2
+  Timer
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -85,9 +83,7 @@ export default function AdminCentralExamLayout() {
     { path: "/admin/central-exam/questions", icon: FileQuestion, label: "بنك الأسئلة" },
     { path: "/admin/central-exam/wheel", icon: Sparkles, label: "عجلة العلوم" },
     { path: "/admin/central-exam/matching", icon: Puzzle, label: "لعبة المطابقة" },
-    { path: "/admin/central-exam/ordering", icon: Gamepad2, label: "لغز الترتيب" },
     { path: "/admin/central-exam/speed", icon: Timer, label: "تحدي السرعة" },
-    { path: "/admin/central-exam/stages", icon: ListOrdered, label: "لعبة المراحل" },
   ];
 
   return (

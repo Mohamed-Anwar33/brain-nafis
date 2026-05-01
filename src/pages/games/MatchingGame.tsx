@@ -431,9 +431,9 @@ export default function MatchingGame() {
                         </div>
                     </Card>
                 ) : (
-                    <div className={`grid gap-4 md:gap-8 w-full transition-all ${questions.length > 8 ? 'grid-cols-2 max-w-6xl' : 'grid-cols-2'}`}>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 w-full max-w-5xl transition-all">
                         {/* Left Column */}
-                        <div className={`grid gap-3 md:gap-4 ${questions.length > 8 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                        <div className="grid grid-cols-1 gap-3 md:gap-4">
                             {leftItems.map((item) => (
                                 <Card
                                     key={item.id}
@@ -444,15 +444,15 @@ export default function MatchingGame() {
                                         ${selectedLeft === item.id 
                                             ? "bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white shadow-xl shadow-purple-500/30 scale-105" 
                                             : "bg-white/90 backdrop-blur hover:bg-white"}
-                                        ${questions.length > 8 ? 'text-[10px] md:text-base p-1.5 md:p-3' : 'text-sm md:text-xl md:p-6'} 
+                                        min-h-[88px] md:min-h-[112px] text-sm md:text-lg md:p-5
                                     `}
                                 >
                                     {item.imageUrl ? (
-                                        <div className="w-full h-full flex items-center justify-center min-h-[60px] md:min-h-[140px]">
+                                        <div className="w-full h-full flex items-center justify-center min-h-[72px] md:min-h-[92px]">
                                             <img
                                                 src={item.imageUrl}
                                                 alt="question"
-                                                className="w-full h-full object-contain max-h-20 md:max-h-48 mix-blend-multiply transition-transform hover:scale-110 duration-300"
+                                                className="w-full h-full object-contain max-h-20 md:max-h-28 mix-blend-multiply transition-transform hover:scale-110 duration-300"
                                             />
                                         </div>
                                     ) : (
@@ -463,7 +463,7 @@ export default function MatchingGame() {
                         </div>
 
                         {/* Right Column */}
-                        <div className={`grid gap-3 md:gap-4 ${questions.length > 8 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                        <div className="grid grid-cols-1 gap-3 md:gap-4">
                             {rightItems.map((item) => (
                                 <Card
                                     key={item.id}
@@ -474,15 +474,15 @@ export default function MatchingGame() {
                                         ${selectedRight === item.id 
                                             ? "bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white shadow-xl shadow-purple-500/30 scale-105" 
                                             : "bg-white/90 backdrop-blur hover:bg-white"}
-                                        ${questions.length > 8 ? 'text-[10px] md:text-base p-1.5 md:p-3' : 'text-sm md:text-xl md:p-6'} 
+                                        min-h-[88px] md:min-h-[112px] text-sm md:text-lg md:p-5
                                     `}
                                 >
                                     {item.imageUrl ? (
-                                        <div className="w-full h-full flex items-center justify-center min-h-[60px] md:min-h-[140px]">
+                                        <div className="w-full h-full flex items-center justify-center min-h-[72px] md:min-h-[92px]">
                                             <img
                                                 src={item.imageUrl}
                                                 alt="answer"
-                                                className="w-full h-full object-contain max-h-20 md:max-h-48 mix-blend-multiply transition-transform hover:scale-110 duration-300"
+                                                className="w-full h-full object-contain max-h-20 md:max-h-28 mix-blend-multiply transition-transform hover:scale-110 duration-300"
                                             />
                                         </div>
                                     ) : (

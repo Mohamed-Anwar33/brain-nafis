@@ -1,11 +1,11 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Trash2, Plus, Loader2, Puzzle, X, Edit, Upload, Image as ImageIcon, RotateCcw, Save } from "lucide-react";
+import { Trash2, Plus, Loader2, Puzzle, Edit, Image as ImageIcon, RotateCcw, Save, BookOpen, Layers, ListFilter } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { SelectionScopeFields } from "@/components/admin/SelectionScopeFields";
+import { useAcademicCatalog } from "@/hooks/use-academic-catalog";
 import { validateSelectionScope } from "@/lib/selection-scope-validation";
 import { SelectionScopeValue } from "@/types/selection";
 
@@ -30,16 +31,21 @@ interface MatchingItem {
 
 interface MatchingQuestion {
   id: string;
-  items: MatchingItem[];
+  items?: MatchingItem[];
   is_active: boolean;
   created_at: string;
+  grade_subject_id?: string | null;
+  domain_id?: string | null;
 }
 
 export default function CentralExamMatching() {
+  const { data: catalog, isLoading: isCatalogLoading } = useAcademicCatalog();
   const [questions, setQuestions] = useState<MatchingQuestion[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploading, setIsUploading] = useState<{index: number, side: 'left'|'right'} | null>(null);
+  const [selectedGradeSubjectId, setSelectedGradeSubjectId] = useState<string>("all");
+  const [selectedDomainId, setSelectedDomainId] = useState<string>("all");
   
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
@@ -69,6 +75,63 @@ export default function CentralExamMatching() {
   useEffect(() => {
     fetchQuestions();
   }, []);
+
+  const getValidItems = (question: MatchingQuestion) =>
+    (question.items || []).filter(
+      (item) =>
+        (item.left_text?.trim() || item.left_image_url) &&
+        (item.right_text?.trim() || item.right_image_url),
+    );
+
+  const gradeSubjects = useMemo(() => catalog?.gradeSubjects || [], [catalog]);
+  const domains = useMemo(() => catalog?.domains || [], [catalog]);
+
+  const getGradeSubjectLabel = (gradeSubjectId?: string | null) => {
+    const gradeSubject = gradeSubjects.find((item) => item.id === gradeSubjectId);
+    if (!gradeSubject) return "غير محدد";
+    return gradeSubject.label || [gradeSubject.grade?.name, gradeSubject.subject?.name].filter(Boolean).join(" - ");
+  };
+
+  const getDomainName = (domainId?: string | null) =>
+    domains.find((domain) => domain.id === domainId)?.name || "غير محدد";
+
+  const getQuestionStats = (items: MatchingQuestion[]) => ({
+    questions: items.length,
+    active: items.filter((q) => q.is_active).length,
+    pairs: items.reduce((total, q) => total + getValidItems(q).length, 0),
+  });
+
+  const visibleDomains = useMemo(() => {
+    if (selectedGradeSubjectId === "all") return domains;
+    return domains.filter((domain) => domain.grade_subject_id === selectedGradeSubjectId);
+  }, [domains, selectedGradeSubjectId]);
+
+  const filteredQuestions = useMemo(
+    () =>
+      questions.filter((question) => {
+        const matchesGradeSubject =
+          selectedGradeSubjectId === "all" ||
+          question.grade_subject_id === selectedGradeSubjectId;
+        const matchesDomain =
+          selectedDomainId === "all" || question.domain_id === selectedDomainId;
+        return matchesGradeSubject && matchesDomain;
+      }),
+    [questions, selectedDomainId, selectedGradeSubjectId],
+  );
+
+  const allStats = useMemo(() => getQuestionStats(questions), [questions]);
+  const filteredStats = useMemo(() => getQuestionStats(filteredQuestions), [filteredQuestions]);
+
+  const getGradeSubjectStats = (gradeSubjectId: string) =>
+    getQuestionStats(questions.filter((question) => question.grade_subject_id === gradeSubjectId));
+
+  const getDomainStats = (domainId: string) =>
+    getQuestionStats(questions.filter((question) => question.domain_id === domainId));
+
+  const handleGradeSubjectFilter = (gradeSubjectId: string) => {
+    setSelectedGradeSubjectId(gradeSubjectId);
+    setSelectedDomainId("all");
+  };
 
   const fetchQuestions = async () => {
     setIsLoading(true);
@@ -208,7 +271,7 @@ export default function CentralExamMatching() {
   };
 
   const handleEdit = (q: MatchingQuestion) => {
-    const paddedItems = [...q.items];
+    const paddedItems = [...(q.items || [])];
     while (paddedItems.length < 3) {
        paddedItems.push({ left_text: "", right_text: "" });
     }
@@ -330,6 +393,99 @@ export default function CentralExamMatching() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Fast Filters */}
+      <Card className="border-slate-200 bg-white shadow-sm">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-xl text-slate-800">
+            <BookOpen className="h-5 w-5 text-purple-600" />
+            الوصول السريع للأسئلة
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <div className="grid gap-4 md:grid-cols-3">
+            <div className="rounded-2xl border border-purple-100 bg-purple-50/60 p-4">
+              <div className="text-sm font-bold text-slate-500">كل الأسئلة</div>
+              <div className="mt-1 text-3xl font-black text-purple-700">{allStats.questions}</div>
+            </div>
+            <div className="rounded-2xl border border-emerald-100 bg-emerald-50/60 p-4">
+              <div className="text-sm font-bold text-slate-500">النشطة</div>
+              <div className="mt-1 text-3xl font-black text-emerald-700">{allStats.active}</div>
+            </div>
+            <div className="rounded-2xl border border-blue-100 bg-blue-50/60 p-4">
+              <div className="text-sm font-bold text-slate-500">أزواج المطابقة</div>
+              <div className="mt-1 text-3xl font-black text-blue-700">{allStats.pairs}</div>
+            </div>
+          </div>
+
+          <div>
+            <div className="mb-2 text-sm font-bold text-slate-500">المواد</div>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant={selectedGradeSubjectId === "all" ? "default" : "outline"}
+                className="rounded-xl"
+                onClick={() => handleGradeSubjectFilter("all")}
+                disabled={isCatalogLoading}
+              >
+                الكل
+                <Badge variant="secondary" className="mr-2 bg-white/80 text-slate-700">{allStats.questions}</Badge>
+              </Button>
+              {gradeSubjects.map((gradeSubject) => {
+                const stats = getGradeSubjectStats(gradeSubject.id);
+                return (
+                  <Button
+                    key={gradeSubject.id}
+                    type="button"
+                    variant={selectedGradeSubjectId === gradeSubject.id ? "default" : "outline"}
+                    className="rounded-xl"
+                    onClick={() => handleGradeSubjectFilter(gradeSubject.id)}
+                  >
+                    {getGradeSubjectLabel(gradeSubject.id)}
+                    <Badge variant="secondary" className="mr-2 bg-white/80 text-slate-700">{stats.questions}</Badge>
+                  </Button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div>
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <div className="text-sm font-bold text-slate-500">المجالات</div>
+              <div className="text-xs font-semibold text-slate-400">
+                المعروض الآن: {filteredStats.questions} سؤال / {filteredStats.pairs} زوج
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant={selectedDomainId === "all" ? "default" : "outline"}
+                className="rounded-xl"
+                onClick={() => setSelectedDomainId("all")}
+              >
+                كل المجالات
+                <Badge variant="secondary" className="mr-2 bg-white/80 text-slate-700">{filteredStats.questions}</Badge>
+              </Button>
+              {visibleDomains.map((domain) => {
+                const stats = getDomainStats(domain.id);
+                return (
+                  <Button
+                    key={domain.id}
+                    type="button"
+                    variant={selectedDomainId === domain.id ? "default" : "outline"}
+                    className="rounded-xl"
+                    onClick={() => setSelectedDomainId(domain.id)}
+                  >
+                    {domain.name}
+                    <Badge variant="secondary" className="mr-2 bg-white/80 text-slate-700">{stats.questions}</Badge>
+                    <span className="mr-2 text-xs opacity-80">{stats.pairs} زوج</span>
+                  </Button>
+                );
+              })}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Form */}
       <Card className="shadow-md border-slate-200 bg-white">
@@ -472,21 +628,32 @@ export default function CentralExamMatching() {
         <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
            قائمة أسئلة المطابقة المضافة
         </h2>
+        <p className="text-sm font-semibold text-slate-500">
+          يتم عرض {filteredStats.questions} سؤال، بداخلها {filteredStats.pairs} زوج مطابقة حسب الفلتر الحالي.
+        </p>
         
         {isLoading ? (
           <div className="flex items-center justify-center py-20 bg-white rounded-2xl border"><Loader2 className="w-10 h-10 animate-spin text-purple-500" /></div>
-        ) : questions.length === 0 ? (
+        ) : filteredQuestions.length === 0 ? (
           <div className="text-center py-20 bg-white rounded-2xl border border-dashed border-slate-300">
             <Puzzle className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-            <p className="text-slate-500 text-lg font-medium">لا توجد أسئلة مضافة حتى الآن</p>
+            <p className="text-slate-500 text-lg font-medium">لا توجد أسئلة مطابقة لهذا الفلتر</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-             {questions.map((q, idx) => (
+          <div className="space-y-4">
+             {filteredQuestions.map((q, idx) => (
                 <Card key={q.id} className="overflow-hidden shadow-sm hover:shadow-md transition-shadow border-slate-200">
-                   <div className="bg-slate-50 border-b p-3 flex justify-between items-center">
-                     <span className="font-bold text-sm text-slate-500">سؤال #{questions.length - idx}</span>
-                     <Badge 
+                   <div className="bg-slate-50 border-b p-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                      <div className="flex flex-col gap-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-black text-slate-800">سؤال مطابقة #{filteredQuestions.length - idx}</span>
+                          <Badge variant="outline" className="bg-white">{getValidItems(q).length} أزواج</Badge>
+                        </div>
+                        <div className="text-xs font-semibold text-slate-500">
+                          {getGradeSubjectLabel(q.grade_subject_id)} / {getDomainName(q.domain_id)}
+                        </div>
+                      </div>
+                      <Badge 
                        variant={q.is_active ? "default" : "secondary"}
                        className={`cursor-pointer ${q.is_active ? 'bg-emerald-500 hover:bg-emerald-600' : ''}`}
                        onClick={() => toggleActive(q.id, q.is_active)}
@@ -496,17 +663,18 @@ export default function CentralExamMatching() {
                    </div>
                    
                    <div className="p-4 space-y-3">
-                      {q.items.map((item, i) => (
-                         <div key={i} className="flex items-center justify-between text-sm bg-slate-50 rounded-lg p-2 px-3 border border-slate-100">
-                            <div className="flex items-center gap-2 max-w-[40%]">
-                               {item.left_image_url && <img src={item.left_image_url} className="w-6 h-6 rounded object-cover" />}
+                      {getValidItems(q).map((item, i) => (
+                         <div key={i} className="grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm md:grid-cols-[1fr_auto_1fr] md:items-center">
+                            <div className="flex items-center gap-3 min-w-0">
+                               <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-900 text-xs font-bold text-white">{i + 1}</span>
+                               {item.left_image_url && <img src={item.left_image_url} className="h-10 w-10 rounded-lg border bg-white object-cover" />}
                                <span className="truncate font-medium" title={item.left_text}>{item.left_text || 'صورة'}</span>
                             </div>
                             
-                            <span className="text-purple-400 text-xs font-black">=</span>
+                            <span className="rounded-full bg-purple-100 px-3 py-1 text-center text-xs font-black text-purple-600">يطابق</span>
                             
-                            <div className="flex items-center gap-2 max-w-[40%] flex-row-reverse">
-                               {item.right_image_url && <img src={item.right_image_url} className="w-6 h-6 rounded object-cover" />}
+                            <div className="flex items-center gap-3 min-w-0">
+                               {item.right_image_url && <img src={item.right_image_url} className="h-10 w-10 rounded-lg border bg-white object-cover" />}
                                <span className="truncate font-medium text-left dir-ltr" title={item.right_text}>{item.right_text || 'صورة'}</span>
                             </div>
                          </div>

@@ -98,11 +98,12 @@ export default function MatchingGame() {
             // Get Config
             const limit = 10;
 
-            // 1. Fetch all active questions (IDs only)
+            // 1. Fetch all active scoped questions. In central exam, one row can
+            // contain multiple matching pairs in items, so selection happens after flattening.
             const { data: allQuestions, error } = await applySelectionFilters(
                 supabase
                     .from("matching_game_questions")
-                    .select("id")
+                    .select("*")
                     .eq("is_active", true),
                 selectionContext,
             );
@@ -113,43 +114,25 @@ export default function MatchingGame() {
                 return;
             }
 
-            // 2. Fetch seen question IDs
+            // 2. Fetch seen source row IDs.
             const seenIds = await getScopedHistoryIds(
                 session.user.id,
                 "matching",
                 selectionContext,
             );
 
-            // 3. Filter unseen
-            let availableQuestions = allQuestions.filter(q => !seenIds.has(q.id));
+            const scopedQuestions = allQuestions as RawQuestion[];
+            const unseenQuestions = scopedQuestions.filter((q) => !seenIds.has(q.id));
 
-            // 4. Reset if needed
-            if (availableQuestions.length < limit) {
+            // Reset only when every source row in this scope has already been used.
+            if (unseenQuestions.length === 0 && scopedQuestions.length > 0) {
                 await resetScopedHistory(session.user.id, "matching", selectionContext);
-
-                availableQuestions = allQuestions;
-                // Silent reset - no notification to student
-            }
-
-            // 5. Fetch full data
-            const availableIds = availableQuestions.map(q => q.id);
-            const { data: fullQuestions, error: fullError } = await applySelectionFilters(
-                supabase
-                    .from("matching_game_questions")
-                    .select("*")
-                    .in("id", availableIds),
-                selectionContext,
-            );
-
-            if (fullError || !fullQuestions) {
-                toast.error("فشل تحميل بيانات الأسئلة");
-                setLoading(false);
-                return;
+                seenIds.clear();
             }
 
             // 6. Flatten items JSONB into individual pairs
             const flattenedQuestions: Question[] = [];
-            for (const raw of fullQuestions as RawQuestion[]) {
+            for (const raw of scopedQuestions) {
                 if (raw.items && Array.isArray(raw.items) && raw.items.length > 0) {
                     // New format: items JSONB array
                     for (const item of raw.items) {
@@ -183,15 +166,15 @@ export default function MatchingGame() {
                 return;
             }
 
-            // 7. Shuffle
-            const shuffledQuestions = [...flattenedQuestions];
-            for (let i = shuffledQuestions.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [shuffledQuestions[i], shuffledQuestions[j]] = [shuffledQuestions[j], shuffledQuestions[i]];
-            }
-            const selectedQuestions = shuffledQuestions.slice(0, limit);
+            // 4. Prefer pairs from unseen source rows, then fill from seen rows if needed.
+            const unseenPairs = flattenedQuestions.filter((q) => !seenIds.has(q.source_id));
+            const seenPairs = flattenedQuestions.filter((q) => seenIds.has(q.source_id));
+            const selectedQuestions = [
+                ...shuffleArray(unseenPairs),
+                ...shuffleArray(seenPairs),
+            ].slice(0, limit);
 
-            // 8. Record seen (use original question IDs, not pair IDs)
+            // 5. Record seen (use original question IDs, not pair IDs)
             const originalIds = [...new Set(selectedQuestions.map((q) => q.source_id))];
             await recordScopedHistory(
                 session.user.id,

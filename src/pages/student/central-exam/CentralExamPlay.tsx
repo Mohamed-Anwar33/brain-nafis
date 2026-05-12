@@ -127,7 +127,15 @@ export default function CentralExamPlay() {
         toast.error("لا توجد أسئلة متاحة في الاختبار المركزي");
         navigate("/student/dashboard");
       } else {
-        setQuestions(activeQuestions);
+        // Shuffle questions for Quick Exam
+        const shuffled = [...activeQuestions];
+        for (let i = shuffled.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        // Limit to 10 questions as requested
+        const limitedQuestions = shuffled.slice(0, 10);
+        setQuestions(limitedQuestions);
       }
     } catch (e) {
       navigate("/student/dashboard");

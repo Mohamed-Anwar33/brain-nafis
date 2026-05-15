@@ -61,6 +61,7 @@ export default function CentralExamPlay() {
   const [studentName, setStudentName] = useState<string>("");
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "success" | "error">("idle");
   const [exitDialogOpen, setExitDialogOpen] = useState(false);
+  const [stage, setStage] = useState(1);
   const startTime = useRef(Date.now());
   const selectionContext = useMemo(() => getStoredSelectionContext(), []);
   
@@ -207,6 +208,22 @@ export default function CentralExamPlay() {
         audioManager.playSuccess();
       }
     }
+  };
+
+  const startNextStage = () => {
+    setStage(prev => prev + 1);
+    setCurrentIndex(0);
+    setSelectedChoice(null);
+    setIsAnswered(false);
+    setScore(0);
+    setIsFinished(false);
+    setLoading(true);
+    setSaveStatus("idle");
+    setQuestionsWithErrors(new Set());
+    setWrongAttempts(0);
+    setCurrentWrongReason(null);
+    startTime.current = Date.now();
+    fetchQuestions();
   };
 
   const saveAttempt = async (finalScore: number) => {
@@ -391,6 +408,7 @@ export default function CentralExamPlay() {
               {achievement.title}
             </h2>
             <p className="text-slate-600 mb-6 text-lg font-medium">{achievement.message}</p>
+            <p className="text-slate-500 mb-2 text-sm">المرحلة {stage}</p>
             
             {/* Student Name */}
             {resolvedStudentName && (
@@ -468,13 +486,21 @@ export default function CentralExamPlay() {
             </div>
             
             {/* Action Buttons */}
-            <div className="flex flex-col sm:flex-row gap-3">
+            <div className="flex flex-col gap-3">
+              <Button 
+                onClick={startNextStage}
+                className="w-full h-14 text-xl font-black rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-emerald-500/20 text-white"
+              >
+                <Sparkles className="w-6 h-6 ml-3" />
+                الانتقال للمرحلة {stage + 1}
+              </Button>
+              
               <Button 
                 onClick={() => navigate("/student/dashboard")}
-                className={`flex-1 h-14 text-lg font-bold rounded-xl bg-gradient-to-r ${achievement.color} hover:opacity-90 shadow-xl transition-all hover:scale-105 text-white`}
+                variant="outline"
+                className="w-full h-12 text-lg font-bold rounded-xl border-2 border-slate-300 hover:bg-slate-100"
               >
-                <Sparkles className="w-5 h-5 mr-2" />
-                العودة للوحة القيادة
+                العودة للصفحة الرئيسية
               </Button>
             </div>
             
@@ -531,7 +557,7 @@ export default function CentralExamPlay() {
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1 bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white px-4 py-2 rounded-full shadow-lg shadow-purple-500/30">
             <Target className="w-5 h-5" />
-            <span className="font-bold">الاختبار المركزي</span>
+            <span className="font-bold">الاختبار المركزي - المرحلة {stage}</span>
           </div>
         </div>
 

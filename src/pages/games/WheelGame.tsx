@@ -127,13 +127,20 @@ export default function WheelGame() {
         setStudentName(profile.full_name);
       }
 
-      // Fetch sections - no domain filter, show ALL for grade+subject
-      const { data: sectionsData, error: sectionsError } = await supabase
+      // Fetch sections - filter by domain so each subject shows its own questions
+      let sectionsQuery = supabase
         .from("wheel_sections")
         .select("*")
         .eq("is_active", true)
         .eq("track_type", selectionContext.trackType)
-        .eq("grade_subject_id", selectionContext.gradeSubjectId)
+        .eq("grade_subject_id", selectionContext.gradeSubjectId);
+
+      // Apply domain filter so Physics shows Physics questions, Chemistry shows Chemistry, etc.
+      if (selectionContext.trackType === "central" && selectionContext.domainId) {
+        sectionsQuery = sectionsQuery.eq("domain_id", selectionContext.domainId);
+      }
+
+      const { data: sectionsData, error: sectionsError } = await sectionsQuery
         .order("order_index", { ascending: true });
 
       if (sectionsError) throw sectionsError;
@@ -148,13 +155,20 @@ export default function WheelGame() {
 
       // Fetch questions for all active sections
       const sectionIds = (sectionsData as any[]).map((s) => s.id);
-      const { data: questionsData, error: questionsError } = await supabase
+      let questionsQuery = supabase
         .from("wheel_section_questions")
         .select("*")
         .eq("is_active", true)
         .eq("track_type", selectionContext.trackType)
         .eq("grade_subject_id", selectionContext.gradeSubjectId)
         .in("section_id", sectionIds);
+
+      // Apply domain filter for questions as well
+      if (selectionContext.trackType === "central" && selectionContext.domainId) {
+        questionsQuery = questionsQuery.eq("domain_id", selectionContext.domainId);
+      }
+
+      const { data: questionsData, error: questionsError } = await questionsQuery;
 
       if (questionsError) throw questionsError;
 

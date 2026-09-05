@@ -3,10 +3,11 @@ import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ArrowRight, RefreshCw, Trophy, CheckCircle2, XCircle, ListOrdered, Lightbulb, ArrowUp } from "lucide-react";
+import { ArrowRight, RefreshCw, Trophy, CheckCircle2, XCircle, ListOrdered, Lightbulb, ArrowUp, Award } from "lucide-react";
 import { toast } from "sonner";
 import confetti from "canvas-confetti";
 import { audioManager } from "@/lib/audio";
+import { CertificateModal } from "@/components/exam/CertificateModal";
 import {
   getSelectionDisplayText,
   getStoredSelectionContext,
@@ -46,6 +47,8 @@ export default function StagesGame() {
   const [questionsWithErrors, setQuestionsWithErrors] = useState<Set<string>>(new Set());  // Track which questions had errors
   const [gameOver, setGameOver] = useState(false);
   const [showHint, setShowHint] = useState(false);
+  const [studentName, setStudentName] = useState<string>("");
+  const [showCertificateModal, setShowCertificateModal] = useState(false);
   
   const startTime = useState(() => Date.now())[0];
 
@@ -54,6 +57,25 @@ export default function StagesGame() {
       navigate("/student/dashboard", { replace: true });
       return;
     }
+
+    const fetchStudentName = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: profile } = await supabase
+            .from("student_profiles")
+            .select("full_name")
+            .eq("id", user.id)
+            .maybeSingle();
+          if (profile?.full_name) {
+            setStudentName(profile.full_name);
+          }
+        }
+      } catch (e) {
+        console.error("Error fetching student profile:", e);
+      }
+    };
+    void fetchStudentName();
 
     audioManager.preload();
     fetchQuestions();
@@ -79,8 +101,7 @@ export default function StagesGame() {
         supabase
           .from("stages_game_questions")
           .select("*")
-          .eq("is_active", true)
-          .limit(10),
+          .eq("is_active", true),
         selectionContext,
       );
 
@@ -298,9 +319,10 @@ export default function StagesGame() {
           }
         }).select().single();
 
-        if (attemptData && !insertError) {
+        const savedAttempt = attemptData as unknown as { id: string } | null;
+        if (savedAttempt?.id && !insertError) {
           await supabase.functions.invoke('exam-finish', {
-            body: { attempt_id: attemptData.id, is_game: true }
+            body: { attempt_id: savedAttempt.id, is_game: true }
           });
         }
       }
@@ -330,6 +352,8 @@ export default function StagesGame() {
   }
 
   if (gameOver) {
+    const percentage = questions.length > 0 ? Math.round((correctCount / questions.length) * 100) : 100;
+
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4" dir="rtl">
         <Card className="p-10 text-center space-y-8 max-w-md w-full animate-in zoom-in duration-500 shadow-2xl">
@@ -341,16 +365,18 @@ export default function StagesGame() {
           </div>
           
           <div>
-            <h2 className="text-3xl font-black text-slate-800 mb-2">ممتاز!</h2>
-            <p className="text-slate-500">أكملت لعبة ترتيب المراحل</p>
+            <h2 className="text-3xl font-black text-slate-800 mb-2">أحسنت يا {studentName || "بطل"}!</h2>
+            <p className="text-slate-500">أكملت لعبة ترتيب المراحل بنجاح</p>
           </div>
           
           <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-2xl border border-blue-100">
-            <div className="text-sm text-blue-600 mb-2">النتيجة النهائية</div>
+            <div className="text-sm text-blue-600 mb-2 font-bold">النسبة والدرجة</div>
             <div className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-indigo-600">
-              {score}
+              {percentage}%
             </div>
-            <div className="text-sm text-slate-400 mt-2">نقطة</div>
+            <div className="text-sm text-slate-500 font-bold mt-2">
+              {correctCount} من {questions.length} أسئلة صحيحة ({score} نقطة)
+            </div>
           </div>
           
           <div className="flex justify-center gap-8 text-center">
@@ -364,6 +390,15 @@ export default function StagesGame() {
               <div className="text-xs text-slate-500">مجموع</div>
             </div>
           </div>
+
+          {/* Certificate Button */}
+          <Button
+            onClick={() => setShowCertificateModal(true)}
+            className="w-full h-14 text-lg sm:text-xl font-black rounded-2xl bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-amber-500/20 text-slate-950"
+          >
+            <Award className="w-6 h-6 ml-3" />
+            🎓 عرض وتحميل شهادة الشكر والتقدير
+          </Button>
           
           <div className="flex flex-col gap-3">
             <Button onClick={restartGame} variant="outline" className="w-full h-12 text-lg rounded-xl">
@@ -374,6 +409,16 @@ export default function StagesGame() {
               <Link to="/student/dashboard">العودة للقائمة</Link>
             </Button>
           </div>
+
+          <CertificateModal
+            isOpen={showCertificateModal}
+            onClose={() => setShowCertificateModal(false)}
+            studentName={studentName || "طالب متميز"}
+            score={correctCount}
+            totalQuestions={questions.length}
+            percentage={percentage}
+            examTitle="لعبة ترتيب المراحل - منصة SCIRISE"
+          />
         </Card>
       </div>
     );

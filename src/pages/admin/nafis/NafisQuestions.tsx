@@ -490,7 +490,7 @@ export default function NafisQuestions() {
                   <DialogHeader>
                     <DialogTitle>{editingQuestion ? "تعديل سؤال" : "إضافة سؤال جديد"}</DialogTitle>
                   </DialogHeader>
-                  <QuestionForm question={editingQuestion} onComplete={handleFormClose} defaultStage={activeStage || 1} />
+                  <QuestionForm key={editingQuestion?.id || 'new'} question={editingQuestion} onComplete={handleFormClose} defaultStage={activeStage || 1} />
                 </DialogContent>
               </Dialog>
             </div>

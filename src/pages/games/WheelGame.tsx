@@ -13,6 +13,7 @@ import {
   getStoredSelectionContext,
 } from "@/lib/selection-context";
 import { applySelectionFilters, getScopedPayload } from "@/lib/selection-scope";
+import { CertificateModal } from "@/components/exam/CertificateModal";
 
 interface WheelSection {
   id: string;
@@ -86,6 +87,7 @@ export default function WheelGame() {
   
   const [gameOver, setGameOver] = useState(false);
   const [studentName, setStudentName] = useState<string>("");
+  const [showCertificateModal, setShowCertificateModal] = useState(false);
   const wheelRef = useRef<HTMLDivElement>(null);
   const startTime = useRef(Date.now());
 
@@ -634,6 +636,15 @@ export default function WheelGame() {
             </div>
           </div>
           
+          {/* Certificate Button */}
+          <Button
+            onClick={() => setShowCertificateModal(true)}
+            className="w-full h-14 text-lg sm:text-xl font-black rounded-2xl bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-amber-500/20 text-slate-950"
+          >
+            <Award className="w-6 h-6 ml-3" />
+            🎓 عرض وتحميل شهادة الشكر والتقدير
+          </Button>
+          
           <div className="flex flex-col gap-3">
             <Button onClick={startNextStage} className="w-full h-14 text-xl font-black rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-500 hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-emerald-500/20">
               <Sparkles className="w-6 h-6 ml-3" />
@@ -650,6 +661,16 @@ export default function WheelGame() {
               </Button>
             </div>
           </div>
+
+          <CertificateModal
+            isOpen={showCertificateModal}
+            onClose={() => setShowCertificateModal(false)}
+            studentName={studentName || "طالب متميز"}
+            score={currentSectionStats.correct}
+            totalQuestions={currentSectionStats.total || 1}
+            percentage={currentSectionStats.total > 0 ? Math.round((currentSectionStats.correct / currentSectionStats.total) * 100) : 100}
+            examTitle={`عجلة العلوم (المرحلة ${stage}) - منصة SCIRISE`}
+          />
         </Card>
       </div>
     );

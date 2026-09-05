@@ -20,8 +20,6 @@ const PremiumBackground: React.FC<{ children: React.ReactNode }> = ({ children }
         }} 
       />
       
-      {/* Subtle Grain Texture for Depth */}
-      <div className="fixed inset-0 pointer-events-none opacity-[0.02] bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
 
       {/* Content Wrapper */}
       <div className="relative z-10 w-full min-h-screen">

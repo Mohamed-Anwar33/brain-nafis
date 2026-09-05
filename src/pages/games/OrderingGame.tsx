@@ -3,10 +3,11 @@ import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ArrowRight, RotateCcw, Check, Puzzle, Sparkles, Trophy, Target } from "lucide-react";
+import { ArrowRight, RotateCcw, Check, Puzzle, Sparkles, Trophy, Target, Award } from "lucide-react";
 import { toast } from "sonner";
 import confetti from "canvas-confetti";
 import { audioManager } from "@/lib/audio";
+import { CertificateModal } from "@/components/exam/CertificateModal";
 import {
     DndContext,
     DragOverlay,
@@ -183,6 +184,8 @@ export default function OrderingGame() {
     const [wrongCount, setWrongCount] = useState(0);  // Track wrong attempts
     const [questionsWithErrors, setQuestionsWithErrors] = useState<Set<string>>(new Set());  // Track which questions had errors
     const [gameOver, setGameOver] = useState(false);
+    const [studentName, setStudentName] = useState<string>("");
+    const [showCertificateModal, setShowCertificateModal] = useState(false);
 
     const [isChecked, setIsChecked] = useState(false);
     const [isCorrect, setIsCorrect] = useState(false);
@@ -211,6 +214,25 @@ export default function OrderingGame() {
             return;
         }
 
+        const fetchStudentName = async () => {
+            try {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (user) {
+                    const { data: profile } = await supabase
+                        .from("student_profiles")
+                        .select("full_name")
+                        .eq("id", user.id)
+                        .maybeSingle();
+                    if (profile?.full_name) {
+                        setStudentName(profile.full_name);
+                    }
+                }
+            } catch (e) {
+                console.error("Error fetching student profile:", e);
+            }
+        };
+        void fetchStudentName();
+
         audioManager.preload();
         fetchQuestions();
     }, [navigate, selectionContext]);
@@ -234,51 +256,22 @@ export default function OrderingGame() {
             const limit = 5;
 
             // 1. Fetch active
-            const { data: allQuestions, error } = await applySelectionFilters(
+            const { data: fullQuestions, error: fullError } = await applySelectionFilters(
                 supabase
                     .from("ordering_game_questions")
-                    .select("id")
-                    .eq("is_active", true)
-                    .eq("level", gameState.level),
+                    .select("*")
+                    .eq("is_active", true),
                 selectionContext,
             );
 
-            if (error || !allQuestions || allQuestions.length === 0) {
+            if (fullError || !fullQuestions || fullQuestions.length === 0) {
                 toast.error("لا توجد أسئلة متاحة");
                 setLoading(false);
                 return;
             }
 
-            const seenIds = await getScopedHistoryIds(
-                session.user.id,
-                "ordering",
-                selectionContext,
-            );
-            let availableQuestions = allQuestions.filter((question) => !seenIds.has(question.id));
-
-            if (availableQuestions.length < limit) {
-                await resetScopedHistory(session.user.id, "ordering", selectionContext);
-                availableQuestions = allQuestions;
-            }
-
-            // 5. Fetch full data
-            const availableIds = availableQuestions.map(q => q.id);
-            const { data: fullQuestions, error: fullError } = await applySelectionFilters(
-                supabase
-                    .from("ordering_game_questions")
-                    .select("*")
-                    .in("id", availableIds),
-                selectionContext,
-            );
-
-            if (fullError || !fullQuestions) {
-                toast.error("فشل تحميل بيانات الأسئلة");
-                setLoading(false);
-                return;
-            }
-
             // Cast json arrays
-            let loadedQuestions = fullQuestions.map((q: any) => ({
+            const loadedQuestions = fullQuestions.map((q: any) => ({
                 ...q,
                 item_images: Array.isArray(q.item_images) ? q.item_images : [],
                 correct_order: Array.isArray(q.correct_order) ? q.correct_order : [],
@@ -288,18 +281,8 @@ export default function OrderingGame() {
 
             const typedQuestions = loadedQuestions as Question[];
 
-            // 6. Shuffle questions
-            const shuffledQuestions = [...typedQuestions].sort(() => Math.random() - 0.5).slice(0, limit);
-
-            await recordScopedHistory(
-                session.user.id,
-                "ordering",
-                shuffledQuestions.map((question) => question.id),
-                selectionContext,
-            );
-
-            setQuestions(shuffledQuestions);
-            if (shuffledQuestions.length > 0) loadQuestion(shuffledQuestions[0]);
+            setQuestions(typedQuestions);
+            if (typedQuestions.length > 0) loadQuestion(typedQuestions[0]);
 
         } catch (error) {
             console.error("Error fetching questions:", error);
@@ -503,6 +486,8 @@ export default function OrderingGame() {
     };
 
     if (gameOver) {
+        const percentage = questions.length > 0 ? Math.round((correctCount / questions.length) * 100) : 100;
+
         return (
             <div className="min-h-screen bg-gradient-to-br from-emerald-100 via-teal-50 to-cyan-100 flex flex-col items-center justify-center p-4 relative" dir="rtl">
                 {/* Floating Background */}
@@ -521,17 +506,28 @@ export default function OrderingGame() {
                     </div>
                     
                     <div>
-                        <h2 className="text-3xl font-black bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent mb-2">أحسنت يا بطل!</h2>
+                        <h2 className="text-3xl font-black bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent mb-2">أحسنت يا {studentName || "بطل"}!</h2>
                         <p className="text-slate-500">أكملت المرحلة {gameState.stage} من ألغاز الترتيب</p>
                     </div>
 
                     <div className="bg-gradient-to-r from-emerald-50 to-teal-50 p-6 rounded-2xl border border-emerald-200">
-                        <div className="text-sm text-emerald-700 mb-2 font-bold">نقاط المرحلة</div>
+                        <div className="text-sm text-emerald-700 mb-2 font-bold">النسبة والدرجة</div>
                         <div className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-teal-600">
-                            {correctCount}
+                            {percentage}%
                         </div>
-                        <div className="text-sm text-slate-400 mt-2">نقطة</div>
+                        <div className="text-sm text-slate-500 font-bold mt-2">
+                            {correctCount} من {questions.length} أسئلة صحيحة ({gameState.score} نقطة)
+                        </div>
                     </div>
+
+                    {/* Certificate Button */}
+                    <Button
+                        onClick={() => setShowCertificateModal(true)}
+                        className="w-full h-14 text-lg sm:text-xl font-black rounded-2xl bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-amber-500/20 text-slate-950"
+                    >
+                        <Award className="w-6 h-6 ml-3" />
+                        🎓 عرض وتحميل شهادة الشكر والتقدير
+                    </Button>
 
                     <div className="flex flex-col gap-3">
                         <Button onClick={startNextStage} className="w-full h-14 text-xl font-black rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-500 hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-emerald-500/20">
@@ -549,6 +545,16 @@ export default function OrderingGame() {
                             </Button>
                         </div>
                     </div>
+
+                    <CertificateModal
+                        isOpen={showCertificateModal}
+                        onClose={() => setShowCertificateModal(false)}
+                        studentName={studentName || "طالب متميز"}
+                        score={correctCount}
+                        totalQuestions={questions.length}
+                        percentage={percentage}
+                        examTitle={`لغز الترتيب العلمي (المرحلة ${gameState.stage}) - منصة SCIRISE`}
+                    />
                 </Card>
             </div>
         );

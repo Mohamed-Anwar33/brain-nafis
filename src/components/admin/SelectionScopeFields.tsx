@@ -30,113 +30,160 @@ export function SelectionScopeFields({
     [catalog?.gradeSubjects],
   );
   const domains = useMemo(() => catalog?.domains ?? [], [catalog?.domains]);
-
-  useEffect(() => {
-    if (!value.gradeSubjectId || !catalog) {
-      return;
-    }
-
-    const match = gradeSubjects.find((item) => item.id === value.gradeSubjectId);
-    if (
-      match &&
-      (match.grade_id !== value.gradeId || match.subject_id !== value.subjectId)
-    ) {
-      onChange({
-        ...value,
-        gradeId: match.grade_id,
-        subjectId: match.subject_id,
-      });
-    }
-  }, [catalog, gradeSubjects, onChange, value]);
-
-  const availableSubjects = useMemo(() => {
-    if (!catalog?.subjects || !value.gradeId) {
-      return [];
-    }
-
-    const subjectIds = new Set(
-      gradeSubjects
-        .filter((item) => item.grade_id === value.gradeId)
-        .map((item) => item.subject_id),
-    );
-
-    return catalog.subjects.filter((subject) => subjectIds.has(subject.id));
-  }, [catalog, gradeSubjects, value.gradeId]);
-
-  const availableDomains = useMemo(
-    () =>
-      domains.filter((domain) => domain.grade_subject_id === value.gradeSubjectId),
-    [domains, value.gradeSubjectId],
-  );
+  const grades = useMemo(() => catalog?.grades ?? [], [catalog?.grades]);
+  const subjects = useMemo(() => catalog?.subjects ?? [], [catalog?.subjects]);
 
   const resolvedTrackType: TrackType =
     trackMode === "nafis"
       ? "nafis"
       : trackMode === "central"
         ? "central"
-        : value.trackType;
+        : value.trackType || "central";
 
-  useEffect(() => {
-    if (resolvedTrackType !== value.trackType) {
-      onChange({
-        ...value,
-        trackType: resolvedTrackType,
-        domainId: resolvedTrackType === "central" ? value.domainId : "",
-      });
+  // 1. SYNCHRONOUS RESOLUTION of all effective IDs
+  let effectiveGsId = value.gradeSubjectId || "";
+  let effectiveDomainId = value.domainId || "";
+
+  // If gradeSubjectId is missing but domainId exists, find gradeSubjectId from domain
+  if (!effectiveGsId && effectiveDomainId) {
+    const dMatch = domains.find((d) => d.id === effectiveDomainId);
+    if (dMatch?.grade_subject_id) {
+      effectiveGsId = dMatch.grade_subject_id;
     }
-  }, [onChange, resolvedTrackType, value]);
+  }
 
-  useEffect(() => {
-    if (!catalog) {
-      return;
-    }
+  // Find match from effectiveGsId
+  const gsMatch = effectiveGsId
+    ? gradeSubjects.find((gs) => gs.id === effectiveGsId)
+    : undefined;
 
-    if (!value.gradeId || !value.subjectId) {
-      if (value.gradeSubjectId || value.domainId) {
-        onChange({
-          ...value,
-          gradeSubjectId: "",
-          domainId: "",
-        });
-      }
-      return;
-    }
+  let effectiveGradeId = value.gradeId || gsMatch?.grade_id || "";
+  if (!effectiveGradeId && grades.length === 1) {
+    effectiveGradeId = grades[0].id;
+  }
 
-    const match = gradeSubjects.find(
-      (item) =>
-        item.grade_id === value.gradeId && item.subject_id === value.subjectId,
+  // Available subjects for the effective grade
+  const availableSubjects = useMemo(() => {
+    if (!subjects.length || !effectiveGradeId) return subjects;
+    const allowedSubjectIds = new Set(
+      gradeSubjects
+        .filter((gs) => gs.grade_id === effectiveGradeId)
+        .map((gs) => gs.subject_id),
     );
-    const nextGradeSubjectId = match?.id || "";
+    const filtered = subjects.filter((s) => allowedSubjectIds.has(s.id));
+    return filtered.length > 0 ? filtered : subjects;
+  }, [subjects, gradeSubjects, effectiveGradeId]);
 
-    if (nextGradeSubjectId !== value.gradeSubjectId) {
-      onChange({
-        ...value,
-        gradeSubjectId: nextGradeSubjectId,
-        domainId: "",
-      });
+  let effectiveSubjectId = value.subjectId || gsMatch?.subject_id || "";
+  if (!effectiveSubjectId && availableSubjects.length === 1) {
+    effectiveSubjectId = availableSubjects[0].id;
+  }
+
+  // If effectiveGsId is still not resolved, resolve from gradeId + subjectId
+  if (!effectiveGsId && effectiveGradeId && effectiveSubjectId) {
+    const match = gradeSubjects.find(
+      (gs) => gs.grade_id === effectiveGradeId && gs.subject_id === effectiveSubjectId,
+    );
+    if (match) {
+      effectiveGsId = match.id;
     }
-  }, [catalog, gradeSubjects, onChange, value]);
+  }
 
+  // Available domains for the effective gradeSubject
+  const availableDomains = useMemo(() => {
+    if (!effectiveGsId) return domains;
+    const filtered = domains.filter((d) => d.grade_subject_id === effectiveGsId);
+    return filtered.length > 0 ? filtered : domains;
+  }, [domains, effectiveGsId]);
+
+  // Resolve selected item objects for explicit rendering in SelectValue
+  const selectedGrade = grades.find((g) => g.id === effectiveGradeId);
+  const selectedSubject =
+    availableSubjects.find((s) => s.id === effectiveSubjectId) ||
+    subjects.find((s) => s.id === effectiveSubjectId);
+  const selectedDomain =
+    availableDomains.find((d) => d.id === effectiveDomainId) ||
+    domains.find((d) => d.id === effectiveDomainId);
+
+  // Synchronize effective values back to parent if needed
   useEffect(() => {
-    if (resolvedTrackType !== "central" && value.domainId) {
-      onChange({
-        ...value,
-        domainId: "",
-      });
-      return;
-    }
+    if (!catalog) return;
 
-    if (
-      resolvedTrackType === "central" &&
-      value.domainId &&
-      !availableDomains.some((domain) => domain.id === value.domainId)
-    ) {
+    const needsTrack = value.trackType !== resolvedTrackType;
+    const needsGrade = value.gradeId !== effectiveGradeId && !!effectiveGradeId;
+    const needsSubject = value.subjectId !== effectiveSubjectId && !!effectiveSubjectId;
+    const needsGs = value.gradeSubjectId !== effectiveGsId && !!effectiveGsId;
+    const needsDomain = value.domainId !== effectiveDomainId && !!effectiveDomainId;
+
+    if (needsTrack || needsGrade || needsSubject || needsGs || needsDomain) {
       onChange({
-        ...value,
-        domainId: "",
+        trackType: resolvedTrackType,
+        gradeId: effectiveGradeId,
+        subjectId: effectiveSubjectId,
+        gradeSubjectId: effectiveGsId,
+        domainId: effectiveDomainId,
       });
     }
-  }, [availableDomains, onChange, resolvedTrackType, value]);
+  }, [
+    catalog,
+    resolvedTrackType,
+    effectiveGradeId,
+    effectiveSubjectId,
+    effectiveGsId,
+    effectiveDomainId,
+    value.trackType,
+    value.gradeId,
+    value.subjectId,
+    value.gradeSubjectId,
+    value.domainId,
+    onChange,
+  ]);
+
+  const handleGradeChange = (gradeId: string) => {
+    const subjectsForNewGrade = gradeSubjects.filter((gs) => gs.grade_id === gradeId);
+    const newSubjectId = subjectsForNewGrade.length === 1 ? subjectsForNewGrade[0].subject_id : "";
+    const newGsId = subjectsForNewGrade.length === 1 ? subjectsForNewGrade[0].id : "";
+    onChange({
+      trackType: resolvedTrackType,
+      gradeId,
+      subjectId: newSubjectId,
+      gradeSubjectId: newGsId,
+      domainId: "",
+    });
+  };
+
+  const handleSubjectChange = (subjectId: string) => {
+    const match = gradeSubjects.find(
+      (gs) => gs.grade_id === effectiveGradeId && gs.subject_id === subjectId,
+    );
+    onChange({
+      trackType: resolvedTrackType,
+      gradeId: effectiveGradeId,
+      subjectId,
+      gradeSubjectId: match?.id || "",
+      domainId: "",
+    });
+  };
+
+  const handleDomainChange = (domainId: string) => {
+    onChange({
+      trackType: resolvedTrackType,
+      gradeId: effectiveGradeId,
+      subjectId: effectiveSubjectId,
+      gradeSubjectId: effectiveGsId,
+      domainId,
+    });
+  };
+
+  const handleTrackChange = (nextTrackType: TrackType) => {
+    onChange({
+      trackType: nextTrackType,
+      gradeId: effectiveGradeId,
+      subjectId: effectiveSubjectId,
+      gradeSubjectId: effectiveGsId,
+      domainId: nextTrackType === "central" ? effectiveDomainId : "",
+    });
+  };
 
   return (
     <div className="grid gap-4 md:grid-cols-2">
@@ -144,20 +191,15 @@ export function SelectionScopeFields({
         <div className="space-y-2">
           <Label>المسار</Label>
           <Select
+            key={`track-${resolvedTrackType}`}
             value={resolvedTrackType}
-            onValueChange={(nextTrackType: TrackType) =>
-              onChange({
-                ...value,
-                trackType: nextTrackType,
-                domainId: nextTrackType === "central" ? value.domainId : "",
-              })
-            }
+            onValueChange={handleTrackChange}
           >
             <SelectTrigger>
               <SelectValue placeholder="اختر المسار" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="nafis">براين ساينس</SelectItem>
+              <SelectItem value="nafis">منصة SCIRISE (نافس)</SelectItem>
               <SelectItem value="central">الاختبار المركزي</SelectItem>
             </SelectContent>
           </Select>
@@ -167,23 +209,18 @@ export function SelectionScopeFields({
       <div className="space-y-2">
         <Label>الصف</Label>
         <Select
+          key={`grade-${effectiveGradeId || "none"}`}
           disabled={isLoading}
-          value={value.gradeId || undefined}
-          onValueChange={(gradeId) =>
-            onChange({
-              ...value,
-              gradeId,
-              subjectId: "",
-              gradeSubjectId: "",
-              domainId: "",
-            })
-          }
+          value={effectiveGradeId || undefined}
+          onValueChange={handleGradeChange}
         >
           <SelectTrigger>
-            <SelectValue placeholder="اختر الصف" />
+            <SelectValue placeholder="اختر الصف">
+              {selectedGrade?.name}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
-            {(catalog?.grades || []).map((grade) => (
+            {(grades.length > 0 ? grades : catalog?.grades || []).map((grade) => (
               <SelectItem key={grade.id} value={grade.id}>
                 {grade.name}
               </SelectItem>
@@ -195,19 +232,15 @@ export function SelectionScopeFields({
       <div className="space-y-2">
         <Label>المادة</Label>
         <Select
-          disabled={isLoading || !value.gradeId}
-          value={value.subjectId || undefined}
-          onValueChange={(subjectId) =>
-            onChange({
-              ...value,
-              subjectId,
-              gradeSubjectId: "",
-              domainId: "",
-            })
-          }
+          key={`subject-${effectiveGradeId || "none"}-${effectiveSubjectId || "none"}`}
+          disabled={isLoading || !effectiveGradeId}
+          value={effectiveSubjectId || undefined}
+          onValueChange={handleSubjectChange}
         >
           <SelectTrigger>
-            <SelectValue placeholder="اختر المادة" />
+            <SelectValue placeholder="اختر المادة">
+              {selectedSubject?.name}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             {availableSubjects.map((subject) => (
@@ -223,17 +256,15 @@ export function SelectionScopeFields({
         <div className="space-y-2">
           <Label>المجال</Label>
           <Select
-            disabled={isLoading || !value.gradeSubjectId}
-            value={value.domainId || undefined}
-            onValueChange={(domainId) =>
-              onChange({
-                ...value,
-                domainId,
-              })
-            }
+            key={`domain-${effectiveGsId || "none"}-${effectiveDomainId || "none"}`}
+            disabled={isLoading || (!effectiveGsId && !effectiveDomainId)}
+            value={effectiveDomainId || undefined}
+            onValueChange={handleDomainChange}
           >
             <SelectTrigger>
-              <SelectValue placeholder="اختر المجال" />
+              <SelectValue placeholder="اختر المجال">
+                {selectedDomain?.name}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               {availableDomains.map((domain) => (

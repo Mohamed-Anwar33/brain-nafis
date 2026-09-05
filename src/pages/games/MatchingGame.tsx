@@ -3,10 +3,11 @@ import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ArrowRight, RefreshCw, Trophy, Target, Gamepad2 } from "lucide-react";
+import { ArrowRight, RefreshCw, Trophy, Target, Gamepad2, Award } from "lucide-react";
 import { toast } from "sonner";
 import confetti from "canvas-confetti";
 import { audioManager } from "@/lib/audio";
+import { CertificateModal } from "@/components/exam/CertificateModal";
 import {
     getSelectionDisplayText,
     getStoredSelectionContext,
@@ -71,12 +72,34 @@ export default function MatchingGame() {
     const [currentIndex, setCurrentIndex] = useState(0);
     const [isChecked, setIsChecked] = useState(false);
     const [startTime] = useState(() => Date.now());
+    const [isFinished, setIsFinished] = useState(false);
+    const [studentName, setStudentName] = useState<string>("");
+    const [showCertificateModal, setShowCertificateModal] = useState(false);
 
     useEffect(() => {
         if (!selectionContext) {
             navigate("/student/dashboard", { replace: true });
             return;
         }
+
+        const fetchStudentName = async () => {
+            try {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (user) {
+                    const { data: profile } = await supabase
+                        .from("student_profiles")
+                        .select("full_name")
+                        .eq("id", user.id)
+                        .maybeSingle();
+                    if (profile?.full_name) {
+                        setStudentName(profile.full_name);
+                    }
+                }
+            } catch (e) {
+                console.error("Error fetching student profile:", e);
+            }
+        };
+        void fetchStudentName();
 
         audioManager.preload();
         fetchQuestions();
@@ -114,19 +137,7 @@ export default function MatchingGame() {
                 return;
             }
 
-            const seenIds = await getScopedHistoryIds(
-                session.user.id,
-                "matching",
-                selectionContext,
-            );
-
             const scopedQuestions = allQuestions as RawQuestion[];
-            const unseenQuestions = scopedQuestions.filter((q) => !seenIds.has(q.id));
-
-            if (unseenQuestions.length === 0 && scopedQuestions.length > 0) {
-                await resetScopedHistory(session.user.id, "matching", selectionContext);
-                seenIds.clear();
-            }
 
             const flattenedQuestions: Question[] = [];
             for (const raw of scopedQuestions) {
@@ -161,20 +172,7 @@ export default function MatchingGame() {
                 return;
             }
 
-            const unseenPairs = flattenedQuestions.filter((q) => !seenIds.has(q.source_id));
-            const seenPairs = flattenedQuestions.filter((q) => seenIds.has(q.source_id));
-            const selectedQuestions = [
-                ...shuffleArray(unseenPairs),
-                ...shuffleArray(seenPairs),
-            ].slice(0, limit);
-
-            const originalIds = [...new Set(selectedQuestions.map((q) => q.source_id))];
-            await recordScopedHistory(
-                session.user.id,
-                "matching",
-                originalIds,
-                selectionContext,
-            );
+            const selectedQuestions = [...flattenedQuestions];
 
             setQuestions(selectedQuestions);
             initializeGame(selectedQuestions);
@@ -280,6 +278,7 @@ export default function MatchingGame() {
     };
 
     const handleWin = (finalScore: number, finalCorrect: number) => {
+        setIsFinished(true);
         confetti({
             particleCount: 100,
             spread: 70,
@@ -376,7 +375,7 @@ export default function MatchingGame() {
                         <p className="text-slate-600 text-lg mb-4">لا توجد أسئلة متاحة حالياً.</p>
                         <Button onClick={fetchQuestions} className="bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white font-bold px-8">تحديث</Button>
                     </Card>
-                ) : gameState.correctAnswers === questions.length && isChecked ? (
+                ) : isFinished ? (
                     <Card className="p-10 text-center space-y-6 max-w-md w-full bg-white/90 backdrop-blur-xl border-0 shadow-2xl shadow-purple-500/20">
                         <div className="relative inline-block">
                             <div className="w-24 h-24 rounded-full bg-gradient-to-br from-yellow-400 via-amber-500 to-orange-500 flex items-center justify-center shadow-xl shadow-orange-500/30">
@@ -387,17 +386,28 @@ export default function MatchingGame() {
                         </div>
                         
                         <div>
-                            <h2 className="text-3xl font-black bg-gradient-to-r from-violet-600 to-fuchsia-600 bg-clip-text text-transparent mb-2">أحسنت يا بطل!</h2>
+                            <h2 className="text-3xl font-black bg-gradient-to-r from-violet-600 to-fuchsia-600 bg-clip-text text-transparent mb-2">أحسنت يا {studentName || "بطل"}!</h2>
                             <p className="text-slate-500">أكملت لعبة المطابقة بنجاح.</p>
                         </div>
                         
                         <div className="bg-gradient-to-r from-violet-50 to-fuchsia-50 p-6 rounded-2xl border border-violet-100">
-                            <div className="text-sm text-slate-500 mb-2 font-bold">النقاط النهائية</div>
+                            <div className="text-sm text-slate-500 mb-2 font-bold">النسبة والدرجة</div>
                             <div className="text-5xl font-black bg-gradient-to-r from-violet-600 via-fuchsia-600 to-pink-600 bg-clip-text text-transparent">
-                                {gameState.score}
+                                {questions.length > 0 ? Math.round((gameState.correctAnswers / questions.length) * 100) : 100}%
                             </div>
-                            <div className="text-sm text-slate-400 mt-2">نقطة</div>
+                            <div className="text-sm text-slate-500 font-bold mt-2">
+                                {gameState.correctAnswers} من {questions.length} إجابة صحيحة ({gameState.score} نقطة)
+                            </div>
                         </div>
+
+                        {/* Certificate Button */}
+                        <Button
+                            onClick={() => setShowCertificateModal(true)}
+                            className="w-full h-14 text-lg sm:text-xl font-black rounded-2xl bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-amber-500/20 text-slate-950"
+                        >
+                            <Award className="w-6 h-6 ml-3" />
+                            🎓 عرض وتحميل شهادة الشكر والتقدير
+                        </Button>
                         
                         <div className="flex flex-col gap-3">
                             <div className="grid grid-cols-2 gap-3">
@@ -410,6 +420,16 @@ export default function MatchingGame() {
                                 </Button>
                             </div>
                         </div>
+
+                        <CertificateModal
+                            isOpen={showCertificateModal}
+                            onClose={() => setShowCertificateModal(false)}
+                            studentName={studentName || "طالب متميز"}
+                            score={gameState.correctAnswers}
+                            totalQuestions={questions.length}
+                            percentage={questions.length > 0 ? Math.round((gameState.correctAnswers / questions.length) * 100) : 100}
+                            examTitle="لعبة المطابقة العلمية - منصة SCIRISE"
+                        />
                     </Card>
                 ) : (
                     <div className="flex flex-col items-center w-full max-w-4xl space-y-8 animate-in fade-in duration-500">

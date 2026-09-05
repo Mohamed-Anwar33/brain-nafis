@@ -17,10 +17,13 @@ export interface CentralExamQuestion {
   image_url: string | null;
   active: boolean;
   order_index: number;
+  stage_number?: number | null;
+  created_at?: string;
   track_type?: "nafis" | "central";
   grade_subject_id?: string | null;
   domain_id?: string | null;
   wrong_reason?: string | null;
+  explanation_url?: string | null;
   choices?: CentralExamChoice[];
 }
 
@@ -118,11 +121,28 @@ export async function createCentralExamQuestion(
   question: Omit<CentralExamQuestion, 'id' | 'choices'>,
   choices: CentralExamChoiceInput[]
 ) {
-  const { data: qData, error: qError } = await supabase
+  const insertPayload: Record<string, unknown> = { ...question };
+  let { data: qData, error: qError } = await supabase
     .from("central_exam_questions")
-    .insert(question)
+    .insert(insertPayload)
     .select()
     .single();
+
+  // If explanation_url column is not yet present on remote DB, fallback gracefully
+  if (qError && (qError.code === "42703" || qError.message?.includes("explanation_url"))) {
+    const fallbackReason = question.explanation_url
+      ? (question.wrong_reason ? `${question.wrong_reason}\n${question.explanation_url}` : question.explanation_url)
+      : question.wrong_reason || null;
+    delete insertPayload.explanation_url;
+    insertPayload.wrong_reason = fallbackReason;
+    const retry = await supabase
+      .from("central_exam_questions")
+      .insert(insertPayload)
+      .select()
+      .single();
+    qData = retry.data;
+    qError = retry.error;
+  }
 
   if (qError) throw qError;
 
@@ -146,10 +166,25 @@ export async function updateCentralExamQuestion(
   question: Partial<CentralExamQuestion>,
   choices?: (Partial<CentralExamChoice> & { id?: string })[]
 ) {
-  const { error: qError } = await supabase
+  const updatePayload: Record<string, unknown> = { ...question };
+  let { error: qError } = await supabase
     .from("central_exam_questions")
-    .update(question)
+    .update(updatePayload)
     .eq("id", questionId);
+
+  // If explanation_url column is not yet present on remote DB, fallback gracefully
+  if (qError && (qError.code === "42703" || qError.message?.includes("explanation_url"))) {
+    const fallbackReason = question.explanation_url
+      ? (question.wrong_reason ? `${question.wrong_reason}\n${question.explanation_url}` : question.explanation_url)
+      : question.wrong_reason || null;
+    delete updatePayload.explanation_url;
+    updatePayload.wrong_reason = fallbackReason;
+    const retry = await supabase
+      .from("central_exam_questions")
+      .update(updatePayload)
+      .eq("id", questionId);
+    qError = retry.error;
+  }
 
   if (qError) throw qError;
 

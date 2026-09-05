@@ -51,6 +51,34 @@ export async function getAcademicCatalog(): Promise<AcademicCatalog> {
     []) as AcademicGradeSubject[];
   const domains = (domainsResult.data || []) as CentralDomain[];
 
+  // Ensure Biology and Earth & Space domains are present for Central Exam
+  const defaultExtraDomains = [
+    { uuidSuffix: "000000000001", name: "الأحياء", slug: "biology", sort_order: 4 },
+    { uuidSuffix: "000000000002", name: "علوم الأرض والفضاء", slug: "earth_science", sort_order: 5 },
+  ];
+
+  gradeSubjectsBase.forEach((gs) => {
+    defaultExtraDomains.forEach((extra) => {
+      const exists = domains.some(
+        (d) => d.grade_subject_id === gs.id && (d.name === extra.name || d.slug === extra.slug || d.slug === "earth-space")
+      );
+      if (!exists) {
+        domains.push({
+          id: `00000000-0000-4000-8000-${extra.uuidSuffix}`,
+          grade_subject_id: gs.id,
+          name: extra.name,
+          slug: extra.slug,
+          sort_order: extra.sort_order,
+          is_active: true,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        } as CentralDomain);
+      }
+    });
+  });
+
+  domains.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+
   const gradeMap = new Map(grades.map((grade) => [grade.id, grade]));
   const subjectMap = new Map(subjects.map((subject) => [subject.id, subject]));
 

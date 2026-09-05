@@ -3,10 +3,11 @@ import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ArrowRight, Clock, Trophy, RefreshCw, Zap, Sparkles, Target } from "lucide-react";
+import { ArrowRight, Clock, Trophy, RefreshCw, Zap, Sparkles, Target, Award } from "lucide-react";
 import { toast } from "sonner";
 import confetti from "canvas-confetti";
 import { audioManager } from "@/lib/audio";
+import { CertificateModal } from "@/components/exam/CertificateModal";
 import {
     getSelectionDisplayText,
     getStoredSelectionContext,
@@ -65,6 +66,8 @@ export default function SpeedChallenge() {
     const [initialTime, setInitialTime] = useState(60);
     const [questionsWithErrors, setQuestionsWithErrors] = useState<Set<string>>(new Set());
     const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
+    const [studentName, setStudentName] = useState<string>("");
+    const [showCertificateModal, setShowCertificateModal] = useState(false);
 
     // Refs to always have latest values for async saves
     const scoreRef = useRef(0);
@@ -82,6 +85,23 @@ export default function SpeedChallenge() {
 
             // Preload audio
             await audioManager.preload();
+
+            // Fetch student profile
+            try {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (user) {
+                    const { data: profile } = await supabase
+                        .from("student_profiles")
+                        .select("full_name")
+                        .eq("id", user.id)
+                        .maybeSingle();
+                    if (profile?.full_name) {
+                        setStudentName(profile.full_name);
+                    }
+                }
+            } catch (e) {
+                console.error("Error fetching student profile:", e);
+            }
 
             // Fetch Config
             const { data: setting } = await supabase.from("app_settings").select("value").eq("key", "speed_challenge_duration").maybeSingle();
@@ -420,16 +440,18 @@ export default function SpeedChallenge() {
                 ) : isGameOver ? (
                     <Card className="p-10 text-center space-y-6 max-w-md w-full bg-white/90 backdrop-blur-xl border-0 shadow-2xl shadow-orange-500/20">
                         <div>
-                            <h2 className="text-3xl font-black bg-gradient-to-r from-orange-600 to-amber-600 bg-clip-text text-transparent mb-2">أحسنت يا بطل!</h2>
-                            <p className="text-slate-500">أكملت المرحلة {gameState.stage} بنجاح.</p>
+                            <h2 className="text-3xl font-black bg-gradient-to-r from-orange-600 to-amber-600 bg-clip-text text-transparent mb-2">أحسنت يا {studentName || "بطل"}!</h2>
+                            <p className="text-slate-500">أكملت المرحلة {gameState.stage} من تحدي السرعة بنجاح.</p>
                         </div>
 
                         <div className="bg-gradient-to-r from-orange-50 to-amber-50 p-6 rounded-2xl border border-orange-200">
-                            <div className="text-sm text-orange-700 mb-2 font-bold">نقاط المرحلة</div>
+                            <div className="text-sm text-orange-700 mb-2 font-bold">النسبة والدرجة</div>
                             <div className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-amber-600">
-                                {gameState.score}
+                                {gameState.answeringCount > 0 ? Math.round((gameState.correctCount / gameState.answeringCount) * 100) : 100}%
                             </div>
-                            <div className="text-sm text-slate-400 mt-2">نقطة</div>
+                            <div className="text-sm text-slate-500 font-bold mt-2">
+                                {gameState.correctCount} من {gameState.answeringCount} أسئلة صحيحة ({gameState.score} نقطة)
+                            </div>
                         </div>
                         
                         <div className="grid grid-cols-2 gap-4">
@@ -442,6 +464,15 @@ export default function SpeedChallenge() {
                                 <div className="text-xs text-slate-500 font-bold">خاطئة</div>
                             </Card>
                         </div>
+
+                        {/* Certificate Button */}
+                        <Button
+                            onClick={() => setShowCertificateModal(true)}
+                            className="w-full h-14 text-lg sm:text-xl font-black rounded-2xl bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-amber-500/20 text-slate-950"
+                        >
+                            <Award className="w-6 h-6 ml-3" />
+                            🎓 عرض وتحميل شهادة الشكر والتقدير
+                        </Button>
                         
                         <div className="flex flex-col gap-3">
                             <Button onClick={startNextStage} className="w-full h-14 text-xl font-black rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-emerald-500/20">
@@ -459,6 +490,16 @@ export default function SpeedChallenge() {
                                 </Button>
                             </div>
                         </div>
+
+                        <CertificateModal
+                            isOpen={showCertificateModal}
+                            onClose={() => setShowCertificateModal(false)}
+                            studentName={studentName || "طالب متميز"}
+                            score={gameState.correctCount}
+                            totalQuestions={gameState.answeringCount || 1}
+                            percentage={gameState.answeringCount > 0 ? Math.round((gameState.correctCount / gameState.answeringCount) * 100) : 100}
+                            examTitle={`تحدي السرعة العلمي (المرحلة ${gameState.stage}) - منصة SCIRISE`}
+                        />
                     </Card>
                 ) : questions.length > 0 ? (
                     <div className="w-full space-y-8 animate-fade-in">

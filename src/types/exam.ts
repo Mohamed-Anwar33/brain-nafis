@@ -11,6 +11,7 @@ export interface Question {
   choices: Choice[];
   image_url?: string;
   wrong_reason?: string | null;
+  explanation_url?: string | null;
   stage_number?: number | null;
 }
 

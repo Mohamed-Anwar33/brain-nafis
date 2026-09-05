@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { Trash2, Plus, Image as ImageIcon, Upload, X, Loader2 } from "lucide-react";
+import { Trash2, Plus, Upload, X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -19,6 +19,7 @@ import {
 } from "@/components/admin/SelectionScopeFields";
 import { validateSelectionScope } from "@/lib/selection-scope-validation";
 import { SelectionScopeValue } from "@/types/selection";
+import { useAcademicCatalog } from "@/hooks/use-academic-catalog";
 
 interface Props {
   question: CentralExamQuestion | null;
@@ -26,18 +27,20 @@ interface Props {
 }
 
 export function CentralExamQuestionForm({ question, onComplete }: Props) {
+  const { data: catalog } = useAcademicCatalog();
   const [text, setText] = useState(question?.text || "");
   const [imageUrl, setImageUrl] = useState(question?.image_url || "");
   const [active, setActive] = useState(question?.active ?? true);
   const [orderIndex, setOrderIndex] = useState(question?.order_index || 0);
   const [wrongReason, setWrongReason] = useState(question?.wrong_reason || "");
-  const [scope, setScope] = useState<SelectionScopeValue>({
+  const [explanationUrl, setExplanationUrl] = useState(question?.explanation_url || "");
+  const [scope, setScope] = useState<SelectionScopeValue>(() => ({
     trackType: "central",
     gradeId: "",
     subjectId: "",
     gradeSubjectId: question?.grade_subject_id || "",
     domainId: question?.domain_id || "",
-  });
+  }));
   
   const [choices, setChoices] = useState<Partial<CentralExamChoice>[]>([]);
   const [loading, setLoading] = useState(false);
@@ -56,14 +59,43 @@ export function CentralExamQuestionForm({ question, onComplete }: Props) {
         { text: "", is_correct: false },
       ]);
     }
+    setText(question?.text || "");
+    setImageUrl(question?.image_url || "");
+    setImagePreview(question?.image_url || null);
+    setActive(question?.active ?? true);
+    setOrderIndex(question?.order_index || 0);
     setWrongReason(question?.wrong_reason || "");
-    setScope((current) => ({
-      ...current,
+    setExplanationUrl(question?.explanation_url || "");
+
+    let targetGsId = question?.grade_subject_id || "";
+    let derivedGradeId = "";
+    let derivedSubjectId = "";
+    let derivedDomainId = question?.domain_id || "";
+
+    if (targetGsId && catalog?.gradeSubjects) {
+      const match = catalog.gradeSubjects.find((gs) => gs.id === targetGsId);
+      if (match) {
+        derivedGradeId = match.grade_id;
+        derivedSubjectId = match.subject_id;
+      }
+    } else if (!targetGsId && catalog?.grades?.length === 1) {
+      const onlyGrade = catalog.grades[0];
+      derivedGradeId = onlyGrade.id;
+      const gsList = (catalog.gradeSubjects || []).filter((gs) => gs.grade_id === onlyGrade.id);
+      if (gsList.length === 1) {
+        derivedSubjectId = gsList[0].subject_id;
+        targetGsId = gsList[0].id;
+      }
+    }
+
+    setScope((prev) => ({
       trackType: "central",
-      gradeSubjectId: question?.grade_subject_id || "",
-      domainId: question?.domain_id || "",
+      gradeSubjectId: targetGsId || prev.gradeSubjectId,
+      domainId: prev.domainId || derivedDomainId,
+      gradeId: derivedGradeId || prev.gradeId,
+      subjectId: derivedSubjectId || prev.subjectId,
     }));
-  }, [question]);
+  }, [question, catalog]);
 
   const addChoice = () => {
     setChoices([...choices, { text: "", is_correct: false }]);
@@ -178,6 +210,7 @@ export function CentralExamQuestionForm({ question, onComplete }: Props) {
           grade_subject_id: scope.gradeSubjectId,
           domain_id: scope.domainId,
           wrong_reason: wrongReason || null,
+          explanation_url: explanationUrl || null,
         }, validChoices);
         toast.success("تم تحديث السؤال بنجاح");
       } else {
@@ -190,6 +223,7 @@ export function CentralExamQuestionForm({ question, onComplete }: Props) {
           grade_subject_id: scope.gradeSubjectId,
           domain_id: scope.domainId,
           wrong_reason: wrongReason || null,
+          explanation_url: explanationUrl || null,
         }, validChoices as CentralExamChoiceInput[]);
         toast.success("تم إضافة السؤال بنجاح");
       }
@@ -297,6 +331,20 @@ export function CentralExamQuestionForm({ question, onComplete }: Props) {
           placeholder="اكتب التفسير الذي سيظهر للطالب عند الإجابة الخاطئة"
           className="min-h-[90px] resize-y"
         />
+      </div>
+
+      <div className="space-y-2">
+        <Label>رابط شرح السؤال (المنصة التعليمية / يوتيوب / فيديو)</Label>
+        <Input
+          value={explanationUrl}
+          onChange={(e) => setExplanationUrl(e.target.value)}
+          placeholder="https://www.youtube.com/watch?v=... أو رابط المنصة التعليمية أو مقطع فيديو"
+          dir="ltr"
+          className="text-left font-mono text-sm"
+        />
+        <p className="text-xs text-muted-foreground">
+          يظهر للطالب عند الإجابة الخاطئة لمشاهدة فيديو أو درس الشرح مباشرة
+        </p>
       </div>
 
       <div className="space-y-4 pt-4 border-t">

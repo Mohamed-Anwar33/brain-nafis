@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { ExamQuestion as ExamQuestionType, Choice } from "@/types/exam";
-import { CheckCircle2, XCircle, Loader2 } from "lucide-react";
+import { CheckCircle2, XCircle, Loader2, PlayCircle, HelpCircle } from "lucide-react";
+import { ExplanationModal } from "@/components/exam/ExplanationModal";
 
 interface ExamQuestionProps {
   question: ExamQuestionType;
@@ -24,12 +25,14 @@ export function ExamQuestion({
   const [answerState, setAnswerState] = useState<"correct" | "wrong" | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pendingChoice, setPendingChoice] = useState<string | null>(null);
+  const [showExplanationModal, setShowExplanationModal] = useState(false);
 
   // Reset state when question changes
   useEffect(() => {
     setSelectedChoice(null);
     setAnswerState(null);
     setPendingChoice(null);
+    setShowExplanationModal(false);
   }, [question.id]);
 
   const handleChoiceClick = async (choice: Choice) => {
@@ -159,14 +162,39 @@ export function ExamQuestion({
             })}
           </div>
 
-          {answerState === "wrong" && wrongReason && (
-            <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-right">
-              <p className="text-sm font-bold text-amber-700">سبب الخطأ</p>
-              <p className="mt-2 text-sm leading-7 text-amber-900">
-                {wrongReason}
-              </p>
+          {answerState === "wrong" && (wrongReason || question.explanation_url) && (
+            <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50/90 p-5 text-right space-y-3 shadow-sm animate-in fade-in slide-in-from-top-2">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center gap-2 text-amber-800 font-bold text-sm">
+                  <HelpCircle className="w-5 h-5 text-amber-600" />
+                  <span>توضيح الإجابة الصحيحة:</span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setShowExplanationModal(true)}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-primary to-blue-600 text-white font-bold text-xs sm:text-sm hover:opacity-90 transition-all shadow-md shadow-primary/20"
+                >
+                  <PlayCircle className="w-4 h-4" />
+                  <span>🎥 شاهد شرح السؤال والدرس</span>
+                </button>
+              </div>
+
+              {wrongReason && (
+                <p className="text-sm leading-relaxed text-amber-950 font-medium pt-1 border-t border-amber-200/60">
+                  {wrongReason}
+                </p>
+              )}
             </div>
           )}
+
+          <ExplanationModal
+            isOpen={showExplanationModal}
+            onClose={() => setShowExplanationModal(false)}
+            questionText={question.text}
+            wrongReason={wrongReason || question.wrong_reason}
+            explanationUrl={question.explanation_url}
+          />
         </div>
       </div>
     </div>

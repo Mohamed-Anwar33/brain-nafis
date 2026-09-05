@@ -8,11 +8,11 @@ export const SaudiLoader = ({ text = "جاري التجهيز..." }: { text?: st
                 <div className="absolute inset-0 bg-sky-400 rounded-full blur-3xl opacity-30 group-hover:opacity-50 transition-opacity duration-1000 animate-pulse"></div>
                 
                 {/* Decorative rotating outer ring with Vibrant colors */}
-                <div className="absolute -inset-4 rounded-full border-[6px] border-t-indigo-600 border-r-transparent border-b-sky-400 border-l-transparent animate-spin duration-[2s]"></div>
+                <div className="absolute -inset-4 rounded-full border-[6px] border-t-indigo-600 border-r-transparent border-b-sky-400 border-l-transparent animate-spin" style={{ animationDuration: "2s" }}></div>
 
                 {/* Inner pulsing circle - White Glass */}
                 <div className="w-32 h-32 bg-white/80 backdrop-blur-xl border-2 border-indigo-100 rounded-full shadow-[0_15px_40px_rgba(0,0,0,0.05)] flex items-center justify-center relative z-10 animate-pulse-slow">
-                    <Brain className="w-16 h-16 text-indigo-600 animate-bounce duration-[3s]" />
+                    <Brain className="w-16 h-16 text-indigo-600 animate-bounce" style={{ animationDuration: "3s" }} />
                 </div>
             </div>
 

@@ -31,6 +31,8 @@ interface OrderingQuestion {
   items: OrderingItem[];
   is_active: boolean;
   created_at: string;
+  grade_subject_id?: string | null;
+  domain_id?: string | null;
 }
 
 export default function CentralExamOrdering() {
@@ -136,6 +138,16 @@ export default function CentralExamOrdering() {
       id: q.id,
       items: paddedItems
     });
+
+    if (q.grade_subject_id || q.domain_id) {
+      setScope((current) => ({
+        ...current,
+        trackType: "central",
+        gradeSubjectId: q.grade_subject_id || "",
+        domainId: q.domain_id || "",
+      }));
+    }
+
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 

@@ -280,6 +280,15 @@ export default function CentralExamMatching() {
       id: q.id,
       items: paddedItems
     });
+
+    if (q.grade_subject_id || q.domain_id) {
+      setScope((current) => ({
+        ...current,
+        trackType: "central",
+        gradeSubjectId: q.grade_subject_id || "",
+        domainId: q.domain_id || "",
+      }));
+    }
     
     // Scroll to form
     window.scrollTo({ top: 0, behavior: 'smooth' });

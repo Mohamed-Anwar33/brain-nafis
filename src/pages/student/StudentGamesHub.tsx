@@ -70,7 +70,7 @@ export default function StudentGamesHub() {
           </Button>
 
           <div className="text-left">
-            <h1 className="text-lg font-black text-slate-900">ألعاب براين ساينس</h1>
+            <h1 className="text-lg font-black text-slate-900">ألعاب SCIRISE التعليمية</h1>
             <p className="text-sm text-slate-500">
               اختر اللعبة المناسبة داخل نفس السياق
             </p>

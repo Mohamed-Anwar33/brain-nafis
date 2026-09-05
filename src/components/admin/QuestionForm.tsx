@@ -1,32 +1,25 @@
 import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Plus, Trash2, ImageIcon, Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Plus, Trash2, Loader2, Upload, ImageIcon } from "lucide-react";
-import {
-  SelectionScopeFields,
-} from "@/components/admin/SelectionScopeFields";
+import { SelectionScopeFields } from "@/components/admin/SelectionScopeFields";
 import { validateSelectionScope } from "@/lib/selection-scope-validation";
 import { SelectionScopeValue } from "@/types/selection";
+import { useAcademicCatalog } from "@/hooks/use-academic-catalog";
 
 interface Choice {
   id?: string;
   text: string;
   is_correct: boolean;
   image_url?: string;
-  file?: File; // For new uploads
+  file?: File;
 }
 
 interface QuestionFormProps {
@@ -38,26 +31,29 @@ interface QuestionFormProps {
     stage_number?: number;
     grade_subject_id?: string | null;
     wrong_reason?: string | null;
+    explanation_url?: string | null;
   } | null;
   onComplete: () => void;
   defaultStage?: number;
 }
 
 export function QuestionForm({ question, onComplete, defaultStage }: QuestionFormProps) {
+  const { data: catalog } = useAcademicCatalog();
   const [text, setText] = useState("");
   const [active, setActive] = useState(true);
   const [stageNumber, setStageNumber] = useState<number>(defaultStage || 1);
   const [wrongReason, setWrongReason] = useState("");
+  const [explanationUrl, setExplanationUrl] = useState("");
   const [stagesList, setStagesList] = useState<{ stage_number: number; title: string }[]>([]);
   const [questionImage, setQuestionImage] = useState<File | null>(null);
   const [questionImageUrl, setQuestionImageUrl] = useState<string | null>(null);
-  const [scope, setScope] = useState<SelectionScopeValue>({
+  const [scope, setScope] = useState<SelectionScopeValue>(() => ({
     trackType: "nafis",
     gradeId: "",
     subjectId: "",
-    gradeSubjectId: "",
+    gradeSubjectId: question?.grade_subject_id || "",
     domainId: "",
-  });
+  }));
 
   const [choices, setChoices] = useState<Choice[]>([
     { text: "", is_correct: true },
@@ -75,14 +71,37 @@ export function QuestionForm({ question, onComplete, defaultStage }: QuestionFor
       setStageNumber(question.stage_number || defaultStage || 1);
       setQuestionImageUrl(question.image_url || null);
       setWrongReason(question.wrong_reason || "");
-      setScope((current) => ({
-        ...current,
+      setExplanationUrl(question.explanation_url || "");
+
+      let targetGsId = question.grade_subject_id || "";
+      let derivedGradeId = "";
+      let derivedSubjectId = "";
+      if (targetGsId && catalog?.gradeSubjects) {
+        const match = catalog.gradeSubjects.find((gs) => gs.id === targetGsId);
+        if (match) {
+          derivedGradeId = match.grade_id;
+          derivedSubjectId = match.subject_id;
+        }
+      } else if (!targetGsId && catalog?.grades?.length === 1) {
+        const onlyGrade = catalog.grades[0];
+        derivedGradeId = onlyGrade.id;
+        const gsList = (catalog.gradeSubjects || []).filter((gs) => gs.grade_id === onlyGrade.id);
+        if (gsList.length === 1) {
+          derivedSubjectId = gsList[0].subject_id;
+          targetGsId = gsList[0].id;
+        }
+      }
+
+      setScope((prev) => ({
         trackType: "nafis",
-        gradeSubjectId: question.grade_subject_id || "",
+        gradeSubjectId: targetGsId || prev.gradeSubjectId,
+        domainId: "",
+        gradeId: derivedGradeId || prev.gradeId,
+        subjectId: derivedSubjectId || prev.subjectId,
       }));
       fetchChoices(question.id);
     }
-  }, [defaultStage, question]);
+  }, [defaultStage, question, catalog]);
 
   // Fetch stages from stage_titles table
   useEffect(() => {
@@ -112,8 +131,8 @@ export function QuestionForm({ question, onComplete, defaultStage }: QuestionFor
 
       if (error) throw error;
 
-      if (data && data.length > 0) {
-        setChoices(data.map(c => ({
+      if (data && (data as any[]).length > 0) {
+        setChoices((data as any[]).map((c: any) => ({
           id: c.id,
           text: c.text,
           is_correct: c.is_correct ?? false,
@@ -170,42 +189,44 @@ export function QuestionForm({ question, onComplete, defaultStage }: QuestionFor
 
   const uploadFile = async (file: File) => {
     const fileExt = file.name.split('.').pop();
-    const fileName = `${Math.random()}.${fileExt}`;
-    const filePath = `${fileName}`;
+    const fileName = `${Math.random().toString(36).substring(2)}_${Date.now()}.${fileExt}`;
+    const filePath = `questions/${fileName}`;
+
+    console.log("🚀 Starting upload to Supabase Storage:", filePath);
 
     const { error: uploadError } = await supabase.storage
-      .from('question-images')
-      .upload(filePath, file);
+      .from("game-images")
+      .upload(filePath, file, {
+        cacheControl: "3600",
+        upsert: false
+      });
 
-    if (uploadError) throw uploadError;
+    if (uploadError) {
+      console.error("❌ Storage Upload Error:", uploadError);
+      throw uploadError;
+    }
 
-    const { data } = supabase.storage
-      .from('question-images')
+    const { data: { publicUrl } } = supabase.storage
+      .from("game-images")
       .getPublicUrl(filePath);
 
-    return data.publicUrl;
+    console.log("🔗 Generated Public URL:", publicUrl);
+    return publicUrl;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
+    
     // Validation
-    if (!text.trim() && !questionImage && !questionImageUrl) {
-      toast.error("يرجى إدخال نص السؤال أو صورة");
-      // Note: allow strictly image questions if desired, but usually text is good. 
-      // Let's keep enforcing text for accessibility/search unless requested otherwise.
-      if (!text.trim()) return;
-    }
-
     const filledChoices = choices.filter(c => c.text.trim() || c.file || c.image_url);
     if (filledChoices.length < 2) {
-      toast.error("يجب إدخال خيارين على الأقل");
+      toast.error("يجب ملء خيارين على الأقل");
       return;
     }
 
-    const correctCount = filledChoices.filter(c => c.is_correct).length;
-    if (correctCount !== 1) {
-      toast.error("يجب تحديد إجابة صحيحة واحدة فقط");
+    const hasCorrect = choices.some(c => c.is_correct);
+    if (!hasCorrect) {
+      toast.error("يجب تحديد إجابة صحيحة واحدة على الأقل");
       return;
     }
 
@@ -218,60 +239,84 @@ export function QuestionForm({ question, onComplete, defaultStage }: QuestionFor
     setIsLoading(true);
 
     try {
-      // Upload Question Image
-      console.log("🚀 Submitting Form...");
       let finalQuestionImageUrl = questionImageUrl;
-
       if (questionImage) {
-        console.log("📤 Uploading question image:", questionImage.name);
+        console.log("📤 Uploading Question Image...");
         finalQuestionImageUrl = await uploadFile(questionImage);
-        console.log("✅ Question image uploaded:", finalQuestionImageUrl);
-      } else {
-        console.log("ℹ️ No new question image selected. Current URL:", questionImageUrl);
+        console.log("✅ Question Image Uploaded:", finalQuestionImageUrl);
       }
 
       let qId = question?.id;
 
       if (question) {
         // Update existing question
-        const { error: questionError } = await supabase
+        let updatePayload: any = {
+          text,
+          active,
+          image_url: finalQuestionImageUrl,
+          stage_number: stageNumber,
+          grade_subject_id: scope.gradeSubjectId,
+          track_type: "nafis",
+          wrong_reason: wrongReason || null,
+          explanation_url: explanationUrl || null,
+        };
+
+        let { error: questionError } = await supabase
           .from("questions")
-          .update({
-            text,
-            active,
-            image_url: finalQuestionImageUrl,
-            stage_number: stageNumber,
-            grade_subject_id: scope.gradeSubjectId,
-            track_type: "nafis",
-            wrong_reason: wrongReason || null,
-          })
+          .update(updatePayload)
           .eq("id", question.id);
+
+        if (questionError && (questionError.code === "42703" || questionError.message?.includes("explanation_url"))) {
+          const fallbackReason = explanationUrl
+            ? (wrongReason ? `${wrongReason}\n${explanationUrl}` : explanationUrl)
+            : wrongReason || null;
+          delete updatePayload.explanation_url;
+          updatePayload.wrong_reason = fallbackReason;
+          const retry = await supabase.from("questions").update(updatePayload).eq("id", question.id);
+          questionError = retry.error;
+        }
 
         if (questionError) throw questionError;
 
-        // Delete old choices and insert new ones
-        // Wait! We are deleting old choices, so we lose their image usage?
-        // Actually, the new choices state has the image_url preserved, so we just re-insert it.
+        // Delete old choices to replace with new ones
         await supabase.from("choices").delete().eq("question_id", question.id);
 
       } else {
         // Create new question
-        const { data: newQuestion, error: questionError } = await supabase
+        let insertPayload: any = {
+          text,
+          active,
+          image_url: finalQuestionImageUrl,
+          stage_number: stageNumber,
+          grade_subject_id: scope.gradeSubjectId,
+          track_type: "nafis",
+          wrong_reason: wrongReason || null,
+          explanation_url: explanationUrl || null,
+        };
+
+        let { data: newQuestion, error: questionError } = await supabase
           .from("questions")
-          .insert({
-            text,
-            active,
-            image_url: finalQuestionImageUrl,
-            stage_number: stageNumber,
-            grade_subject_id: scope.gradeSubjectId,
-            track_type: "nafis",
-            wrong_reason: wrongReason || null,
-          })
+          .insert(insertPayload)
           .select()
           .single();
 
+        if (questionError && (questionError.code === "42703" || questionError.message?.includes("explanation_url"))) {
+          const fallbackReason = explanationUrl
+            ? (wrongReason ? `${wrongReason}\n${explanationUrl}` : explanationUrl)
+            : wrongReason || null;
+          delete insertPayload.explanation_url;
+          insertPayload.wrong_reason = fallbackReason;
+          const retry = await supabase
+            .from("questions")
+            .insert(insertPayload)
+            .select()
+            .single();
+          newQuestion = retry.data;
+          questionError = retry.error;
+        }
+
         if (questionError) throw questionError;
-        qId = newQuestion.id;
+        qId = (newQuestion as any)?.id;
       }
 
       // Upload Choice Images & Insert Choices
@@ -410,6 +455,20 @@ export function QuestionForm({ question, onComplete, defaultStage }: QuestionFor
           placeholder="اكتب التفسير الذي يظهر للطالب عند الإجابة الخاطئة"
           className="min-h-24 resize-none"
         />
+      </div>
+
+      <div className="space-y-2">
+        <Label className="text-base font-medium">رابط شرح السؤال (المنصة التعليمية / يوتيوب / فيديو)</Label>
+        <Input
+          value={explanationUrl}
+          onChange={(e) => setExplanationUrl(e.target.value)}
+          placeholder="https://www.youtube.com/watch?v=... أو رابط المنصة التعليمية أو مقطع فيديو"
+          dir="ltr"
+          className="text-left font-mono text-sm"
+        />
+        <p className="text-xs text-muted-foreground">
+          يظهر للطالب عند الإجابة الخاطئة لمشاهدة فيديو أو درس الشرح مباشرة
+        </p>
       </div>
 
       {/* Active Status */}

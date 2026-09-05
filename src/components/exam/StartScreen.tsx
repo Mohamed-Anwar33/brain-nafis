@@ -48,34 +48,63 @@ export function StartScreen({ onStart, isLoading }: StartScreenProps) {
             <div className="absolute bottom-0 left-0 w-64 h-64 bg-amber-500/10 rounded-full blur-[100px] translate-y-1/2 -translate-x-1/2" />
 
             <div className="relative z-10">
-              <div className="text-center mb-8 sm:mb-16">
-                <div className="relative inline-flex items-center justify-center w-32 h-32 sm:w-56 sm:h-56 mb-6 sm:mb-10 group">
-                  <div className="absolute inset-0 bg-gradient-to-tr from-sky-400 to-indigo-400 rounded-full blur-2xl opacity-30 group-hover:opacity-50 transition-opacity duration-700" />
-                  <div className="relative w-full h-full p-4 sm:p-6 bg-white rounded-[2rem] sm:rounded-[3rem] shadow-xl animate-in zoom-in duration-700 hover:rotate-6 transition-transform border border-slate-100">
-                    <img src="/logo.jpg" alt="Logo" className="w-full h-full object-contain" />
+              <div className="text-center mb-8 sm:mb-14">
+                {/* Logo Presentation - Blended Seamlessly with Background */}
+                <div className="relative max-w-lg mx-auto flex items-center justify-center mb-6 group animate-in zoom-in duration-700">
+                  {/* Organic circular soft aura behind the logo */}
+                  <div className="absolute inset-0 m-auto w-72 sm:w-96 h-40 sm:h-52 bg-gradient-to-tr from-sky-400/25 via-indigo-400/25 to-purple-400/20 rounded-full blur-3xl pointer-events-none -z-10" />
+                  
+                  {/* Logo image blended smoothly into the background without cutting off details */}
+                  <div
+                    className="relative w-full overflow-hidden flex items-center justify-center"
+                    style={{
+                      WebkitMaskImage: "radial-gradient(ellipse 92% 88% at 50% 50%, black 70%, transparent 100%)",
+                      maskImage: "radial-gradient(ellipse 92% 88% at 50% 50%, black 70%, transparent 100%)",
+                    }}
+                  >
+                    <img
+                      src="/logo.jpg"
+                      alt="SCIRISE Logo"
+                      className="w-full h-auto max-h-52 sm:max-h-64 object-contain mx-auto mix-blend-multiply transition-transform duration-500 group-hover:scale-105"
+                    />
                   </div>
                 </div>
 
-                <h1 className="text-4xl sm:text-6xl md:text-8xl font-black text-slate-900 mb-6 sm:mb-8 tracking-tighter leading-tight">
-                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-sky-600 to-emerald-600">
-                    براين ساينس
-                  </span>
-                </h1>
+                {/* Brand Title & Taglines */}
+                <div className="space-y-3 mb-6">
+                  <h1 className="text-4xl sm:text-6xl md:text-7xl font-black text-slate-900 tracking-tighter leading-tight">
+                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-700 via-sky-600 to-blue-700">
+                      SCIRISE
+                    </span>
+                  </h1>
 
-                <div className="space-y-4 sm:space-y-6 mb-8 sm:mb-12">
-                  <h2 className="text-xl sm:text-3xl md:text-5xl font-black text-slate-800">
-                    المتوسطة <span className="text-indigo-600">الرابعة والعشرون</span> بجدة
+                  <div className="flex items-center justify-center gap-2 text-xs sm:text-base font-black tracking-widest text-[#1e3a8a]">
+                    <span>تعلمي</span>
+                    <span>•</span>
+                    <span>تدربي</span>
+                    <span>•</span>
+                    <span>ارتقي</span>
+                    <span className="text-slate-300 mx-1">|</span>
+                    <span className="text-slate-500 font-bold tracking-wider">LEARN • PRACTICE • RISE</span>
+                  </div>
+                </div>
+
+                {/* Requested Official Educational Statement */}
+                <div className="max-w-2xl mx-auto mb-6 px-4 py-3 sm:py-4 rounded-2xl bg-gradient-to-r from-blue-50/90 via-indigo-50/80 to-purple-50/90 border border-indigo-100/80 shadow-sm">
+                  <p className="text-sm sm:text-lg md:text-xl font-bold text-slate-800 leading-relaxed">
+                    منصة تعليمية تفاعلية لتنمية المهارات العلمية ورفع نواتج التعلم والاستعداد للاختبارات الوطنية ( نافس ) والمركزية
+                  </p>
+                </div>
+
+                {/* School & Teacher Information */}
+                <div className="space-y-3 mb-8">
+                  <h2 className="text-lg sm:text-2xl md:text-3xl font-black text-slate-800">
+                    المتوسطة <span className="text-primary">الثانية والثمانون</span>
                   </h2>
-                  <div className="flex flex-wrap justify-center gap-4 sm:gap-8 text-sm sm:text-xl md:text-2xl text-slate-500">
-                    <div className="bg-white/80 px-4 sm:px-6 py-2 sm:py-3 rounded-xl sm:rounded-2xl border border-slate-100 shadow-sm">
-                      <p>
-                        معلمة المادة: <span className="font-black text-slate-800">هيفا السلمي</span>
-                      </p>
-                    </div>
-                    <div className="bg-white/80 px-4 sm:px-6 py-2 sm:py-3 rounded-xl sm:rounded-2xl border border-slate-100 shadow-sm">
-                      <p>
-                        قائدة المدرسة: <span className="font-black text-slate-800">تهاني السفياني</span>
-                      </p>
+                  <div className="flex justify-center">
+                    <div className="bg-white/90 px-6 py-2.5 rounded-xl border border-slate-100 shadow-sm text-sm sm:text-lg text-slate-600">
+                      <span>معلمة المادة: </span>
+                      <span className="font-black text-slate-900">أ/ هيفا السلمي</span>
                     </div>
                   </div>
                 </div>

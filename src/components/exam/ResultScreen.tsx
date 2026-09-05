@@ -1,11 +1,12 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ExamResult } from "@/types/exam";
-import { Trophy, Clock, AlertCircle, Home, RotateCcw, CheckCircle2, XCircle, Star } from "lucide-react";
+import { Trophy, Clock, AlertCircle, Home, RotateCcw, CheckCircle2, XCircle, Star, Award } from "lucide-react";
 import { format } from "date-fns";
 import { ar } from "date-fns/locale";
 import { useNavigate } from "react-router-dom";
 import confetti from "canvas-confetti";
+import { CertificateModal } from "@/components/exam/CertificateModal";
 
 interface ResultScreenProps {
   result: ExamResult;
@@ -13,7 +14,8 @@ interface ResultScreenProps {
 
 export function ResultScreen({ result }: ResultScreenProps) {
   const navigate = useNavigate();
-  const percentage = Math.round((result.score / result.question_count) * 100);
+  const [showCertificateModal, setShowCertificateModal] = useState(false);
+  const percentage = result.question_count > 0 ? Math.round((result.score / result.question_count) * 100) : 0;
 
   const getGradeInfo = () => {
     if (percentage >= 90) return { label: "كفو يا بطل! أسطوري", color: "text-yellow-500", bg: "bg-yellow-500/10", border: "border-yellow-500/20", emoji: "👑" };
@@ -93,7 +95,7 @@ export function ResultScreen({ result }: ResultScreenProps) {
                   <div className="w-10 h-10 mx-auto bg-green-50 rounded-full flex items-center justify-center mb-2 text-green-500">
                     <CheckCircle2 className="w-5 h-5" />
                   </div>
-                  <p className="text-2xl font-bold text-slate-800">{result.question_count}</p>
+                  <p className="text-2xl font-bold text-slate-800">{result.score}</p>
                   <p className="text-xs text-slate-500 font-bold">إجابات صحيحة</p>
                 </div>
                 <div className="text-center">
@@ -101,7 +103,7 @@ export function ResultScreen({ result }: ResultScreenProps) {
                     <AlertCircle className="w-5 h-5" />
                   </div>
                   <p className="text-2xl font-bold text-slate-800">{result.total_penalty}</p>
-                  <p className="text-xs text-slate-500 font-bold">خصومات</p>
+                  <p className="text-xs text-slate-500 font-bold">أخطاء وخصومات</p>
                 </div>
               </div>
 
@@ -131,23 +133,43 @@ export function ResultScreen({ result }: ResultScreenProps) {
             </div>
 
             {/* Actions */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-4">
+            <div className="space-y-3 pt-4">
               <Button
-                onClick={() => navigate("/")}
-                variant="outline"
-                className="h-14 rounded-xl border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-bold text-lg"
+                onClick={() => setShowCertificateModal(true)}
+                className="w-full h-14 rounded-2xl bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 hover:from-amber-600 hover:to-yellow-700 text-slate-950 shadow-xl shadow-amber-500/25 font-black text-lg sm:text-xl transform hover:scale-[1.01] active:scale-95 transition-all"
               >
-                <Home className="w-5 h-5 ml-2" />
-                الرئيسية
+                <Award className="w-6 h-6 ml-2" />
+                🎓 عرض وتحميل شهادة الشكر والتقدير
               </Button>
-              <Button
-                onClick={() => navigate("/")}
-                className="h-14 rounded-xl bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 text-white shadow-lg shadow-primary/25 font-bold text-lg"
-              >
-                <RotateCcw className="w-5 h-5 ml-2" />
-                اختبار جديد
-              </Button>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Button
+                  onClick={() => navigate("/")}
+                  variant="outline"
+                  className="h-14 rounded-xl border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-bold text-lg"
+                >
+                  <Home className="w-5 h-5 ml-2" />
+                  الرئيسية
+                </Button>
+                <Button
+                  onClick={() => navigate("/")}
+                  className="h-14 rounded-xl bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 text-white shadow-lg shadow-primary/25 font-bold text-lg"
+                >
+                  <RotateCcw className="w-5 h-5 ml-2" />
+                  اختبار جديد
+                </Button>
+              </div>
             </div>
+
+            <CertificateModal
+              isOpen={showCertificateModal}
+              onClose={() => setShowCertificateModal(false)}
+              studentName={result.student_name}
+              score={result.score}
+              totalQuestions={result.question_count}
+              percentage={percentage}
+              examTitle="اختبار منصة SCIRISE"
+            />
           </div>
 
         </div>

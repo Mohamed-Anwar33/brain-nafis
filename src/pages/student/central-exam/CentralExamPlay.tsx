@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -19,6 +19,8 @@ import {
 } from "@/components/ui/dialog";
 import { getCentralExamQuestions, CentralExamQuestion } from "@/services/centralExamService";
 import { SaudiLoader } from "@/components/ui/SaudiLoader";
+import { ExplanationModal } from "@/components/exam/ExplanationModal";
+import { CertificateModal } from "@/components/exam/CertificateModal";
 import { 
   ChevronRight, 
   Target, 
@@ -31,13 +33,17 @@ import {
   Rocket,
   Crown,
   ArrowLeft,
+  ArrowRight,
+  BookOpen,
   Clock,
   TrendingUp,
   Award,
   Sparkles,
   LogOut,
   AlertTriangle,
-  Maximize2
+  Maximize2,
+  PlayCircle,
+  HelpCircle
 } from "lucide-react";
 import { toast } from "sonner";
 import confetti from "canvas-confetti";
@@ -62,11 +68,14 @@ export default function CentralExamPlay() {
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "success" | "error">("idle");
   const [exitDialogOpen, setExitDialogOpen] = useState(false);
   const [stage, setStage] = useState(1);
+  const [showExplanationModal, setShowExplanationModal] = useState(false);
+  const [showCertificateModal, setShowCertificateModal] = useState(false);
   const startTime = useRef(Date.now());
   const selectionContext = useMemo(() => getStoredSelectionContext(), []);
   
   // Strict answer system - track wrong attempts
   const [questionsWithErrors, setQuestionsWithErrors] = useState<Set<string>>(new Set());
+  const questionsWithErrorsRef = useRef<Set<string>>(new Set());
   const [wrongAttempts, setWrongAttempts] = useState(0);
   const [currentWrongReason, setCurrentWrongReason] = useState<string | null>(null);
 
@@ -84,7 +93,6 @@ export default function CentralExamPlay() {
       navigate("/student/dashboard", { replace: true });
       return;
     }
-    // Preload audio with better error handling
     const initAudio = async () => {
       try {
         await audioManager.preload();
@@ -94,56 +102,62 @@ export default function CentralExamPlay() {
       }
     };
     initAudio();
-    fetchQuestions();
-  }, [navigate, selectionContext]);
 
-  const fetchQuestions = async () => {
+    // Fetch student profile for name
+    const fetchProfile = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase
+          .from("student_profiles")
+          .select("full_name")
+          .eq("id", user.id)
+          .single();
+        if (profile?.full_name) {
+          setStudentName(profile.full_name);
+        }
+      }
+    };
+    fetchProfile();
+  }, [selectionContext, navigate]);
+
+  const fetchQuestions = useCallback(async () => {
     if (!selectionContext || selectionContext.trackType !== "central") {
-      navigate("/student/dashboard");
+      setLoading(false);
       return;
     }
 
     try {
-      // Get student profile
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        try {
-          const { data: profile } = await supabase
-            .from("student_profiles")
-            .select("full_name")
-            .eq("id", session.user.id)
-            .single();
-          if (profile?.full_name) {
-            setStudentName(profile.full_name);
-          }
-        } catch (err) {
-          console.log("Could not fetch profile:", err);
-        }
-      }
+      const activeQuestions = await getCentralExamQuestions(selectionContext);
       
-      const data = await getCentralExamQuestions(selectionContext);
-      // Filter only active questions
-      const activeQuestions = data.filter(q => q.active);
-      if (activeQuestions.length === 0) {
-        toast.error("لا توجد أسئلة متاحة في الاختبار المركزي");
-        navigate("/student/dashboard");
-      } else {
-        // Shuffle questions for Quick Exam
-        const shuffled = [...activeQuestions];
-        for (let i = shuffled.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      // Filter questions matching current stage if stage_number exists
+      const stageQuestions = activeQuestions.filter(q => !q.stage_number || q.stage_number === stage);
+      const questionsToUse = stageQuestions.length > 0 ? stageQuestions : activeQuestions;
+
+      // Deterministic order by stage and order_index - NO random shuffle or slicing
+      const sortedQuestions = [...questionsToUse].sort((a, b) => {
+        const stageA = a.stage_number ?? 1;
+        const stageB = b.stage_number ?? 1;
+        if (stageA !== stageB) {
+          return stageA - stageB;
         }
-        // Limit to 10 questions as requested
-        const limitedQuestions = shuffled.slice(0, 10);
-        setQuestions(limitedQuestions);
-      }
-    } catch (e) {
-      navigate("/student/dashboard");
+        if (a.order_index !== undefined && b.order_index !== undefined && a.order_index !== b.order_index) {
+          return a.order_index - b.order_index;
+        }
+        return new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime();
+      });
+
+      setQuestions(sortedQuestions);
+    } catch (err) {
+      console.error("Error loading central exam questions:", err);
+      toast.error("فشل تحميل أسئلة الاختبار المركزي");
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectionContext, stage]);
+
+  useEffect(() => {
+    fetchQuestions();
+  }, [fetchQuestions]);
 
   const handleSelectChoice = (choiceId: string) => {
     const currentQuestion = questions[currentIndex];
@@ -157,9 +171,16 @@ export default function CentralExamPlay() {
       audioManager.playCorrect();
       setCurrentWrongReason(null);
       setIsAnswered(true);
-      const nextScore = score + 1;
-      setScore(nextScore);
-      toast.success("إجابة صحيحة! ✅", { duration: 1500 });
+      
+      // Points are only awarded if this question was answered correctly on the FIRST attempt
+      const hadError = questionsWithErrorsRef.current.has(currentQuestion.id);
+      const nextScore = !hadError ? score + 1 : score;
+      if (!hadError) {
+        setScore(nextScore);
+        toast.success("إجابة صحيحة! ✅", { duration: 1500 });
+      } else {
+        toast.info("إجابة صحيحة بعد المحاولة 👍", { duration: 1500 });
+      }
       
       // Only advance if correct
       setTimeout(() => {
@@ -172,11 +193,12 @@ export default function CentralExamPlay() {
       setCurrentWrongReason(currentQuestion.wrong_reason || null);
       
       // Count wrong attempt (only once per question)
-      const isFirstWrong = !questionsWithErrors.has(currentQuestion.id);
+      const isFirstWrong = !questionsWithErrorsRef.current.has(currentQuestion.id);
       if (isFirstWrong) {
-        setQuestionsWithErrors(prev => new Set(prev).add(currentQuestion.id));
-        setWrongAttempts(prev => prev + 1);
+        questionsWithErrorsRef.current.add(currentQuestion.id);
+        setQuestionsWithErrors(new Set(questionsWithErrorsRef.current));
       }
+      setWrongAttempts(prev => prev + 1);
       
       toast.error("إجابة خاطئة! حاول مرة أخرى ❌", { duration: 2000 });
       
@@ -188,22 +210,29 @@ export default function CentralExamPlay() {
   };
 
 
-  const handleNextQuestion = (finalScore: number) => {
+  const handleNextQuestion = (currentRunningScore: number) => {
     if (currentIndex < questions.length - 1) {
       setCurrentIndex(i => i + 1);
       setSelectedChoice(null);
       setIsAnswered(false);
+      setCurrentWrongReason(null);
     } else {
-      setScore(finalScore);
+      // Final question reached:
+      // True correct count = total questions minus questions that had errors
+      const finalWrongCount = questionsWithErrorsRef.current.size;
+      const finalCorrectScore = Math.max(0, questions.length - finalWrongCount);
+      setScore(finalCorrectScore);
       setIsFinished(true);
       setSaveStatus("saving");
       
-      // Save attempt to database
-      void saveAttempt(finalScore);
+      // Save attempt to database with genuine score
+      void saveAttempt(finalCorrectScore);
       
-      // Trigger celebration based on score
-      const percentage = Math.round((finalScore / questions.length) * 100);
-      if (percentage >= 50) {
+      // Trigger celebration based on real percentage
+      const percentage = questions.length > 0
+        ? Math.round((finalCorrectScore / questions.length) * 100)
+        : 0;
+      if (percentage >= 60) {
         triggerConfetti();
         audioManager.playSuccess();
       }
@@ -219,6 +248,7 @@ export default function CentralExamPlay() {
     setIsFinished(false);
     setLoading(true);
     setSaveStatus("idle");
+    questionsWithErrorsRef.current = new Set();
     setQuestionsWithErrors(new Set());
     setWrongAttempts(0);
     setCurrentWrongReason(null);
@@ -231,15 +261,18 @@ export default function CentralExamPlay() {
       const { data: { user } } = await supabase.auth.getUser();
       if (user && selectionContext) {
         const durationSeconds = Math.floor((Date.now() - startTime.current) / 1000);
-        const percentage = Math.round((finalScore / questions.length) * 100);
+        const totalCount = questions.length;
+        const wrongCount = questionsWithErrors.size;
+        const correctCount = finalScore;
+        const percentage = totalCount > 0 ? Math.round((correctCount / totalCount) * 100) : 0;
         const resolvedStudentName = studentName || "طالب";
         
         const { data: attemptData, error: insertError } = await supabase.from("game_attempts").insert({
           user_id: user.id,
           game_type: "central_exam",
-          score: finalScore,
-          correct_count: finalScore,
-          total_questions: questions.length,
+          score: correctCount,
+          correct_count: correctCount,
+          total_questions: totalCount,
           duration_seconds: durationSeconds,
           ...getScopedPayload(selectionContext),
           metadata: {
@@ -247,7 +280,8 @@ export default function CentralExamPlay() {
             percentage: percentage,
             game_name: "الاختبار المركزي الشامل",
             exam_type: "central_exam",
-            wrong_attempts: questionsWithErrors.size,
+            wrong_attempts: wrongCount,
+            total_wrong_clicks: wrongAttempts,
             strict_mode: true,
             selection_context: getSelectionDisplayText(selectionContext)
           }
@@ -320,19 +354,60 @@ export default function CentralExamPlay() {
       </div>
     </div>
   );
-  if (!questions.length) return null;
+  if (!questions.length) {
+    const domainName = selectionContext?.domainName || "هذا القسم";
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-violet-100 via-fuchsia-50 to-blue-100 flex items-center justify-center p-4" dir="rtl">
+        <Card className="w-full max-w-lg bg-white/95 backdrop-blur-2xl border-0 shadow-2xl p-8 sm:p-10 text-center rounded-3xl animate-in zoom-in duration-500">
+          <div className="w-24 h-24 mx-auto rounded-3xl bg-amber-100 text-amber-600 flex items-center justify-center mb-6 shadow-xl shadow-amber-500/20">
+            <BookOpen className="w-12 h-12" />
+          </div>
+
+          <h2 className="text-2xl sm:text-3xl font-black text-slate-800 mb-3">
+            لا توجد أسئلة مضافة حالياً
+          </h2>
+
+          <p className="text-slate-600 text-base sm:text-lg leading-relaxed mb-8 font-medium">
+            قسم <span className="font-black text-indigo-600">({domainName})</span> قيد التجهيز ولم يتم إدخال أسئلة له بعد من قِبل المعلمة. يمكنك التوجه للأقسام المتاحة التي تحتوي على أسئلة جاهزة: <br />
+            <span className="inline-block mt-2 font-black text-emerald-600">الكيمياء • الفيزياء • الكهرباء</span>
+          </p>
+
+          <div className="space-y-3">
+            <Button
+              onClick={() => navigate("/student/dashboard")}
+              className="w-full h-14 rounded-2xl bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-black shadow-xl shadow-indigo-500/25 text-lg"
+            >
+              <ArrowRight className="w-6 h-6 ml-2" />
+              العودة لاختيار قسم متاح
+            </Button>
+
+            <Button
+              onClick={() => navigate("/")}
+              variant="outline"
+              className="w-full h-12 rounded-xl border-2 border-slate-200 text-slate-600 hover:bg-slate-100 font-bold text-base"
+            >
+              الصفحة الرئيسية
+            </Button>
+          </div>
+        </Card>
+      </div>
+    );
+  }
 
   if (isFinished) {
-    const percentage = Math.round((score / questions.length) * 100);
+    const totalCount = questions.length;
+    const wrongCount = questionsWithErrors.size;
+    const correctCount = Math.max(0, totalCount - wrongCount);
+    const percentage = totalCount > 0 ? Math.round((correctCount / totalCount) * 100) : 0;
     const resolvedStudentName = studentName || "طالب";
     
     // Determine achievement level
     let achievement = {
       icon: <Trophy className="w-16 h-16" />,
       title: "استمر في المحاولة! 💪",
-      color: "from-amber-400 to-orange-500",
+      color: "from-amber-500 to-orange-500",
       bgColor: "from-amber-100 to-orange-100",
-      message: "لا تيأس! التدريب يجعلك أفضل"
+      message: "فرصة ممتازة للمراجعة والتحسن، التدريب المستمر يجعلك بطلاً!"
     };
     
     if (percentage >= 90) {
@@ -346,7 +421,7 @@ export default function CentralExamPlay() {
     } else if (percentage >= 75) {
       achievement = {
         icon: <Rocket className="w-16 h-16" />,
-        title: "جيد جداً! أداء رائع 🚀",
+        title: "رائع جداً! مستوى متميز 🌟",
         color: "from-emerald-400 via-green-500 to-teal-500",
         bgColor: "from-emerald-100 to-teal-100",
         message: "استمر في التقدم! أنت في الطريق الصحيح"
@@ -354,10 +429,18 @@ export default function CentralExamPlay() {
     } else if (percentage >= 60) {
       achievement = {
         icon: <Star className="w-16 h-16" />,
-        title: "جيد! أداء مقبول ⭐",
+        title: "جيد جداً! خطوة ممتازة 👍",
         color: "from-blue-400 via-cyan-500 to-sky-500",
         bgColor: "from-blue-100 to-sky-100",
         message: "أداء جيد! يمكنك التحسن أكثر بالتمرين"
+      };
+    } else if (percentage >= 50) {
+      achievement = {
+        icon: <Sparkles className="w-16 h-16" />,
+        title: "مستوى مقبول! تقدر تجيب أحسن 💪",
+        color: "from-orange-400 to-amber-500",
+        bgColor: "from-orange-100 to-amber-100",
+        message: "أداء مقبول، راجع الأسئلة التي أخطأت بها وستتفوق!"
       };
     }
     
@@ -451,7 +534,7 @@ export default function CentralExamPlay() {
               <Card className="p-4 bg-gradient-to-br from-emerald-50 to-green-50 border-emerald-200">
                 <div className="flex items-center justify-center gap-2 mb-1">
                   <CheckCircle2 className="w-5 h-5 text-emerald-500" />
-                  <span className="text-2xl font-black text-emerald-600">{score}</span>
+                  <span className="text-2xl font-black text-emerald-600">{correctCount}</span>
                 </div>
                 <span className="text-xs text-slate-500 font-medium">صحيحة</span>
               </Card>
@@ -459,7 +542,7 @@ export default function CentralExamPlay() {
               <Card className="p-4 bg-gradient-to-br from-rose-50 to-red-50 border-rose-200">
                 <div className="flex items-center justify-center gap-2 mb-1">
                   <XCircle className="w-5 h-5 text-rose-500" />
-                  <span className="text-2xl font-black text-rose-600">{questionsWithErrors.size}</span>
+                  <span className="text-2xl font-black text-rose-600">{wrongCount}</span>
                 </div>
                 <span className="text-xs text-slate-500 font-medium">أخطاء</span>
               </Card>
@@ -467,7 +550,7 @@ export default function CentralExamPlay() {
               <Card className="p-4 bg-gradient-to-br from-blue-50 to-sky-50 border-blue-200">
                 <div className="flex items-center justify-center gap-2 mb-1">
                   <TrendingUp className="w-5 h-5 text-blue-500" />
-                  <span className="text-2xl font-black text-blue-600">{questions.length}</span>
+                  <span className="text-2xl font-black text-blue-600">{totalCount}</span>
                 </div>
                 <span className="text-xs text-slate-500 font-medium">المجموع</span>
               </Card>
@@ -480,13 +563,21 @@ export default function CentralExamPlay() {
                   </span>
                 </div>
                 <span className="text-xs text-slate-500 font-medium">
-                  {percentage >= 60 ? 'ناجح' : 'استمر'}
+                  {percentage >= 60 ? 'ناجح' : 'يحتاج تدريب'}
                 </span>
               </Card>
             </div>
             
             {/* Action Buttons */}
             <div className="flex flex-col gap-3">
+              <Button 
+                onClick={() => setShowCertificateModal(true)}
+                className="w-full h-14 text-xl font-black rounded-2xl bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-amber-500/20 text-slate-950"
+              >
+                <Award className="w-6 h-6 ml-3" />
+                🎓 عرض وتحميل شهادة الشكر والتقدير
+              </Button>
+
               <Button 
                 onClick={startNextStage}
                 className="w-full h-14 text-xl font-black rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-emerald-500/20 text-white"
@@ -503,6 +594,16 @@ export default function CentralExamPlay() {
                 العودة للصفحة الرئيسية
               </Button>
             </div>
+
+            <CertificateModal
+              isOpen={showCertificateModal}
+              onClose={() => setShowCertificateModal(false)}
+              studentName={resolvedStudentName}
+              score={correctCount}
+              totalQuestions={totalCount}
+              percentage={percentage}
+              examTitle="الاختبار المركزي - منصة SCIRISE"
+            />
             
             <div className="mt-6 flex items-center justify-center gap-2 text-sm">
               {saveStatus === "saving" && (
@@ -705,14 +806,48 @@ export default function CentralExamPlay() {
           })}
         </div>
 
-        {currentWrongReason && (
-          <Card className="mb-8 border-amber-200 bg-amber-50 p-5 shadow-lg shadow-amber-100/50">
-            <p className="text-sm font-black text-amber-700">سبب الخطأ</p>
-            <p className="mt-2 text-sm leading-7 text-amber-950">
-              {currentWrongReason}
-            </p>
+        {(currentWrongReason || currentQuestion.explanation_url) && (
+          <Card className="mb-8 border-amber-200 bg-amber-50/90 p-5 shadow-lg shadow-amber-100/50 space-y-3">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-2 text-amber-800 font-black text-sm">
+                <HelpCircle className="w-5 h-5 text-amber-600" />
+                <span>توضيح السؤال والإجابة:</span>
+              </div>
+              <Button
+                type="button"
+                onClick={() => setShowExplanationModal(true)}
+                className="bg-gradient-to-r from-primary to-blue-600 hover:opacity-90 text-white font-bold text-xs sm:text-sm rounded-xl px-4 py-2 shadow-md shadow-primary/20"
+              >
+                <PlayCircle className="w-4 h-4 ml-1.5" />
+                <span>🎥 شاهد شرح السؤال والدرس</span>
+              </Button>
+            </div>
+            {currentWrongReason && (
+              <p className="mt-2 text-sm leading-7 text-amber-950 font-medium pt-1 border-t border-amber-200/60">
+                {currentWrongReason}
+              </p>
+            )}
+            <div className="pt-2 flex items-center justify-end">
+              <Button
+                type="button"
+                onClick={() => handleNextQuestion(score)}
+                variant="outline"
+                className="border-amber-400 text-amber-900 bg-white hover:bg-amber-100 font-bold px-4 py-1.5 rounded-xl shadow-sm text-xs sm:text-sm flex items-center gap-2"
+              >
+                <span>الانتقال للسؤال التالي</span>
+                <ArrowLeft className="w-4 h-4" />
+              </Button>
+            </div>
           </Card>
         )}
+
+        <ExplanationModal
+          isOpen={showExplanationModal}
+          onClose={() => setShowExplanationModal(false)}
+          questionText={currentQuestion.text}
+          wrongReason={currentWrongReason || currentQuestion.wrong_reason}
+          explanationUrl={currentQuestion.explanation_url}
+        />
 
         {/* Feedback Area */}
         <div className="mt-auto pb-8 text-center">

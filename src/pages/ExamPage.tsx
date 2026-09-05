@@ -20,6 +20,7 @@ type QuestionRow = {
   text: string;
   image_url?: string | null;
   wrong_reason?: string | null;
+  explanation_url?: string | null;
   stage_number?: number | null;
   created_at: string;
   choices: QuestionChoiceRow[];
@@ -166,6 +167,7 @@ export default function ExamPage() {
             text: question.text,
             image_url: question.image_url,
             wrong_reason: question.wrong_reason,
+            explanation_url: question.explanation_url,
             stage_number: question.stage_number,
             order_index: index,
             choices: question.choices.map((choice) => ({
@@ -366,39 +368,43 @@ export default function ExamPage() {
 
             {/* Logo & Header */}
             <div className="space-y-4">
-              <div className="w-48 h-48 mx-auto flex items-center justify-center mb-2 animate-in zoom-in duration-700">
-                <img src="/logo.jpg" alt="Logo" className="w-full h-full object-contain hover:scale-105 transition-transform duration-500 mix-blend-multiply" />
+              <div className="relative max-w-lg mx-auto flex items-center justify-center mb-4 group animate-in zoom-in duration-700">
+                <div className="absolute inset-0 m-auto w-64 sm:w-80 h-36 sm:h-44 bg-gradient-to-tr from-sky-400/20 via-indigo-400/20 to-purple-400/15 rounded-full blur-2xl pointer-events-none -z-10" />
+                <div
+                  className="relative w-full overflow-hidden flex items-center justify-center"
+                  style={{
+                    WebkitMaskImage: "radial-gradient(ellipse 92% 88% at 50% 50%, black 70%, transparent 100%)",
+                    maskImage: "radial-gradient(ellipse 92% 88% at 50% 50%, black 70%, transparent 100%)",
+                  }}
+                >
+                  <img
+                    src="/logo.jpg"
+                    alt="SCIRISE"
+                    className="w-full h-auto max-h-40 sm:max-h-52 object-contain mx-auto mix-blend-multiply hover:scale-105 transition-transform duration-500"
+                  />
+                </div>
               </div>
               <h1 className="text-3xl md:text-5xl font-black text-gray-900 tracking-tight leading-tight">
-                المتوسطة الرابعة والعشرون جدة
+                المتوسطة الثانية والثمانون
               </h1>
+              <p className="text-sm md:text-base font-bold text-slate-700 max-w-lg mx-auto leading-relaxed bg-blue-50/70 p-3 rounded-xl border border-blue-100">
+                منصة تعليمية تفاعلية لتنمية المهارات العلمية ورفع نواتج التعلم والاستعداد للاختبارات الوطنية ( نافس ) والمركزية
+              </p>
             </div>
 
             <div className="w-full h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent"></div>
 
             {/* School Staff Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="flex justify-center max-w-md mx-auto">
 
-              <div className="group p-5 rounded-2xl bg-gradient-to-br from-purple-50 to-white border border-purple-100 shadow-sm hover:shadow-md transition-all duration-300">
+              <div className="w-full group p-6 rounded-2xl bg-gradient-to-br from-blue-50 to-white border border-blue-100 shadow-sm hover:shadow-md transition-all duration-300">
                 <div className="flex flex-col items-center gap-3">
-                  <div className="p-3 bg-purple-100 text-purple-600 rounded-full group-hover:scale-110 transition-transform duration-300">
-                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+                  <div className="p-4 bg-primary/10 text-primary rounded-full group-hover:scale-110 transition-transform duration-300">
+                    <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
                   </div>
                   <div>
-                    <p className="text-sm font-bold text-purple-400 mb-1">معلمة مادة العلوم</p>
-                    <h3 className="text-xl font-bold text-gray-800">أ/ هيفا السلمي</h3>
-                  </div>
-                </div>
-              </div>
-
-              <div className="group p-5 rounded-2xl bg-gradient-to-br from-indigo-50 to-white border border-indigo-100 shadow-sm hover:shadow-md transition-all duration-300">
-                <div className="flex flex-col items-center gap-3">
-                  <div className="p-3 bg-indigo-100 text-indigo-600 rounded-full group-hover:scale-110 transition-transform duration-300">
-                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-indigo-400 mb-1">قائدة المدرسة</p>
-                    <h3 className="text-xl font-bold text-gray-800">أ/ تهاني السفياني</h3>
+                    <p className="text-sm font-bold text-primary/70 mb-1">معلمة مادة العلوم</p>
+                    <h3 className="text-2xl font-black text-gray-800">أ/ هيفا السلمي</h3>
                   </div>
                 </div>
               </div>

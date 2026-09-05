@@ -56,6 +56,8 @@ interface SpeedQuestion {
   correct_choice_index: number;
   is_active: boolean;
   created_at: string;
+  grade_subject_id?: string | null;
+  domain_id?: string | null;
 }
 
 const emptyQuestionForm = {
@@ -299,6 +301,16 @@ export default function CentralExamSpeed() {
       answer_explanation: q.answer_explanation || "",
       correct_choice_index: q.correct_choice_index || 1,
     });
+
+    if (q.grade_subject_id || q.domain_id) {
+      setScope((current) => ({
+        ...current,
+        trackType: "central",
+        gradeSubjectId: q.grade_subject_id || "",
+        domainId: q.domain_id || "",
+      }));
+    }
+
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 

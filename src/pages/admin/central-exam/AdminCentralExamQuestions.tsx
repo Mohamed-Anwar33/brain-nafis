@@ -97,7 +97,7 @@ export default function AdminCentralExamQuestions() {
             <DialogHeader>
               <DialogTitle>{editingQuestion ? "تعديل السؤال" : "إضافة سؤال مركزي جديد"}</DialogTitle>
             </DialogHeader>
-            <CentralExamQuestionForm question={editingQuestion} onComplete={handleFormClose} />
+            <CentralExamQuestionForm key={editingQuestion?.id || 'new'} question={editingQuestion} onComplete={handleFormClose} />
           </DialogContent>
         </Dialog>
       </div>

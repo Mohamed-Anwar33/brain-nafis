@@ -124,7 +124,7 @@ export default function AdminLayout() {
                   <GraduationCap className="w-6 h-6 text-primary" />
                 </div>
                 <div>
-                  <h1 className="font-bold text-lg">براين ساينس</h1>
+                  <h1 className="font-bold text-lg">منصة SCIRISE</h1>
                   <p className="text-xs text-muted-foreground">لوحة الإدارة</p>
                 </div>
               </div>

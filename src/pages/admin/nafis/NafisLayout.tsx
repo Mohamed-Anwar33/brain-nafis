@@ -14,7 +14,10 @@ import {
   Timer,
   Sparkles,
   ArrowRight,
-  BookOpen
+  BookOpen,
+  Compass,
+  Target,
+  Trophy
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -99,7 +102,7 @@ export default function NafisLayout() {
         </button>
         <div className="flex items-center gap-2">
           <BookOpen className="w-6 h-6 text-primary" />
-          <span className="font-bold text-lg">نظام SCIRISE (نافس)</span>
+          <span className="font-bold text-lg">نظام براين ساينس</span>
         </div>
         <div className="w-10" />
       </div>
@@ -119,7 +122,7 @@ export default function NafisLayout() {
                   <BookOpen className="w-7 h-7 text-white" />
                 </div>
                 <div>
-                  <h1 className="font-bold text-lg text-slate-800">نظام SCIRISE (نافس)</h1>
+                  <h1 className="font-bold text-lg text-slate-800">نظام براين ساينس</h1>
                   <p className="text-xs text-slate-500">إدارة الأسئلة والألعاب</p>
                 </div>
               </div>
@@ -160,6 +163,39 @@ export default function NafisLayout() {
                 );
               })}
             </nav>
+
+            {/* Quick Switch Systems */}
+            <div className="px-4 py-3 border-t border-border bg-slate-50/50">
+              <p className="text-xs font-semibold text-slate-400 px-2 mb-2">
+                الأنظمة الأخرى
+              </p>
+              <div className="space-y-1">
+                <Link
+                  to="/admin/treasure"
+                  onClick={() => setIsSidebarOpen(false)}
+                  className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-amber-700 hover:bg-amber-50 transition-colors"
+                >
+                  <Compass className="w-4 h-4 text-amber-600" />
+                  <span>مغامرة الكنز</span>
+                </Link>
+                <Link
+                  to="/admin/central-exam"
+                  onClick={() => setIsSidebarOpen(false)}
+                  className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-indigo-700 hover:bg-indigo-50 transition-colors"
+                >
+                  <Target className="w-4 h-4 text-indigo-600" />
+                  <span>الاختبار المركزي</span>
+                </Link>
+                <Link
+                  to="/admin/results"
+                  onClick={() => setIsSidebarOpen(false)}
+                  className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-slate-700 hover:bg-slate-100 transition-colors"
+                >
+                  <Trophy className="w-4 h-4 text-emerald-600" />
+                  <span>النتائج والتقارير</span>
+                </Link>
+              </div>
+            </div>
 
             {/* Logout */}
             <div className="p-4 border-t border-border">

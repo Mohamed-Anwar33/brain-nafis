@@ -14,7 +14,9 @@ import {
   Puzzle,
   Timer,
   Trophy,
-  Target
+  Target,
+  Compass,
+  ArrowRight
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -83,6 +85,7 @@ export default function AdminLayout() {
   const navItems = [
     { path: "/admin", icon: LayoutDashboard, label: "لوحة التحكم" },
     { path: "/admin/results", icon: Trophy, label: "نتائج الطلاب" },
+    { path: "/admin/treasure", icon: Compass, label: "مغامرة الكنز" },
     { path: "/admin/catalog", icon: GraduationCap, label: "الكتالوج الدراسي" },
     { path: "/admin/central-exam", icon: Target, label: "الاختبار المركزي" },
     { path: "/admin/questions", icon: FileQuestion, label: "بنك الأسئلة" },
@@ -124,10 +127,17 @@ export default function AdminLayout() {
                   <GraduationCap className="w-6 h-6 text-primary" />
                 </div>
                 <div>
-                  <h1 className="font-bold text-lg">منصة SCIRISE</h1>
+                  <h1 className="font-bold text-lg">براين ساينس</h1>
                   <p className="text-xs text-muted-foreground">لوحة الإدارة</p>
                 </div>
               </div>
+              <Link 
+                to="/admin/system-selector"
+                className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
+              >
+                <ArrowRight className="w-3.5 h-3.5" />
+                <span>العودة لاختيار النظام</span>
+              </Link>
             </div>
 
             {/* Navigation */}

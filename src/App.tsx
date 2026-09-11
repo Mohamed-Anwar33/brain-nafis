@@ -15,6 +15,7 @@ import MatchingGame from "@/pages/games/MatchingGame";
 import OrderingGame from "@/pages/games/OrderingGame";
 import SpeedChallenge from "@/pages/games/SpeedChallenge";
 import WheelGame from "@/pages/games/WheelGame";
+import TreasureGamePage from "@/pages/games/treasure/TreasureGamePage";
 
 import { Footer } from "@/components/layout/Footer";
 
@@ -45,6 +46,9 @@ import CentralExamMatching from "./pages/admin/central-exam/CentralExamMatching"
 import CentralExamSpeed from "./pages/admin/central-exam/CentralExamSpeed";
 import AdminResultsPage from "./pages/admin/AdminResultsPage";
 
+// Treasure Adventure Admin import
+import TreasureAdventuresAdmin from "./pages/admin/treasure/TreasureAdventuresAdmin";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -52,7 +56,7 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner position="top-center" dir="rtl" />
-      <BrowserRouter>
+      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <div className="flex flex-col min-h-screen">
           <Routes>
             {/* Student Routes */}
@@ -68,6 +72,8 @@ const App = () => (
             <Route path="/games/ordering" element={<OrderingGame />} />
             <Route path="/games/speed" element={<SpeedChallenge />} />
             <Route path="/games/wheel" element={<WheelGame />} />
+            <Route path="/games/treasure/active" element={<TreasureGamePage />} />
+            <Route path="/games/treasure/:adventureId" element={<TreasureGamePage />} />
             <Route path="/games/stages" element={<Navigate to="/student/dashboard" replace />} />
 
             {/* Central Exam Routes */}
@@ -104,8 +110,10 @@ const App = () => (
               <Route path="speed" element={<CentralExamSpeed />} />
               <Route path="stages" element={<Navigate to="/admin/central-exam" replace />} />
             </Route>
-            
-            
+
+            {/* Treasure Adventure Admin Route */}
+            <Route path="/admin/treasure" element={<TreasureAdventuresAdmin />} />
+
             {/* Results Route - accessible from system selector */}
             <Route path="/admin/results" element={<AdminResultsPage />} />
 

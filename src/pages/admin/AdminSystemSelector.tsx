@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { GraduationCap, Target, ArrowLeft, Sparkles, BookOpen, Gamepad2, LogOut, Trophy } from "lucide-react";
+import { GraduationCap, Target, ArrowLeft, Sparkles, BookOpen, Gamepad2, LogOut, Trophy, Compass } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -46,7 +46,7 @@ export default function AdminSystemSelector() {
               <GraduationCap className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="font-bold text-xl text-slate-800">منصة SCIRISE</h1>
+              <h1 className="font-bold text-xl text-slate-800">براين ساينس</h1>
               <p className="text-xs text-slate-500">لوحة الإدارة - اختيار النظام</p>
             </div>
           </div>
@@ -80,7 +80,7 @@ export default function AdminSystemSelector() {
           </div>
 
           {/* Systems Grid */}
-          <div className="grid md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {/* Nafis System Card */}
             <Card className="group relative overflow-hidden border-2 border-transparent hover:border-primary/30 transition-all duration-300 hover:shadow-xl hover:shadow-primary/10 cursor-pointer"
                   onClick={() => navigate('/admin/nafis')}>
@@ -94,7 +94,7 @@ export default function AdminSystemSelector() {
                   
                   <div className="flex-1">
                     <h3 className="text-xl font-bold text-slate-800 mb-2 group-hover:text-primary transition-colors">
-                      نظام SCIRISE (نافس)
+                      نظام براين ساينس
                     </h3>
                     <p className="text-slate-500 text-sm leading-relaxed mb-4">
                       النظام الأساسي للأسئلة والألعاب العامة. يحتوي على بنك الأسئلة وألعاب: المطابقة، الترتيب، السرعة، المراحل، والعجلة.
@@ -113,7 +113,7 @@ export default function AdminSystemSelector() {
                     </div>
 
                     <Button className="btn-primary-gradient w-full gap-2">
-                      دخول نظام SCIRISE (نافس)
+                      دخول نظام براين ساينس
                       <ArrowLeft className="w-4 h-4" />
                     </Button>
                   </div>
@@ -194,6 +194,46 @@ export default function AdminSystemSelector() {
 
                     <Button className="w-full gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700">
                       عرض النتائج
+                      <ArrowLeft className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Treasure Adventure Card */}
+            <Card className="group relative overflow-hidden border-2 border-transparent hover:border-emerald-400/30 transition-all duration-300 hover:shadow-xl hover:shadow-emerald-500/10 cursor-pointer"
+                  onClick={() => navigate('/admin/treasure')}>
+              <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+              
+              <CardContent className="relative p-8">
+                <div className="flex items-start gap-5">
+                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/20 group-hover:scale-110 transition-transform">
+                    <Compass className="w-8 h-8 text-white" />
+                  </div>
+                  
+                  <div className="flex-1">
+                    <h3 className="text-xl font-bold text-slate-800 mb-2 group-hover:text-emerald-600 transition-colors">
+                      مغامرة الكنز
+                    </h3>
+                    <p className="text-slate-500 text-sm leading-relaxed mb-4">
+                      نظام إدارة غرف الهروب والمغامرات العلمية. ضبط التحديات الثلاثة ومحرر المخططات والنقاط الفعالة.
+                    </p>
+                    
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-medium">
+                        3 تحديات
+                      </span>
+                      <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-medium">
+                        نقاط فعالة
+                      </span>
+                      <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-medium">
+                        نسخ مجمدة
+                      </span>
+                    </div>
+
+                    <Button className="w-full gap-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700">
+                      إدارة المغامرات
                       <ArrowLeft className="w-4 h-4" />
                     </Button>
                   </div>

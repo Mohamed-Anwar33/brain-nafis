@@ -51,10 +51,11 @@ export async function getAcademicCatalog(): Promise<AcademicCatalog> {
     []) as AcademicGradeSubject[];
   const domains = (domainsResult.data || []) as CentralDomain[];
 
-  // Ensure Biology and Earth & Space domains are present for Central Exam
+  // Ensure Biology, Earth & Space, and Nature of Science domains are present for Central Exam
   const defaultExtraDomains = [
     { uuidSuffix: "000000000001", name: "الأحياء", slug: "biology", sort_order: 4 },
     { uuidSuffix: "000000000002", name: "علوم الأرض والفضاء", slug: "earth_science", sort_order: 5 },
+    { uuidSuffix: "000000000003", name: "طبيعة العلم", slug: "nature_of_science", sort_order: 6 },
   ];
 
   gradeSubjectsBase.forEach((gs) => {
@@ -163,4 +164,46 @@ export async function toggleCatalogItem(
   isActive: boolean,
 ) {
   return supabase.from(table).update({ is_active: isActive }).eq("id", id);
+}
+
+export async function syncDefaultCentralDomains(): Promise<void> {
+  try {
+    const { data: gsList } = await supabase
+      .from("study_grade_subjects")
+      .select("id")
+      .eq("is_active", true);
+
+    if (!gsList || gsList.length === 0) return;
+
+    for (const gs of gsList) {
+      await supabase.from("central_domains").upsert(
+        [
+          {
+            grade_subject_id: gs.id,
+            name: "الأحياء",
+            slug: "biology",
+            sort_order: 4,
+            is_active: true,
+          },
+          {
+            grade_subject_id: gs.id,
+            name: "علوم الأرض والفضاء",
+            slug: "earth_science",
+            sort_order: 5,
+            is_active: true,
+          },
+          {
+            grade_subject_id: gs.id,
+            name: "طبيعة العلم",
+            slug: "nature_of_science",
+            sort_order: 6,
+            is_active: true,
+          },
+        ],
+        { onConflict: "grade_subject_id,name" }
+      );
+    }
+  } catch (err) {
+    console.debug("Silent domain sync notice:", err);
+  }
 }

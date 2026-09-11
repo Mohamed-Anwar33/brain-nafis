@@ -118,7 +118,7 @@ export default function StagesGame() {
             imageUrl: item.imageUrl
           })) : []
         }));
-        setQuestions(formatted);
+        setQuestions(formatted.slice(0, 10));
       } else {
         toast.error("لا توجد أسئلة مفعلة لهذه اللعبة داخل المجال المحدد");
         navigate("/central-exam/games");
@@ -417,7 +417,7 @@ export default function StagesGame() {
             score={correctCount}
             totalQuestions={questions.length}
             percentage={percentage}
-            examTitle="لعبة ترتيب المراحل - منصة SCIRISE"
+            examTitle="لعبة ترتيب المراحل - منصة براين ساينس"
           />
         </Card>
       </div>

@@ -11,6 +11,7 @@ import { audioManager } from "@/lib/audio";
 import {
   getSelectionDisplayText,
   getStoredSelectionContext,
+  ensureStoredSelectionContext,
 } from "@/lib/selection-context";
 import { applySelectionFilters, getScopedPayload } from "@/lib/selection-scope";
 import { CertificateModal } from "@/components/exam/CertificateModal";
@@ -40,7 +41,10 @@ interface WheelQuestion {
 
 export default function WheelGame() {
   const navigate = useNavigate();
-  const selectionContext = useMemo(() => getStoredSelectionContext(), []);
+  const selectionContext = useMemo(
+    () => getStoredSelectionContext() || ensureStoredSelectionContext("central"),
+    []
+  );
   const [loading, setLoading] = useState(true);
   const [sections, setSections] = useState<WheelSection[]>([]);
   const [questions, setQuestions] = useState<WheelQuestion[]>([]);
@@ -92,11 +96,6 @@ export default function WheelGame() {
   const startTime = useRef(Date.now());
 
   useEffect(() => {
-    if (!selectionContext || selectionContext.trackType !== "central") {
-      navigate("/student/dashboard", { replace: true });
-      return;
-    }
-
     audioManager.preload();
     fetchData();
   }, [navigate, selectionContext]);
@@ -669,7 +668,7 @@ export default function WheelGame() {
             score={currentSectionStats.correct}
             totalQuestions={currentSectionStats.total || 1}
             percentage={currentSectionStats.total > 0 ? Math.round((currentSectionStats.correct / currentSectionStats.total) * 100) : 100}
-            examTitle={`عجلة العلوم (المرحلة ${stage}) - منصة SCIRISE`}
+            examTitle={`عجلة العلوم (المرحلة ${stage}) - منصة براين ساينس`}
           />
         </Card>
       </div>

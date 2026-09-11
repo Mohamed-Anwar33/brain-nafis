@@ -20,6 +20,7 @@ import {
   createStudyGrade,
   createStudySubject,
   toggleCatalogItem,
+  syncDefaultCentralDomains,
 } from "@/services/academicCatalogService";
 
 interface GradeRow {
@@ -103,8 +104,32 @@ export default function AdminCatalog() {
 
       setGrades((gradesResult.data || []) as GradeRow[]);
       setSubjects((subjectsResult.data || []) as SubjectRow[]);
-      setGradeSubjects((gradeSubjectsResult.data || []) as GradeSubjectRow[]);
-      setDomains((domainsResult.data || []) as DomainRow[]);
+      const gsList = (gradeSubjectsResult.data || []) as GradeSubjectRow[];
+      setGradeSubjects(gsList);
+
+      const rawDomains = (domainsResult.data || []) as DomainRow[];
+      const defaultExtra = [
+        { name: "الأحياء", uuidSuffix: "000000000001" },
+        { name: "علوم الأرض والفضاء", uuidSuffix: "000000000002" },
+        { name: "طبيعة العلم", uuidSuffix: "000000000003" },
+      ];
+      const mergedDomains = [...rawDomains];
+      gsList.forEach((gs) => {
+        defaultExtra.forEach((extra) => {
+          const exists = mergedDomains.some(
+            (d) => d.grade_subject_id === gs.id && d.name === extra.name
+          );
+          if (!exists) {
+            mergedDomains.push({
+              id: `00000000-0000-4000-8000-${extra.uuidSuffix}`,
+              grade_subject_id: gs.id,
+              name: extra.name,
+              is_active: true,
+            });
+          }
+        });
+      });
+      setDomains(mergedDomains);
     } catch (error) {
       console.error("Failed to fetch academic catalog", error);
       toast.error("فشل تحميل بيانات الكتالوج");
@@ -114,7 +139,9 @@ export default function AdminCatalog() {
   };
 
   useEffect(() => {
-    fetchCatalog();
+    syncDefaultCentralDomains().finally(() => {
+      fetchCatalog();
+    });
   }, []);
 
   const handleCreateGrade = async () => {

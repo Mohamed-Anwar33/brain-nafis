@@ -1,15 +1,6 @@
-import { PostgrestFilterBuilder } from "@supabase/supabase-js";
-import { Database } from "@/integrations/supabase/types";
 import { supabase } from "@/integrations/supabase/client";
 import { buildSelectionSnapshot } from "@/lib/selection-context";
 import { SelectionContext } from "@/types/selection";
-
-type QueryLike = PostgrestFilterBuilder<
-  Database["public"],
-  Record<string, unknown>,
-  Record<string, unknown>[],
-  unknown
->;
 
 export type ScopedHistoryGameType =
   | "exam"
@@ -30,16 +21,16 @@ export function getScopedPayload(context: SelectionContext) {
   return {
     track_type: context.trackType,
     grade_subject_id: context.gradeSubjectId,
-    domain_id: context.trackType === "central" ? context.domainId || null : null,
+    domain_id: context.domainId || null,
     selection_snapshot: buildSelectionSnapshot(context),
   };
 }
 
-export function applySelectionFilters<TQuery extends QueryLike>(
-  query: TQuery,
+export function applySelectionFilters<T = any>(
+  query: any,
   context: SelectionContext,
   options?: ScopeColumnOptions,
-) {
+): T {
   const trackColumn = options?.trackColumn ?? "track_type";
   const gradeSubjectColumn = options?.gradeSubjectColumn ?? "grade_subject_id";
   const domainColumn = options?.domainColumn ?? "domain_id";
@@ -49,26 +40,26 @@ export function applySelectionFilters<TQuery extends QueryLike>(
     context.gradeSubjectId,
   );
 
-  if (context.trackType === "central" && context.domainId) {
+  if (context.domainId) {
     scopedQuery = scopedQuery.eq(domainColumn, context.domainId);
   }
 
-  return scopedQuery;
+  return scopedQuery as T;
 }
 
-function withHistoryScope<TQuery extends QueryLike>(
-  query: TQuery,
+function withHistoryScope(
+  query: any,
   userId: string,
   gameType: ScopedHistoryGameType,
   context: SelectionContext,
-) {
+): any {
   let scopedQuery = query
     .eq("user_id", userId)
     .eq("game_type", gameType)
     .eq("track_type", context.trackType)
     .eq("grade_subject_id", context.gradeSubjectId);
 
-  if (context.trackType === "central" && context.domainId) {
+  if (context.domainId) {
     scopedQuery = scopedQuery.eq("domain_id", context.domainId);
   }
 

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -14,17 +14,58 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Edit, Trash2, Loader2, Target, AlertTriangle } from "lucide-react";
+import { Plus, Edit, Trash2, Loader2, Target, AlertTriangle, Filter, Compass } from "lucide-react";
 import { getCentralExamQuestions, deleteCentralExamQuestion, CentralExamQuestion } from "@/services/centralExamService";
 import { CentralExamQuestionForm } from "@/components/admin/central-exam/CentralExamQuestionForm";
+import { useAcademicCatalog } from "@/hooks/use-academic-catalog";
+import { syncDefaultCentralDomains } from "@/services/academicCatalogService";
 
 export default function AdminCentralExamQuestions() {
+  const { data: catalog } = useAcademicCatalog();
   const [questions, setQuestions] = useState<CentralExamQuestion[]>([]);
   const [loading, setLoading] = useState(true);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState<CentralExamQuestion | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<{ id: string; text: string } | null>(null);
+  const [selectedDomainFilter, setSelectedDomainFilter] = useState<string>("all");
+
+  const availableDomains = useMemo(() => catalog?.domains || [], [catalog?.domains]);
+
+  const domainMap = useMemo(() => {
+    const map = new Map<string, { name: string; badgeClass: string; icon: string }>();
+    availableDomains.forEach((d) => {
+      const name = d.name;
+      let badgeClass = "bg-indigo-50 text-indigo-700 border-indigo-200";
+      let icon = "🎯";
+      if (name.includes("طبيعة") || name.includes("طبيعه")) {
+        badgeClass = "bg-rose-50 text-rose-700 border-rose-200";
+        icon = "🧭";
+      } else if (name.includes("أحياء") || name.includes("احياء")) {
+        badgeClass = "bg-emerald-50 text-emerald-700 border-emerald-200";
+        icon = "🧬";
+      } else if (name.includes("أرض") || name.includes("فضاء") || name.includes("ارض")) {
+        badgeClass = "bg-cyan-50 text-cyan-700 border-cyan-200";
+        icon = "🌍";
+      } else if (name.includes("كيمياء")) {
+        badgeClass = "bg-purple-50 text-purple-700 border-purple-200";
+        icon = "🧪";
+      } else if (name.includes("فيزياء")) {
+        badgeClass = "bg-blue-50 text-blue-700 border-blue-200";
+        icon = "⚛️";
+      } else if (name.includes("كهرباء")) {
+        badgeClass = "bg-amber-50 text-amber-700 border-amber-200";
+        icon = "⚡";
+      }
+      map.set(d.id, { name, badgeClass, icon });
+    });
+    return map;
+  }, [availableDomains]);
+
+  const filteredQuestions = useMemo(() => {
+    if (selectedDomainFilter === "all") return questions;
+    return questions.filter((q) => q.domain_id === selectedDomainFilter);
+  }, [questions, selectedDomainFilter]);
 
   const fetchQuestions = async () => {
     setLoading(true);
@@ -39,7 +80,9 @@ export default function AdminCentralExamQuestions() {
   };
 
   useEffect(() => {
-    fetchQuestions();
+    syncDefaultCentralDomains().finally(() => {
+      fetchQuestions();
+    });
   }, []);
 
   const handleEdit = (q: CentralExamQuestion) => {
@@ -97,9 +140,67 @@ export default function AdminCentralExamQuestions() {
             <DialogHeader>
               <DialogTitle>{editingQuestion ? "تعديل السؤال" : "إضافة سؤال مركزي جديد"}</DialogTitle>
             </DialogHeader>
-            <CentralExamQuestionForm key={editingQuestion?.id || 'new'} question={editingQuestion} onComplete={handleFormClose} />
+            <CentralExamQuestionForm
+              key={editingQuestion?.id || `new-${selectedDomainFilter}`}
+              question={editingQuestion}
+              onComplete={handleFormClose}
+              defaultDomainId={selectedDomainFilter}
+            />
           </DialogContent>
         </Dialog>
+      </div>
+
+      {/* Domain Filter Bar */}
+      <div className="bg-white p-4 sm:p-5 rounded-2xl border shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex items-center gap-2.5 text-slate-800 font-black text-sm">
+          <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+            <Filter className="w-4 h-4" />
+          </div>
+          <span>تصفية الأسئلة حسب المجال العلمي:</span>
+        </div>
+
+        <div className="flex flex-wrap gap-2 items-center">
+          <Button
+            type="button"
+            size="sm"
+            variant={selectedDomainFilter === "all" ? "default" : "outline"}
+            onClick={() => setSelectedDomainFilter("all")}
+            className="rounded-xl text-xs font-black gap-1.5 h-9"
+          >
+            <span>جميع المجالات</span>
+            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4">
+              {questions.length}
+            </Badge>
+          </Button>
+
+          {availableDomains.map((d) => {
+            const info = domainMap.get(d.id);
+            const count = questions.filter((q) => q.domain_id === d.id).length;
+            const isSelected = selectedDomainFilter === d.id;
+            return (
+              <Button
+                key={d.id}
+                type="button"
+                size="sm"
+                variant={isSelected ? "default" : "outline"}
+                onClick={() => setSelectedDomainFilter(d.id)}
+                className={`rounded-xl text-xs font-black gap-1.5 h-9 transition-all ${
+                  isSelected ? "" : "hover:border-indigo-300 text-slate-700 bg-slate-50/50"
+                }`}
+              >
+                <span>{info?.icon || "🎯"}</span>
+                <span>{d.name}</span>
+                <span
+                  className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
+                    isSelected ? "bg-white/25 text-white" : "bg-slate-200/80 text-slate-700"
+                  }`}
+                >
+                  {count}
+                </span>
+              </Button>
+            );
+          })}
+        </div>
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm border overflow-hidden">
@@ -107,52 +208,82 @@ export default function AdminCentralExamQuestions() {
           <div className="flex items-center justify-center py-20">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
           </div>
-        ) : questions.length === 0 ? (
+        ) : filteredQuestions.length === 0 ? (
           <div className="text-center py-20">
             <div className="w-20 h-20 bg-slate-50 flex items-center justify-center rounded-full mx-auto mb-4 text-slate-300">
               <Target className="w-10 h-10" />
             </div>
-            <h3 className="text-lg font-bold text-slate-700">لا توجد أسئلة حالياً</h3>
-            <p className="text-slate-500 mt-2">ابدأ بإضافة أسئلة لتفعيل الاختبار المركزي للطلاب.</p>
+            <h3 className="text-lg font-bold text-slate-700">
+              {questions.length === 0 ? "لا توجد أسئلة حالياً" : "لا توجد أسئلة في هذا المجال المحدد"}
+            </h3>
+            <p className="text-slate-500 mt-2 text-sm">
+              {questions.length === 0
+                ? "ابدأ بإضافة أسئلة لتفعيل الاختبار المركزي للطلاب."
+                : "يمكنك إضافة سؤال جديد وسيندرج تلقائياً في هذا المجال."}
+            </p>
+            {selectedDomainFilter !== "all" && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSelectedDomainFilter("all")}
+                className="mt-4 text-xs font-bold"
+              >
+                عرض كل الأسئلة
+              </Button>
+            )}
           </div>
         ) : (
           <Table dir="rtl">
             <TableHeader className="bg-slate-50/50">
               <TableRow>
                 <TableHead>الترتيب</TableHead>
-                <TableHead className="w-[50%]">السؤال</TableHead>
+                <TableHead className="w-[42%]">السؤال</TableHead>
+                <TableHead>المجال</TableHead>
                 <TableHead>الخيارات</TableHead>
                 <TableHead>الحالة</TableHead>
                 <TableHead className="text-left">الإجراءات</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {questions.map((q) => (
-                <TableRow key={q.id}>
-                  <TableCell className="font-mono text-muted-foreground">{q.order_index}</TableCell>
-                  <TableCell className="font-medium">
-                    <span className="line-clamp-2">{q.text}</span>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{q.choices?.length} خيارات</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={q.active ? "default" : "secondary"} className={q.active ? 'bg-green-100 text-green-700 hover:bg-green-200 border-green-200' : ''}>
-                      {q.active ? "نشط" : "مخفي"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-left">
-                    <div className="flex justify-end gap-2">
-                      <Button variant="ghost" size="icon" onClick={() => handleEdit(q)} className="text-blue-500 hover:text-blue-600 hover:bg-blue-50">
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => confirmDelete(q.id, q.text)} className="text-red-500 hover:text-red-600 hover:bg-red-50">
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
+              {filteredQuestions.map((q) => {
+                const domainInfo = q.domain_id ? domainMap.get(q.domain_id) : null;
+                return (
+                  <TableRow key={q.id}>
+                    <TableCell className="font-mono text-muted-foreground">{q.order_index}</TableCell>
+                    <TableCell className="font-medium">
+                      <span className="line-clamp-2">{q.text}</span>
+                    </TableCell>
+                    <TableCell>
+                      {domainInfo ? (
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-black border ${domainInfo.badgeClass}`}>
+                          <span>{domainInfo.icon}</span>
+                          <span>{domainInfo.name}</span>
+                        </span>
+                      ) : (
+                        <Badge variant="outline" className="text-slate-400 font-normal">عام / غير محدد</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{q.choices?.length} خيارات</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={q.active ? "default" : "secondary"} className={q.active ? 'bg-green-100 text-green-700 hover:bg-green-200 border-green-200' : ''}>
+                        {q.active ? "نشط" : "مخفي"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-left">
+                      <div className="flex justify-end gap-2">
+                        <Button variant="ghost" size="icon" onClick={() => handleEdit(q)} className="text-blue-500 hover:text-blue-600 hover:bg-blue-50">
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => confirmDelete(q.id, q.text)} className="text-red-500 hover:text-red-600 hover:bg-red-50">
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         )}

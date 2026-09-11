@@ -11,6 +11,7 @@ import { CertificateModal } from "@/components/exam/CertificateModal";
 import {
     getSelectionDisplayText,
     getStoredSelectionContext,
+    ensureStoredSelectionContext,
 } from "@/lib/selection-context";
 import {
     applySelectionFilters,
@@ -46,7 +47,10 @@ interface GameState {
 
 export default function SpeedChallenge() {
     const navigate = useNavigate();
-    const selectionContext = useMemo(() => getStoredSelectionContext(), []);
+    const selectionContext = useMemo(
+        () => getStoredSelectionContext() || ensureStoredSelectionContext("nafis"),
+        []
+    );
     const [loading, setLoading] = useState(true);
     const [questions, setQuestions] = useState<Question[]>([]);
     const [currentIndex, setCurrentIndex] = useState(0);
@@ -78,11 +82,6 @@ export default function SpeedChallenge() {
 
     useEffect(() => {
         const fetchConfigAndQuestions = async () => {
-            if (!selectionContext) {
-                navigate("/student/dashboard", { replace: true });
-                return;
-            }
-
             // Preload audio
             await audioManager.preload();
 
@@ -132,11 +131,6 @@ export default function SpeedChallenge() {
     const fetchQuestions = async () => {
         setLoading(true);
         try {
-            if (!selectionContext) {
-                navigate("/student/dashboard");
-                return;
-            }
-
             const { data: { session } } = await supabase.auth.getSession();
             if (!session) {
                 toast.error("يجب تسجيل الدخول أولاً");
@@ -145,7 +139,7 @@ export default function SpeedChallenge() {
             }
 
             // 1. Fetch all active questions (IDs only for performance)
-            const { data: allQuestions, error } = await applySelectionFilters(
+            let { data: allQuestions, error } = await applySelectionFilters(
                 supabase
                     .from("speed_challenge_questions")
                     .select("id")
@@ -153,8 +147,32 @@ export default function SpeedChallenge() {
                 selectionContext,
             );
 
-            if (error || !allQuestions || allQuestions.length === 0) {
-                toast.error("لا توجد أسئلة متاحة");
+            // Fallback 1: Query by grade_subject_id regardless of track_type
+            if (!allQuestions || allQuestions.length === 0) {
+                const retry = await supabase
+                    .from("speed_challenge_questions")
+                    .select("id")
+                    .eq("is_active", true)
+                    .eq("grade_subject_id", selectionContext.gradeSubjectId);
+                if (retry.data && retry.data.length > 0) {
+                    allQuestions = retry.data;
+                }
+            }
+
+            // Fallback 2: Any active speed challenge questions
+            if (!allQuestions || allQuestions.length === 0) {
+                const anyRes = await supabase
+                    .from("speed_challenge_questions")
+                    .select("id")
+                    .eq("is_active", true)
+                    .limit(20);
+                if (anyRes.data && anyRes.data.length > 0) {
+                    allQuestions = anyRes.data;
+                }
+            }
+
+            if (!allQuestions || allQuestions.length === 0) {
+                toast.error("لا توجد أسئلة لتحدي السرعة حالياً");
                 setLoading(false);
                 return;
             }
@@ -498,7 +516,7 @@ export default function SpeedChallenge() {
                             score={gameState.correctCount}
                             totalQuestions={gameState.answeringCount || 1}
                             percentage={gameState.answeringCount > 0 ? Math.round((gameState.correctCount / gameState.answeringCount) * 100) : 100}
-                            examTitle={`تحدي السرعة العلمي (المرحلة ${gameState.stage}) - منصة SCIRISE`}
+                            examTitle={`تحدي السرعة العلمي (المرحلة ${gameState.stage}) - منصة براين ساينس`}
                         />
                     </Card>
                 ) : questions.length > 0 ? (

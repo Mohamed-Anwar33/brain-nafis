@@ -24,6 +24,7 @@ import { cn } from "@/lib/utils";
 import {
     getSelectionDisplayText,
     getStoredSelectionContext,
+    ensureStoredSelectionContext,
 } from "@/lib/selection-context";
 import {
     applySelectionFilters,
@@ -167,7 +168,10 @@ function DroppableSlot({
 
 export default function OrderingGame() {
     const navigate = useNavigate();
-    const selectionContext = useMemo(() => getStoredSelectionContext(), []);
+    const selectionContext = useMemo(
+        () => getStoredSelectionContext() || ensureStoredSelectionContext("nafis"),
+        []
+    );
     const [loading, setLoading] = useState(true);
     const [questions, setQuestions] = useState<Question[]>([]);
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -209,11 +213,6 @@ export default function OrderingGame() {
     );
 
     useEffect(() => {
-        if (!selectionContext) {
-            navigate("/student/dashboard", { replace: true });
-            return;
-        }
-
         const fetchStudentName = async () => {
             try {
                 const { data: { user } } = await supabase.auth.getUser();
@@ -240,11 +239,6 @@ export default function OrderingGame() {
     const fetchQuestions = async () => {
         setLoading(true);
         try {
-            if (!selectionContext) {
-                navigate("/student/dashboard");
-                return;
-            }
-
             const { data: { session } } = await supabase.auth.getSession();
             if (!session) {
                 toast.error("يجب تسجيل الدخول أولاً");
@@ -255,8 +249,8 @@ export default function OrderingGame() {
             // Get Config
             const limit = 5;
 
-            // 1. Fetch active
-            const { data: fullQuestions, error: fullError } = await applySelectionFilters(
+            // 1. Fetch active with selection filters
+            let { data: fullQuestions, error: fullError } = await applySelectionFilters(
                 supabase
                     .from("ordering_game_questions")
                     .select("*")
@@ -264,8 +258,32 @@ export default function OrderingGame() {
                 selectionContext,
             );
 
-            if (fullError || !fullQuestions || fullQuestions.length === 0) {
-                toast.error("لا توجد أسئلة متاحة");
+            // Fallback 1: Query by grade_subject_id regardless of track_type
+            if (!fullQuestions || fullQuestions.length === 0) {
+                const retry = await supabase
+                    .from("ordering_game_questions")
+                    .select("*")
+                    .eq("is_active", true)
+                    .eq("grade_subject_id", selectionContext.gradeSubjectId);
+                if (retry.data && retry.data.length > 0) {
+                    fullQuestions = retry.data;
+                }
+            }
+
+            // Fallback 2: Any active ordering questions
+            if (!fullQuestions || fullQuestions.length === 0) {
+                const anyRes = await supabase
+                    .from("ordering_game_questions")
+                    .select("*")
+                    .eq("is_active", true)
+                    .limit(10);
+                if (anyRes.data && anyRes.data.length > 0) {
+                    fullQuestions = anyRes.data;
+                }
+            }
+
+            if (!fullQuestions || fullQuestions.length === 0) {
+                toast.error("لا توجد أسئلة ترتيب متاحة حالياً");
                 setLoading(false);
                 return;
             }
@@ -553,7 +571,7 @@ export default function OrderingGame() {
                         score={correctCount}
                         totalQuestions={questions.length}
                         percentage={percentage}
-                        examTitle={`لغز الترتيب العلمي (المرحلة ${gameState.stage}) - منصة SCIRISE`}
+                        examTitle={`لغز الترتيب العلمي (المرحلة ${gameState.stage}) - منصة براين ساينس`}
                     />
                 </Card>
             </div>

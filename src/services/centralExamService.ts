@@ -32,6 +32,7 @@ export interface CentralExamChoice {
   question_id: string;
   text: string;
   is_correct: boolean;
+  image_url?: string | null;
 }
 
 export type CentralExamChoiceInput = Omit<
@@ -200,6 +201,7 @@ export async function updateCentralExamQuestion(
     const choicesToInsert = choices.map(c => ({
       text: c.text!,
       is_correct: c.is_correct || false,
+      image_url: c.image_url || null,
       question_id: questionId
     }));
 

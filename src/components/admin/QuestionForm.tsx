@@ -30,6 +30,7 @@ interface QuestionFormProps {
     image_url?: string;
     stage_number?: number;
     grade_subject_id?: string | null;
+    domain_id?: string | null;
     wrong_reason?: string | null;
     explanation_url?: string | null;
   } | null;
@@ -52,7 +53,7 @@ export function QuestionForm({ question, onComplete, defaultStage }: QuestionFor
     gradeId: "",
     subjectId: "",
     gradeSubjectId: question?.grade_subject_id || "",
-    domainId: "",
+    domainId: question?.domain_id || "",
   }));
 
   const [choices, setChoices] = useState<Choice[]>([
@@ -95,7 +96,7 @@ export function QuestionForm({ question, onComplete, defaultStage }: QuestionFor
       setScope((prev) => ({
         trackType: "nafis",
         gradeSubjectId: targetGsId || prev.gradeSubjectId,
-        domainId: "",
+        domainId: question.domain_id || "",
         gradeId: derivedGradeId || prev.gradeId,
         subjectId: derivedSubjectId || prev.subjectId,
       }));
@@ -256,6 +257,7 @@ export function QuestionForm({ question, onComplete, defaultStage }: QuestionFor
           image_url: finalQuestionImageUrl,
           stage_number: stageNumber,
           grade_subject_id: scope.gradeSubjectId,
+          domain_id: scope.domainId || null,
           track_type: "nafis",
           wrong_reason: wrongReason || null,
           explanation_url: explanationUrl || null,
@@ -289,6 +291,7 @@ export function QuestionForm({ question, onComplete, defaultStage }: QuestionFor
           image_url: finalQuestionImageUrl,
           stage_number: stageNumber,
           grade_subject_id: scope.gradeSubjectId,
+          domain_id: scope.domainId || null,
           track_type: "nafis",
           wrong_reason: wrongReason || null,
           explanation_url: explanationUrl || null,
@@ -444,6 +447,7 @@ export function QuestionForm({ question, onComplete, defaultStage }: QuestionFor
           value={scope}
           onChange={setScope}
           trackMode="nafis"
+          showDomain={true}
         />
       </div>
 

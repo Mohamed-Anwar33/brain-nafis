@@ -52,8 +52,12 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   getSelectionDisplayText,
   getStoredSelectionContext,
+  ensureStoredSelectionContext,
 } from "@/lib/selection-context";
 import { getScopedPayload } from "@/lib/selection-scope";
+import { StreakCounter } from "@/components/gamification/StreakCounter";
+import { FloatingXp } from "@/components/gamification/FloatingXp";
+import { SoundToggle } from "@/components/ui/SoundToggle";
 
 export default function CentralExamPlay() {
   const navigate = useNavigate();
@@ -71,7 +75,15 @@ export default function CentralExamPlay() {
   const [showExplanationModal, setShowExplanationModal] = useState(false);
   const [showCertificateModal, setShowCertificateModal] = useState(false);
   const startTime = useRef(Date.now());
-  const selectionContext = useMemo(() => getStoredSelectionContext(), []);
+  const selectionContext = useMemo(
+    () => getStoredSelectionContext() || ensureStoredSelectionContext("central"),
+    []
+  );
+  
+  // Gamification state
+  const [streak, setStreak] = useState(0);
+  const [xpGain, setXpGain] = useState(0);
+  const [xpTrigger, setXpTrigger] = useState(0);
   
   // Strict answer system - track wrong attempts
   const [questionsWithErrors, setQuestionsWithErrors] = useState<Set<string>>(new Set());
@@ -146,7 +158,8 @@ export default function CentralExamPlay() {
         return new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime();
       });
 
-      setQuestions(sortedQuestions);
+      // Enforce strict maximum of 10 questions per stage
+      setQuestions(sortedQuestions.slice(0, 10));
     } catch (err) {
       console.error("Error loading central exam questions:", err);
       toast.error("فشل تحميل أسئلة الاختبار المركزي");
@@ -167,14 +180,25 @@ export default function CentralExamPlay() {
     setSelectedChoice(choiceId);
     
     if (isCorrect) {
-      // ✅ CORRECT - play sound, add score, mark answered, advance after delay
-      audioManager.playCorrect();
       setCurrentWrongReason(null);
       setIsAnswered(true);
       
       // Points are only awarded if this question was answered correctly on the FIRST attempt
       const hadError = questionsWithErrorsRef.current.has(currentQuestion.id);
       const nextScore = !hadError ? score + 1 : score;
+      const nextStreak = !hadError ? streak + 1 : 0;
+      setStreak(nextStreak);
+
+      const gainedXp = 100 + (nextStreak >= 5 ? 150 : nextStreak >= 3 ? 50 : 0);
+      setXpGain(gainedXp);
+      setXpTrigger(prev => prev + 1);
+
+      if (nextStreak >= 3) {
+        audioManager.playStreak(nextStreak);
+      } else {
+        audioManager.playCorrect(nextStreak);
+      }
+
       if (!hadError) {
         setScore(nextScore);
         toast.success("إجابة صحيحة! ✅", { duration: 1500 });
@@ -189,6 +213,7 @@ export default function CentralExamPlay() {
       
     } else {
       // ❌ WRONG - play sound, track error, DON'T advance, allow retry
+      setStreak(0);
       audioManager.playWrong();
       setCurrentWrongReason(currentQuestion.wrong_reason || null);
       
@@ -369,7 +394,7 @@ export default function CentralExamPlay() {
 
           <p className="text-slate-600 text-base sm:text-lg leading-relaxed mb-8 font-medium">
             قسم <span className="font-black text-indigo-600">({domainName})</span> قيد التجهيز ولم يتم إدخال أسئلة له بعد من قِبل المعلمة. يمكنك التوجه للأقسام المتاحة التي تحتوي على أسئلة جاهزة: <br />
-            <span className="inline-block mt-2 font-black text-emerald-600">الكيمياء • الفيزياء • الكهرباء</span>
+            <span className="inline-block mt-2 font-black text-emerald-600">الكيمياء • الفيزياء • الكهرباء • الأحياء • علوم الأرض والفضاء • طبيعة العلم</span>
           </p>
 
           <div className="space-y-3">
@@ -602,7 +627,7 @@ export default function CentralExamPlay() {
               score={correctCount}
               totalQuestions={totalCount}
               percentage={percentage}
-              examTitle="الاختبار المركزي - منصة SCIRISE"
+              examTitle="الاختبار المركزي - منصة براين ساينس"
             />
             
             <div className="mt-6 flex items-center justify-center gap-2 text-sm">
@@ -643,23 +668,30 @@ export default function CentralExamPlay() {
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-pink-300/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
       </div>
 
-      {/* Modern Top Bar */}
-      <div className="h-20 flex items-center justify-between px-6 bg-white/70 backdrop-blur-xl border-b border-white/50 sticky top-0 z-50 shadow-lg shadow-purple-500/5">
-        <Button 
-          variant="ghost" 
-          onClick={handleExit}
-          className="text-slate-600 hover:text-rose-600 hover:bg-rose-50 rounded-xl px-4 py-2 transition-all"
-        >
-          <ArrowLeft className="w-5 h-5 ml-2" />
-          <span className="font-bold">خروج</span>
-        </Button>
+      {/* Floating XP Burst */}
+      <FloatingXp amount={xpGain} triggerKey={xpTrigger} isCombo={streak >= 2} />
 
-        {/* Progress Steps */}
+      {/* Modern Top Bar */}
+      <div className="h-20 flex items-center justify-between px-4 sm:px-6 bg-white/70 backdrop-blur-xl border-b border-white/50 sticky top-0 z-50 shadow-lg shadow-purple-500/5">
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1 bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white px-4 py-2 rounded-full shadow-lg shadow-purple-500/30">
-            <Target className="w-5 h-5" />
+          <Button 
+            variant="ghost" 
+            onClick={handleExit}
+            className="text-slate-600 hover:text-rose-600 hover:bg-rose-50 rounded-xl px-3 sm:px-4 py-2 transition-all"
+          >
+            <ArrowLeft className="w-5 h-5 ml-1 sm:ml-2" />
+            <span className="font-bold hidden sm:inline-block">خروج</span>
+          </Button>
+          <SoundToggle />
+        </div>
+
+        {/* Progress Steps & Streak */}
+        <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-1 bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white px-3 sm:px-4 py-2 rounded-full shadow-lg shadow-purple-500/30 text-xs sm:text-sm">
+            <Target className="w-4 h-4 sm:w-5 sm:h-5" />
             <span className="font-bold">الاختبار المركزي - المرحلة {stage}</span>
           </div>
+          <StreakCounter streak={streak} />
         </div>
 
         <div className="flex items-center gap-3">
@@ -669,8 +701,8 @@ export default function CentralExamPlay() {
               {wrongAttempts}
             </div>
           )}
-          <div className="bg-white/80 backdrop-blur px-4 py-2 rounded-xl shadow-md border border-slate-200">
-            <span className="font-black text-2xl bg-gradient-to-r from-violet-600 to-fuchsia-600 bg-clip-text text-transparent">
+          <div className="bg-white/80 backdrop-blur px-3 sm:px-4 py-2 rounded-xl shadow-md border border-slate-200">
+            <span className="font-black text-xl sm:text-2xl bg-gradient-to-r from-violet-600 to-fuchsia-600 bg-clip-text text-transparent">
               {currentIndex + 1}
             </span>
             <span className="text-slate-400 mx-1">/</span>
@@ -790,7 +822,7 @@ export default function CentralExamPlay() {
                 className={`p-6 cursor-pointer transition-all duration-300 ${cardClass}`}
               >
                 <div className="flex items-center gap-4">
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-black text-lg ${
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-black text-lg shrink-0 ${
                     isAnswered && isCorrect ? 'bg-white/20' :
                     isAnswered && isSelected && !isCorrect ? 'bg-white/20' :
                     isSelected ? 'bg-white/20' : 'bg-violet-100 text-violet-600'
@@ -799,7 +831,18 @@ export default function CentralExamPlay() {
                      isAnswered && isSelected && !isCorrect ? icon :
                      isSelected ? <Sparkles className="w-6 h-6" /> : letters[index]}
                   </div>
-                  <span className="text-lg font-bold flex-1">{choice.text}</span>
+                  <div className="flex-1 flex flex-col items-start gap-2">
+                    <span className="text-lg font-bold">{choice.text}</span>
+                    {choice.image_url && (
+                      <div className="rounded-xl overflow-hidden border border-white/40 bg-white/90 p-1 shadow-xs max-h-32">
+                        <img
+                          src={choice.image_url}
+                          alt={choice.text || "Choice image"}
+                          className="max-h-28 max-w-full object-contain rounded-lg"
+                        />
+                      </div>
+                    )}
+                  </div>
                 </div>
               </Card>
             );

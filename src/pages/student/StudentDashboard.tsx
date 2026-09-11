@@ -25,12 +25,27 @@ import {
   FlaskConical,
   Dna,
   Globe,
-  Leaf
+  Leaf,
+  Star,
+  Compass,
+  Sparkles,
+  Trophy,
+  Rocket,
+  CheckCircle2,
+  ArrowLeft,
+  Shield,
+  Flame,
+  Key,
+  Award,
+  Play,
 } from "lucide-react";
 import { toast } from "sonner";
 import { SaudiLoader } from "@/components/ui/SaudiLoader";
 import PremiumBackground from "@/components/ui/PremiumBackground";
 import { useAcademicCatalog } from "@/hooks/use-academic-catalog";
+import { SoundToggle } from "@/components/ui/SoundToggle";
+import { audioManager } from "@/lib/audio";
+import { StudentPortalHub } from "@/components/student/StudentPortalHub";
 import {
   clearSelectionContext,
   getSelectionDisplayText,
@@ -88,54 +103,112 @@ const getDomainMeta = (slug?: string, name?: string) => {
   const n = name || "";
   if (s.includes("bio") || n.includes("أحياء") || n.includes("احياء")) {
     return {
+      emoji: "🧬",
+      badgeTitle: "عالم الأحياء والكائنات",
+      tagline: "مغامرة استكشاف أسرار الحياة",
       icon: Dna,
       color: "text-emerald-600",
-      iconBg: "bg-emerald-100 text-emerald-700 group-hover:bg-emerald-600 group-hover:text-white",
-      borderHover: "hover:border-emerald-400 hover:shadow-[0_20px_60px_rgba(16,185,129,0.18)]",
+      gradient: "from-emerald-500/15 via-teal-500/5 to-white",
+      iconBg: "bg-gradient-to-tr from-emerald-500 to-teal-400 text-white shadow-lg shadow-emerald-500/30 ring-4 ring-emerald-100",
+      glowBg: "bg-emerald-400/20",
+      borderHover: "hover:border-emerald-400 hover:shadow-[0_24px_70px_rgba(16,185,129,0.22)]",
+      buttonStyle: "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-md shadow-emerald-600/30",
+      chipStyle: "bg-emerald-50 text-emerald-800 border-emerald-200",
       desc: "استكشف أسرار الكائنات الحية والبيولوجيا بتشويق وتفوق"
     };
   }
   if (s.includes("earth") || s.includes("space") || n.includes("أرض") || n.includes("فضاء") || n.includes("ارض")) {
     return {
+      emoji: "🌍",
+      badgeTitle: "علوم الأرض والفضاء",
+      tagline: "رحلة رواد الفضاء والكون الشاسع",
       icon: Globe,
       color: "text-cyan-600",
-      iconBg: "bg-cyan-100 text-cyan-700 group-hover:bg-cyan-600 group-hover:text-white",
-      borderHover: "hover:border-cyan-400 hover:shadow-[0_20px_60px_rgba(6,182,212,0.18)]",
-      desc: "انطلق في رحلة علوم كوكب الأرض وغلافه الجوي والفضاء الشاسع"
+      gradient: "from-cyan-500/15 via-sky-500/5 to-white",
+      iconBg: "bg-gradient-to-tr from-cyan-500 to-blue-500 text-white shadow-lg shadow-cyan-500/30 ring-4 ring-cyan-100",
+      glowBg: "bg-cyan-400/20",
+      borderHover: "hover:border-cyan-400 hover:shadow-[0_24px_70px_rgba(6,182,212,0.22)]",
+      buttonStyle: "bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white shadow-md shadow-cyan-600/30",
+      chipStyle: "bg-cyan-50 text-cyan-800 border-cyan-200",
+      desc: "انطلق في رحلة استكشاف كوكب الأرض والغلاف الجوي والنجوم والمجرات"
     };
   }
   if (s.includes("chem") || n.includes("كيمياء")) {
     return {
+      emoji: "🧪",
+      badgeTitle: "مختبر الكيمياء العجيب",
+      tagline: "تفاعلات مدهشة وعالم الذرات",
       icon: FlaskConical,
       color: "text-purple-600",
-      iconBg: "bg-purple-100 text-purple-700 group-hover:bg-purple-600 group-hover:text-white",
-      borderHover: "hover:border-purple-400 hover:shadow-[0_20px_60px_rgba(147,51,234,0.18)]",
-      desc: "تفاعل مع عالم الذرات والجزيئات والتفاعلات الكيميائية المبهرة"
+      gradient: "from-purple-500/15 via-fuchsia-500/5 to-white",
+      iconBg: "bg-gradient-to-tr from-purple-600 to-fuchsia-500 text-white shadow-lg shadow-purple-500/30 ring-4 ring-purple-100",
+      glowBg: "bg-purple-400/20",
+      borderHover: "hover:border-purple-400 hover:shadow-[0_24px_70px_rgba(147,51,234,0.22)]",
+      buttonStyle: "bg-gradient-to-r from-purple-600 to-fuchsia-600 hover:from-purple-700 hover:to-fuchsia-700 text-white shadow-md shadow-purple-600/30",
+      chipStyle: "bg-purple-50 text-purple-800 border-purple-200",
+      desc: "تفاعل مع الذرات والعناصر والتجارب الكيميائية المبهرة والمسلية"
     };
   }
   if (s.includes("phys") || n.includes("فيزياء")) {
     return {
+      emoji: "⚛️",
+      badgeTitle: "فرسان الفيزياء والطاقة",
+      tagline: "قوانين الحركة والجاذبية والمادة",
       icon: Atom,
       color: "text-blue-600",
-      iconBg: "bg-blue-100 text-blue-700 group-hover:bg-blue-600 group-hover:text-white",
-      borderHover: "hover:border-blue-400 hover:shadow-[0_20px_60px_rgba(59,130,246,0.18)]",
-      desc: "اكتشف قوانين الحركة والطاقة والمادة في عالم الفيزياء الممتع"
+      gradient: "from-blue-500/15 via-indigo-500/5 to-white",
+      iconBg: "bg-gradient-to-tr from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/30 ring-4 ring-blue-100",
+      glowBg: "bg-blue-400/20",
+      borderHover: "hover:border-blue-400 hover:shadow-[0_24px_70px_rgba(59,130,246,0.22)]",
+      buttonStyle: "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md shadow-blue-600/30",
+      chipStyle: "bg-blue-50 text-blue-800 border-blue-200",
+      desc: "اكتشف قوانين الحركة والسرعة والقوى في عالم الفيزياء المليء بالإثارة"
     };
   }
   if (s.includes("elec") || n.includes("كهرباء")) {
     return {
+      emoji: "⚡",
+      badgeTitle: "طاقة الكهرباء والمغناطيس",
+      tagline: "دوائر وتيارات وشرارات الذكاء",
       icon: Zap,
       color: "text-amber-600",
-      iconBg: "bg-amber-100 text-amber-700 group-hover:bg-amber-600 group-hover:text-white",
-      borderHover: "hover:border-amber-400 hover:shadow-[0_20px_60px_rgba(245,158,11,0.18)]",
-      desc: "تعرف على الدوائر الكهربائية والتيارات والقدرة بذكاء واحتراف"
+      gradient: "from-amber-500/15 via-orange-500/5 to-white",
+      iconBg: "bg-gradient-to-tr from-amber-500 to-orange-500 text-white shadow-lg shadow-amber-500/30 ring-4 ring-amber-100",
+      glowBg: "bg-amber-400/20",
+      borderHover: "hover:border-amber-400 hover:shadow-[0_24px_70px_rgba(245,158,11,0.22)]",
+      buttonStyle: "bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-md shadow-amber-500/30",
+      chipStyle: "bg-amber-50 text-amber-800 border-amber-200",
+      desc: "تعرف على الدوائر الكهربائية والقدرة والشحنات بذكاء وسرعة بديهة"
+    };
+  }
+  if (s.includes("nature") || s.includes("sci") || n.includes("طبيعة") || n.includes("طبيعه")) {
+    return {
+      emoji: "🧭",
+      badgeTitle: "مستكشفو طبيعة العلم",
+      tagline: "التفكير العلمي والاستقصاء الذكي",
+      icon: Compass,
+      color: "text-rose-600",
+      gradient: "from-rose-500/15 via-pink-500/5 to-white",
+      iconBg: "bg-gradient-to-tr from-rose-500 to-pink-500 text-white shadow-lg shadow-rose-500/30 ring-4 ring-rose-100",
+      glowBg: "bg-rose-400/20",
+      borderHover: "hover:border-rose-400 hover:shadow-[0_24px_70px_rgba(244,63,94,0.22)]",
+      buttonStyle: "bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-700 hover:to-pink-700 text-white shadow-md shadow-rose-600/30",
+      chipStyle: "bg-rose-50 text-rose-800 border-rose-200",
+      desc: "خطوات التفكير الاستقصائي وصياغة الفرضيات والاستنتاج كعالم حقيقي"
     };
   }
   return {
+    emoji: "🎯",
+    badgeTitle: "تحديات علمية مميزة",
+    tagline: "إتقان المفاهيم وحصد الأوسمة",
     icon: Target,
     color: "text-indigo-600",
-    iconBg: "bg-indigo-100 text-indigo-700 group-hover:bg-indigo-600 group-hover:text-white",
-    borderHover: "hover:border-indigo-400 hover:shadow-[0_20px_60px_rgba(99,102,241,0.18)]",
+    gradient: "from-indigo-500/15 via-sky-500/5 to-white",
+    iconBg: "bg-gradient-to-tr from-indigo-600 to-sky-500 text-white shadow-lg shadow-indigo-500/30 ring-4 ring-indigo-100",
+    glowBg: "bg-indigo-400/20",
+    borderHover: "hover:border-indigo-400 hover:shadow-[0_24px_70px_rgba(99,102,241,0.22)]",
+    buttonStyle: "bg-gradient-to-r from-indigo-600 to-sky-600 hover:from-indigo-700 hover:to-sky-700 text-white shadow-md shadow-indigo-600/30",
+    chipStyle: "bg-indigo-50 text-indigo-800 border-indigo-200",
     desc: "أثبت جدارتك وقوتك في هذا المجال العلمي المتميز والمشوق"
   };
 };
@@ -242,8 +315,9 @@ export default function StudentDashboard() {
     setSelection((current) => ({
       ...current,
       trackType,
-      domainId: trackType === "central" ? current.domainId : "",
+      domainId: "",
     }));
+    setExperienceType(null);
 
     // Move to next step instead of starting immediately
     setStep(2);
@@ -252,50 +326,132 @@ export default function StudentDashboard() {
   const handleBack = () => {
     if (step === 3) {
       setStep(2);
-      setExperienceType(null);
+      if (selection.trackType === "nafis") {
+        setSelection((curr) => ({ ...curr, domainId: "" }));
+      } else {
+        setExperienceType(null);
+      }
     } else if (step === 2) {
       setStep(1);
       setExperienceType(null);
-      if (selection.trackType === "central") {
-        setSelection(curr => ({ ...curr, domainId: "" }));
-      }
+      setSelection((curr) => ({ ...curr, domainId: "" }));
     }
   };
 
   const handleExperienceChange = async (type: ExperienceType) => {
     setExperienceType(type);
 
-    // Auto-start if track (and domain for central) is already selected
-    const context = buildSelectionContextExtended(selection.trackType, type);
-    if (context) {
-      await executeStart(context);
+    const resolvedGrade = selectedGrade || grades[0];
+    const resolvedSubject = selectedSubject || availableSubjects[0];
+    const resolvedGsId =
+      selection.gradeSubjectId ||
+      gradeSubjects.find(
+        (gs) =>
+          gs.grade_id === (resolvedGrade?.id || selection.gradeId) &&
+          gs.subject_id === (resolvedSubject?.id || selection.subjectId)
+      )?.id ||
+      "d5d10da4-4861-456d-a7a4-0b124e9a16d1";
+
+    if (selection.trackType === "nafis") {
+      if (type === "interactive-games") {
+        const context: SelectionContext = {
+          trackType: "nafis",
+          experienceType: "interactive-games",
+          gradeId: resolvedGrade?.id || "8db3f874-aa52-4893-8d04-4eb6ef74f0af",
+          gradeName: resolvedGrade?.name || "ثالث متوسط",
+          subjectId: resolvedSubject?.id || "a79e5e49-5a5e-4ccd-9ac8-c5e9c37c788b",
+          subjectName: resolvedSubject?.name || "علوم",
+          gradeSubjectId: resolvedGsId,
+          domainId: null,
+          domainName: null,
+        };
+        saveSelectionContext(context);
+        navigate("/student/games");
+        return;
+      }
+      if (type === "quick-quiz") {
+        // Move to step 3: Select Scientific Domain (folders)
+        setStep(3);
+        return;
+      }
     }
+
+    // Central track or other
+    const context = buildSelectionContextExtended(selection.trackType, type) || {
+      trackType: selection.trackType,
+      experienceType: type,
+      gradeId: resolvedGrade?.id || "8db3f874-aa52-4893-8d04-4eb6ef74f0af",
+      gradeName: resolvedGrade?.name || "ثالث متوسط",
+      subjectId: resolvedSubject?.id || "a79e5e49-5a5e-4ccd-9ac8-c5e9c37c788b",
+      subjectName: resolvedSubject?.name || "علوم",
+      gradeSubjectId: resolvedGsId,
+      domainId: selectedDomain?.id || null,
+      domainName: selectedDomain?.name || null,
+    };
+    await executeStart(context);
   };
 
-  const handleDomainSelection = (domainId: string) => {
+  const handleDomainSelection = async (domainId: string) => {
     handleDomainChange(domainId);
+
+    const matchedDomain = availableDomains.find((d) => d.id === domainId);
+    const resolvedGrade = selectedGrade || grades[0];
+    const resolvedSubject = selectedSubject || availableSubjects[0];
+    const resolvedGsId =
+      selection.gradeSubjectId ||
+      gradeSubjects.find(
+        (gs) =>
+          gs.grade_id === (resolvedGrade?.id || selection.gradeId) &&
+          gs.subject_id === (resolvedSubject?.id || selection.subjectId)
+      )?.id ||
+      "d5d10da4-4861-456d-a7a4-0b124e9a16d1";
+
+    if (selection.trackType === "nafis") {
+      const context: SelectionContext = {
+        trackType: "nafis",
+        experienceType: "quick-quiz",
+        gradeId: resolvedGrade?.id || "8db3f874-aa52-4893-8d04-4eb6ef74f0af",
+        gradeName: resolvedGrade?.name || "ثالث متوسط",
+        subjectId: resolvedSubject?.id || "a79e5e49-5a5e-4ccd-9ac8-c5e9c37c788b",
+        subjectName: resolvedSubject?.name || "علوم",
+        gradeSubjectId: resolvedGsId,
+        domainId: domainId,
+        domainName: matchedDomain?.name || null,
+      };
+      await executeStart(context);
+      return;
+    }
+
+    // Central track moves to step 3 for challenge mode
     setStep(3);
   };
 
   const buildSelectionContextExtended = (track: TrackType, exp: ExperienceType): SelectionContext | null => {
-    if (!selectedGrade || !selectedSubject || !selection.gradeSubjectId) {
-      return null;
-    }
+    const resolvedGrade = selectedGrade || grades[0];
+    const resolvedSubject = selectedSubject || availableSubjects[0];
+    const resolvedGsId =
+      selection.gradeSubjectId ||
+      gradeSubjects.find(
+        (gs) =>
+          gs.grade_id === (resolvedGrade?.id || selection.gradeId) &&
+          gs.subject_id === (resolvedSubject?.id || selection.subjectId)
+      )?.id ||
+      "d5d10da4-4861-456d-a7a4-0b124e9a16d1";
 
-    if (track === "central" && !selectedDomain) {
+    if (!resolvedGrade || !resolvedSubject) {
       return null;
     }
 
     return {
       trackType: track,
       experienceType: exp,
-      gradeId: selectedGrade.id,
-      gradeName: selectedGrade.name,
-      subjectId: selectedSubject.id,
-      subjectName: selectedSubject.name,
-      gradeSubjectId: selection.gradeSubjectId,
-      domainId: track === "central" ? selectedDomain?.id || null : null,
-      domainName: track === "central" ? selectedDomain?.name || null : null,
+      gradeId: resolvedGrade.id,
+      gradeName: resolvedGrade.name,
+      subjectId: resolvedSubject.id,
+      subjectName: resolvedSubject.name,
+      gradeSubjectId: resolvedGsId,
+      domainId: selectedDomain?.id || null,
+      domainName: selectedDomain?.name || null,
     };
   };
 
@@ -365,16 +521,16 @@ export default function StudentDashboard() {
     }));
   };
 
-  // Auto-selection logic for single availability
+  // Auto-selection logic for catalog availability
   useEffect(() => {
-    if (grades.length === 1 && !selection.gradeId) {
+    if (grades.length > 0 && !selection.gradeId) {
       handleGradeChange(grades[0].id);
     }
   }, [grades, selection.gradeId]);
 
   useEffect(() => {
     if (
-      availableSubjects.length === 1 &&
+      availableSubjects.length > 0 &&
       !selection.subjectId &&
       selection.gradeId
     ) {
@@ -415,12 +571,8 @@ export default function StudentDashboard() {
       subjectId: selectedSubject.id,
       subjectName: selectedSubject.name,
       gradeSubjectId: selection.gradeSubjectId,
-      domainId:
-        selection.trackType === "central" ? selectedDomain?.id || null : null,
-      domainName:
-        selection.trackType === "central"
-          ? selectedDomain?.name || null
-          : null,
+      domainId: selectedDomain?.id || null,
+      domainName: selectedDomain?.name || null,
     };
   };
 
@@ -454,10 +606,14 @@ export default function StudentDashboard() {
       throw questionsError;
     }
 
-    const orderedQuestions = (allQuestionsData || []) as DashboardQuestionRow[];
+    const orderedQuestions = ((allQuestionsData || []) as DashboardQuestionRow[]).slice(0, 10);
 
     if (!orderedQuestions || orderedQuestions.length === 0) {
-      toast.error("لا توجد أسئلة متاحة لهذا الصف والمادة حاليًا");
+      if (context.domainName) {
+        toast.error(`لا توجد أسئلة مخصصة لتخصص "${context.domainName}" حالياً، يُرجى تصنيف الأسئلة من لوحة التحكم`);
+      } else {
+        toast.error("لا توجد أسئلة متاحة لهذا الصف والمادة حاليًا");
+      }
       return;
     }
 
@@ -528,339 +684,920 @@ export default function StudentDashboard() {
 
   return (
     <PremiumBackground>
-      <div className="min-h-screen" dir="rtl">
-        <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/60 backdrop-blur-3xl">
-          <div className="container mx-auto flex items-center justify-between px-6 py-5">
-            <div className="space-y-1">
-              <div className="flex items-center gap-4">
-                {step > 1 && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={handleBack}
-                    className="h-12 w-12 rounded-2xl text-slate-500 hover:bg-slate-100"
-                    title="العودة للخطوة السابقة"
-                  >
-                    <ChevronRight className="h-7 w-7" />
-                  </Button>
-                )}
-                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white shadow-md border border-slate-200 overflow-hidden p-1">
-                  <img src="/logo.jpg" alt="SCIRISE Logo" className="w-full h-full object-contain" />
+      <div className="min-h-screen flex flex-col justify-between" dir="rtl">
+        {/* Full-width Glassmorphic Navbar */}
+        <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/80 backdrop-blur-2xl shadow-sm">
+          <div className="max-w-7xl mx-auto flex items-center justify-between px-4 sm:px-6 lg:px-8 py-3.5 sm:py-4 gap-4 flex-wrap">
+            <div className="flex items-center gap-3 sm:gap-4">
+              {step > 1 && (
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => {
+                    audioManager.playClick();
+                    handleBack();
+                  }}
+                  className="h-10 w-10 sm:h-11 sm:w-11 rounded-2xl border-slate-200 bg-white/90 text-slate-700 hover:bg-slate-100 hover:text-indigo-600 transition-all shadow-sm"
+                  title="العودة للخطوة السابقة"
+                >
+                  <ChevronRight className="h-5 w-5 sm:h-6 sm:w-6" />
+                </Button>
+              )}
+
+              {/* School Logo */}
+              <div className="relative group">
+                <div className="absolute -inset-1 rounded-2xl bg-gradient-to-r from-indigo-500 to-sky-500 opacity-20 blur-sm group-hover:opacity-40 transition-opacity" />
+                <div className="relative flex h-11 w-11 sm:h-13 sm:w-13 items-center justify-center rounded-2xl bg-white shadow-md border border-slate-200 overflow-hidden p-1.5">
+                  <img src="/logo.jpg" alt="Logo" className="w-full h-full object-contain" />
                 </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-black text-xs text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-md tracking-wider">SCIRISE</span>
-                    <h1 className="text-xl sm:text-2xl font-black text-slate-900">
-                      {studentName ? `أهلًا ${studentName}` : "منصة SCIRISE"}
-                    </h1>
-                  </div>
-                  <p className="text-xs sm:text-sm text-slate-500 font-bold mt-0.5">
-                    {step === 1 ? "اختر المسار التعليمي" : step === 2 && selection.trackType === 'central' ? "اختر التخصص" : "اختر نوع التحدي"}
-                  </p>
+              </div>
+
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-black text-[10px] sm:text-xs text-indigo-700 bg-indigo-50 border border-indigo-200/80 px-2.5 py-0.5 rounded-full tracking-wider shadow-2xs">
+                    منصة براين ساينس للتفوق 🚀
+                  </span>
+                  <span className="hidden md:inline-flex text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">
+                    المتوسطة 82 • أ/ هيفا السلمي
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <h1 className="text-base sm:text-xl font-black text-slate-900 tracking-tight">
+                    {studentName ? `أهلاً، ${studentName}` : "منصة براين ساينس"}
+                  </h1>
                 </div>
               </div>
             </div>
 
-            <Button
-              variant="ghost"
-              onClick={handleLogout}
-              className="gap-3 rounded-2xl text-slate-600 hover:bg-slate-100 h-12 px-6 font-bold border border-slate-200"
-            >
-              <LogOut className="h-5 w-5" />
-              تسجيل الخروج
-            </Button>
+            <div className="flex items-center gap-2 sm:gap-3">
+              <SoundToggle />
+
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  audioManager.playClick();
+                  handleLogout();
+                }}
+                className="gap-2 rounded-2xl text-slate-600 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 h-10 sm:h-11 px-3 sm:px-4 font-bold border border-slate-200 text-xs sm:text-sm transition-all shadow-2xs"
+              >
+                <LogOut className="h-4 w-4" />
+                <span className="hidden sm:inline-block">خروج</span>
+              </Button>
+            </div>
           </div>
         </header>
 
-        <main className="container mx-auto px-4 py-8 sm:py-16">
-          <div className="mx-auto max-w-4xl">
-            <Card className="border-0 bg-white/60 backdrop-blur-[40px] p-6 sm:p-10 md:p-14 shadow-[0_32px_128px_-12px_rgba(0,0,0,0.08)] rounded-[2.5rem] md:rounded-[3.5rem] border border-white/80">
-              {/* Step Progress Tracker */}
-              <div className="flex items-center justify-center gap-2 sm:gap-4 mb-8 sm:mb-12 max-w-lg mx-auto select-none">
-                <div className={`flex items-center gap-2 px-4 sm:px-5 py-2 rounded-full text-xs sm:text-sm font-black transition-all ${step === 1 ? "bg-[#1e3a8a] text-white shadow-lg shadow-blue-900/20 scale-105" : "bg-white/90 text-slate-600 border border-slate-200"
-                  }`}>
-                  <span className="w-5 h-5 rounded-full bg-white/25 flex items-center justify-center text-xs">1</span>
-                  <span>المسار</span>
-                </div>
-
-                <div className={`h-1 w-6 sm:w-10 rounded-full transition-all duration-500 ${step >= 2 ? "bg-[#1e3a8a]" : "bg-slate-200"}`} />
-
-                <div className={`flex items-center gap-2 px-4 sm:px-5 py-2 rounded-full text-xs sm:text-sm font-black transition-all ${step === 2 ? "bg-[#1e3a8a] text-white shadow-lg shadow-blue-900/20 scale-105" : "bg-white/90 text-slate-600 border border-slate-200"
-                  }`}>
-                  <span className="w-5 h-5 rounded-full bg-white/25 flex items-center justify-center text-xs">2</span>
-                  <span>{selection.trackType === 'central' ? "التخصص" : "نوع التحدي"}</span>
-                </div>
-
-                {selection.trackType === 'central' && (
-                  <>
-                    <div className={`h-1 w-6 sm:w-10 rounded-full transition-all duration-500 ${step >= 3 ? "bg-[#1e3a8a]" : "bg-slate-200"}`} />
-
-                    <div className={`flex items-center gap-2 px-4 sm:px-5 py-2 rounded-full text-xs sm:text-sm font-black transition-all ${step === 3 ? "bg-[#1e3a8a] text-white shadow-lg shadow-blue-900/20 scale-105" : "bg-white/90 text-slate-600 border border-slate-200"
-                      }`}>
-                      <span className="w-5 h-5 rounded-full bg-white/25 flex items-center justify-center text-xs">3</span>
-                      <span>التحدي</span>
-                    </div>
-                  </>
+        {/* Main Content Area: Expansive & Modern Layout */}
+        <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8 space-y-6">
+          {/* Gamified Quest Adventure Stepper */}
+          <div className="flex items-center justify-center mb-8 sm:mb-12 select-none px-2">
+            <div className="relative flex items-center gap-2 sm:gap-4 p-2 sm:p-2.5 rounded-[2rem] bg-white/90 backdrop-blur-2xl border-2 border-indigo-100/90 shadow-xl shadow-indigo-500/5 max-w-2xl w-full justify-between sm:justify-center">
+              {/* Step 1: Educational Track */}
+              <button
+                type="button"
+                onClick={() => {
+                  if (step > 1) {
+                    audioManager.playClick();
+                    setStep(1);
+                  }
+                }}
+                className={`relative flex items-center gap-2 sm:gap-2.5 px-3 sm:px-5 py-2 sm:py-2.5 rounded-2xl text-xs sm:text-sm font-black transition-all duration-300 ${
+                  step === 1
+                    ? "bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-800 text-white shadow-lg shadow-indigo-600/30 scale-105 ring-4 ring-indigo-100"
+                    : step > 1
+                    ? "bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100 hover:scale-102"
+                    : "text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                <span className={`w-6 h-6 rounded-xl flex items-center justify-center text-xs font-black shadow-2xs ${
+                  step === 1
+                    ? "bg-white/25 text-white"
+                    : step > 1
+                    ? "bg-emerald-500 text-white"
+                    : "bg-slate-200 text-slate-700"
+                }`}>
+                  {step > 1 ? <CheckCircle2 className="w-4 h-4" /> : "1"}
+                </span>
+                <span className="hidden sm:inline">المسار التعليمي</span>
+                <span className="sm:hidden">المسار</span>
+                {step === 1 && (
+                  <span className="flex h-2 w-2 relative">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-300" />
+                  </span>
                 )}
+              </button>
+
+              {/* Connecting Shimmer Bar 1 */}
+              <div className={`h-1.5 flex-1 max-w-[2.5rem] sm:max-w-[4rem] rounded-full transition-all duration-700 overflow-hidden relative ${
+                step >= 2 ? "bg-gradient-to-r from-emerald-500 to-indigo-600" : "bg-slate-200"
+              }`}>
+                {step >= 2 && <div className="absolute inset-0 bg-white/40 animate-[shimmerSweep_2s_infinite]" />}
               </div>
 
-              <div className="space-y-8">
-                {step === 1 ? (
-                  <>
-                    <div className="text-center space-y-4 sm:space-y-6 mb-10 sm:mb-16 animate-in fade-in slide-in-from-bottom-10 duration-1000">
-                      {/* SCIRISE Header Banner - Blended Seamlessly with Background */}
-                      <div className="relative max-w-lg mx-auto flex items-center justify-center mb-4 group">
-                        {/* Organic circular soft aura behind the logo */}
-                        <div className="absolute inset-0 m-auto w-64 sm:w-80 h-36 sm:h-44 bg-gradient-to-tr from-sky-400/20 via-indigo-400/20 to-purple-400/15 rounded-full blur-2xl pointer-events-none -z-10" />
-                        
-                        {/* Logo image blended smoothly into the background without cutting off details */}
-                        <div
-                          className="relative w-full overflow-hidden flex items-center justify-center"
-                          style={{
-                            WebkitMaskImage: "radial-gradient(ellipse 92% 88% at 50% 50%, black 70%, transparent 100%)",
-                            maskImage: "radial-gradient(ellipse 92% 88% at 50% 50%, black 70%, transparent 100%)",
-                          }}
-                        >
-                          <img
-                            src="/logo.jpg"
-                            alt="SCIRISE"
-                            className="w-full h-auto max-h-40 sm:max-h-52 object-contain mx-auto mix-blend-multiply transition-transform duration-500 hover:scale-105"
-                          />
-                        </div>
-                      </div>
+              {/* Step 2: Challenge Type OR Scientific Domain */}
+              <button
+                type="button"
+                disabled={step < 2}
+                onClick={() => {
+                  if (step > 2) {
+                    audioManager.playClick();
+                    setStep(2);
+                  }
+                }}
+                className={`relative flex items-center gap-2 sm:gap-2.5 px-3 sm:px-5 py-2 sm:py-2.5 rounded-2xl text-xs sm:text-sm font-black transition-all duration-300 ${
+                  step === 2
+                    ? "bg-gradient-to-r from-amber-500 via-orange-500 to-rose-600 text-white shadow-lg shadow-amber-500/30 scale-105 ring-4 ring-amber-100"
+                    : step > 2
+                    ? "bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100 hover:scale-102"
+                    : "text-slate-400 opacity-60 cursor-not-allowed"
+                }`}
+              >
+                <span className={`w-6 h-6 rounded-xl flex items-center justify-center text-xs font-black shadow-2xs ${
+                  step === 2
+                    ? "bg-white/25 text-white"
+                    : step > 2
+                    ? "bg-emerald-500 text-white"
+                    : "bg-slate-200 text-slate-500"
+                }`}>
+                  {step > 2 ? <CheckCircle2 className="w-4 h-4" /> : "2"}
+                </span>
+                <span className="hidden sm:inline">{selection.trackType === "central" ? "التخصص العلمي" : "نوع التحدي"}</span>
+                <span className="sm:hidden">{selection.trackType === "central" ? "التخصص" : "التحدي"}</span>
+                {step === 2 && (
+                  <span className="flex h-2 w-2 relative">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-white" />
+                  </span>
+                )}
+              </button>
 
-                      <div className="flex items-center justify-center gap-2 text-xs sm:text-sm font-black tracking-widest text-[#1e3a8a]">
-                        <span>تعلمي</span>
-                        <span>•</span>
-                        <span>تدربي</span>
-                        <span>•</span>
-                        <span>ارتقي</span>
-                        <span className="text-slate-300 mx-1">|</span>
-                        <span className="text-slate-500 font-bold tracking-wider">LEARN • PRACTICE • RISE</span>
-                      </div>
+              {/* Connecting Shimmer Bar 2 */}
+              <div className={`h-1.5 flex-1 max-w-[2.5rem] sm:max-w-[4rem] rounded-full transition-all duration-700 overflow-hidden relative ${
+                step >= 3 ? "bg-gradient-to-r from-orange-500 to-purple-600" : "bg-slate-200"
+              }`}>
+                {step >= 3 && <div className="absolute inset-0 bg-white/40 animate-[shimmerSweep_2s_infinite]" />}
+              </div>
 
-                      <div className="max-w-2xl mx-auto px-4 py-3 sm:py-3.5 rounded-2xl bg-gradient-to-r from-blue-50/90 via-indigo-50/80 to-purple-50/90 border border-indigo-100 shadow-sm">
-                        <p className="text-xs sm:text-base md:text-lg font-bold text-slate-800 leading-relaxed">
-                          منصة تعليمية تفاعلية لتنمية المهارات العلمية ورفع نواتج التعلم والاستعداد للاختبارات الوطنية ( نافس ) والمركزية
-                        </p>
-                      </div>
+              {/* Step 3: Scientific Domain OR Mode */}
+              <div
+                className={`relative flex items-center gap-2 sm:gap-2.5 px-3 sm:px-5 py-2 sm:py-2.5 rounded-2xl text-xs sm:text-sm font-black transition-all duration-300 ${
+                  step === 3
+                    ? "bg-gradient-to-r from-purple-600 via-indigo-600 to-pink-600 text-white shadow-lg shadow-purple-600/30 scale-105 ring-4 ring-purple-100"
+                    : "text-slate-400 opacity-60"
+                }`}
+              >
+                <span className={`w-6 h-6 rounded-xl flex items-center justify-center text-xs font-black shadow-2xs ${
+                  step === 3 ? "bg-white/25 text-white" : "bg-slate-200 text-slate-500"
+                }`}>
+                  3
+                </span>
+                <span className="hidden sm:inline">{selection.trackType === "central" ? "نمط التحدي" : "التخصص العلمي"}</span>
+                <span className="sm:hidden">{selection.trackType === "central" ? "النمط" : "التخصص"}</span>
+                {step === 3 && (
+                  <span className="flex h-2 w-2 relative">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-white" />
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
 
-                      <h2 className="text-2xl sm:text-4xl md:text-5xl font-black text-slate-900 tracking-tight pt-2">
-                        اختر <span className="text-indigo-600">تحديك العلمي</span>
-                      </h2>
+          {/* Step 1: Track Selection */}
+          {step === 1 && (
+            <div className="space-y-8 sm:space-y-12 animate-in fade-in slide-in-from-bottom-6 duration-500 relative">
+              {/* Scoped Keyframes for Smooth Micro-Animations */}
+              <style dangerouslySetInnerHTML={{ __html: `
+                @keyframes floatSlow {
+                  0%, 100% { transform: translateY(0px) rotate(0deg); }
+                  50% { transform: translateY(-9px) rotate(3deg); }
+                }
+                @keyframes floatSlowReverse {
+                  0%, 100% { transform: translateY(0px) rotate(0deg); }
+                  50% { transform: translateY(9px) rotate(-3deg); }
+                }
+                @keyframes shimmerSweep {
+                  0% { transform: translateX(-120%) skewX(-20deg); }
+                  100% { transform: translateX(260%) skewX(-20deg); }
+                }
+              `}} />
+
+              {/* Hero Banner Section with Floating Science Particles */}
+              <div className="relative text-center space-y-5 max-w-4xl mx-auto pt-2">
+                {/* Ambient Floating Science Elements (Desktop) */}
+                <div 
+                  className="hidden lg:flex absolute -top-2 -right-8 items-center gap-2 px-3 py-1.5 rounded-2xl bg-white/90 backdrop-blur-xl border border-emerald-200/80 shadow-lg shadow-emerald-500/10 text-emerald-700 pointer-events-none select-none z-10"
+                  style={{ animation: "floatSlow 5.5s ease-in-out infinite" }}
+                >
+                  <Atom className="w-4 h-4 text-emerald-600 animate-spin" style={{ animationDuration: "12s" }} />
+                  <span className="text-[11px] font-black">معايير نافس الوطنية</span>
+                </div>
+
+                <div 
+                  className="hidden lg:flex absolute -top-2 -left-8 items-center gap-2 px-3 py-1.5 rounded-2xl bg-white/90 backdrop-blur-xl border border-indigo-200/80 shadow-lg shadow-indigo-500/10 text-indigo-700 pointer-events-none select-none z-10"
+                  style={{ animation: "floatSlowReverse 6.5s ease-in-out infinite" }}
+                >
+                  <Rocket className="w-4 h-4 text-indigo-600" />
+                  <span className="text-[11px] font-black">تحديات علمية مقننة</span>
+                </div>
+
+                <div 
+                  className="hidden xl:flex absolute top-36 -right-16 items-center gap-2 px-3 py-1.5 rounded-2xl bg-white/90 backdrop-blur-xl border border-amber-200/80 shadow-lg shadow-amber-500/10 text-amber-700 pointer-events-none select-none z-10"
+                  style={{ animation: "floatSlowReverse 7s ease-in-out infinite" }}
+                >
+                  <Sparkles className="w-4 h-4 text-amber-500 animate-pulse" />
+                  <span className="text-[11px] font-black">ألعاب وتحديات 3D</span>
+                </div>
+
+                <div 
+                  className="hidden xl:flex absolute top-36 -left-16 items-center gap-2 px-3 py-1.5 rounded-2xl bg-white/90 backdrop-blur-xl border border-purple-200/80 shadow-lg shadow-purple-500/10 text-purple-700 pointer-events-none select-none z-10"
+                  style={{ animation: "floatSlow 6s ease-in-out infinite" }}
+                >
+                  <Trophy className="w-4 h-4 text-purple-600" />
+                  <span className="text-[11px] font-black">لوحة شرف وتنافس حي</span>
+                </div>
+
+                {/* Personalized Welcome Capsule */}
+                <div className="inline-flex items-center gap-2.5 px-4 sm:px-5 py-2 rounded-full bg-gradient-to-r from-indigo-50 via-sky-50 to-emerald-50 border border-indigo-200/90 shadow-sm text-xs sm:text-sm font-black text-slate-800">
+                  <span className="flex h-2.5 w-2.5 relative">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
+                  </span>
+                  <Sparkles className="w-4 h-4 text-amber-500 animate-pulse" />
+                  <span>{studentName ? `أهلاً بك يا بطل 🌟 ${studentName}` : "مرحباً بك في منصة براين ساينس"}</span>
+                  <span className="text-slate-300">|</span>
+                  <span className="text-indigo-600 font-extrabold">جاهز لاكتساح التحدي اليوم؟ 🚀</span>
+                </div>
+
+                {/* Logo Presentation with Glow Aura */}
+                <div className="relative inline-flex items-center justify-center my-1 group">
+                  <div className="absolute -inset-3 bg-gradient-to-r from-sky-400/30 via-indigo-500/30 to-emerald-400/30 rounded-3xl blur-2xl opacity-70 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
+                  <div className="relative p-3.5 sm:p-4 rounded-3xl bg-white/95 backdrop-blur-xl shadow-xl shadow-indigo-100/60 border border-white group-hover:scale-105 transition-transform duration-500">
+                    <img
+                      src="/logo.jpg"
+                      alt="براين ساينس"
+                      className="h-20 sm:h-24 w-auto object-contain mix-blend-multiply"
+                    />
+                  </div>
+                </div>
+
+                {/* Slogan */}
+                <div className="flex items-center justify-center gap-2 text-xs sm:text-sm font-black tracking-widest text-[#1e3a8a]">
+                  <span className="hover:text-indigo-600 transition-colors cursor-default">تعلمي</span>
+                  <span className="text-amber-400 text-base">✦</span>
+                  <span className="hover:text-indigo-600 transition-colors cursor-default">تدربي</span>
+                  <span className="text-emerald-400 text-base">✦</span>
+                  <span className="hover:text-indigo-600 transition-colors cursor-default">ارتقي</span>
+                  <span className="text-slate-300 mx-1">|</span>
+                  <span className="text-slate-500 font-bold tracking-wider">LEARN • PRACTICE • RISE</span>
+                </div>
+
+                {/* Main Heading */}
+                <h2 className="text-3xl sm:text-5xl lg:text-6xl font-black text-slate-900 tracking-tight">
+                  اختر <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-700 via-sky-600 to-emerald-600">مسارك العلمي</span>
+                </h2>
+
+                <p className="text-sm sm:text-base font-bold text-slate-600 max-w-2xl mx-auto leading-relaxed bg-white/80 backdrop-blur-md p-3.5 rounded-2xl border border-slate-200/80 shadow-xs">
+                  بوابتك الذكية لتنمية المهارات العلمية وتثبيت المفاهيم والاستعداد للاختبارات الوطنية والمركزية بأعلى درجات الثقة والتميز
+                </p>
+
+                {/* 3-Capsule Interactive Highlights Bar */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-3xl mx-auto pt-2">
+                  <div className="flex items-center gap-3 p-3 rounded-2xl bg-white/80 backdrop-blur-xl border border-emerald-200/80 shadow-xs hover:shadow-md hover:bg-white hover:-translate-y-0.5 transition-all duration-300 group text-right">
+                    <div className="h-10 w-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 shadow-2xs group-hover:scale-110 group-hover:bg-emerald-600 group-hover:text-white transition-all">
+                      <Zap className="h-5 w-5" />
+                    </div>
+                    <div className="min-w-0">
+                      <h4 className="text-xs font-black text-slate-900 group-hover:text-emerald-700 transition-colors">تقييم فوري وتصحيح</h4>
+                      <p className="text-[11px] text-slate-500 font-bold truncate">شرح فوري وتغذية راجعة</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 p-3 rounded-2xl bg-white/80 backdrop-blur-xl border border-indigo-200/80 shadow-xs hover:shadow-md hover:bg-white hover:-translate-y-0.5 transition-all duration-300 group text-right">
+                    <div className="h-10 w-10 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center shrink-0 shadow-2xs group-hover:scale-110 group-hover:bg-indigo-600 group-hover:text-white transition-all">
+                      <Gamepad2 className="h-5 w-5" />
+                    </div>
+                    <div className="min-w-0">
+                      <h4 className="text-xs font-black text-slate-900 group-hover:text-indigo-700 transition-colors">ألعاب وتحديات 3D</h4>
+                      <p className="text-[11px] text-slate-500 font-bold truncate">صائد الكنز والسرعة الخارقة</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 p-3 rounded-2xl bg-white/80 backdrop-blur-xl border border-amber-200/80 shadow-xs hover:shadow-md hover:bg-white hover:-translate-y-0.5 transition-all duration-300 group text-right">
+                    <div className="h-10 w-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 shadow-2xs group-hover:scale-110 group-hover:bg-amber-600 group-hover:text-white transition-all">
+                      <Trophy className="h-5 w-5" />
+                    </div>
+                    <div className="min-w-0">
+                      <h4 className="text-xs font-black text-slate-900 group-hover:text-amber-700 transition-colors">لوحة الشرف والأوسمة</h4>
+                      <p className="text-[11px] text-slate-500 font-bold truncate">شهادات تقدير وتنافس حي</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* The Two Grand Masterpiece Track Cards */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 max-w-5xl mx-auto pt-2">
+                {/* Card 1: Nafis National Track (Emerald & Teal Edition) */}
+                <button
+                  type="button"
+                  onMouseEnter={() => audioManager.playClick()}
+                  onClick={() => {
+                    audioManager.playPowerUp();
+                    handleTrackChange("nafis");
+                  }}
+                  className="group relative text-right p-8 sm:p-10 rounded-[2.5rem] bg-gradient-to-b from-white via-emerald-50/40 to-white border-2 border-emerald-200/90 hover:border-emerald-500 shadow-xl shadow-emerald-500/5 hover:shadow-[0_28px_80px_rgba(16,185,129,0.24)] transition-all duration-500 hover:-translate-y-2.5 active:scale-[0.99] flex flex-col justify-between overflow-hidden cursor-pointer"
+                >
+                  {/* Subtle Background Glow Auras */}
+                  <div className="absolute -top-24 -left-24 w-72 h-72 bg-emerald-500/15 rounded-full blur-3xl group-hover:scale-150 group-hover:bg-emerald-500/25 transition-all duration-700 pointer-events-none" />
+                  <div className="absolute -bottom-24 -right-24 w-72 h-72 bg-teal-400/10 rounded-full blur-3xl group-hover:scale-125 transition-all duration-700 pointer-events-none" />
+
+                  {/* Specular Shimmer Sweep on Hover */}
+                  <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/40 to-transparent pointer-events-none skew-x-12" />
+
+                  <div className="relative space-y-6">
+                    {/* Top Header of Card */}
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="h-16 w-16 sm:h-20 sm:w-20 rounded-3xl bg-gradient-to-tr from-emerald-600 via-teal-600 to-emerald-500 text-white flex items-center justify-center shadow-xl shadow-emerald-500/30 group-hover:scale-110 group-hover:-rotate-3 transition-transform duration-500 ring-4 ring-emerald-100 group-hover:ring-emerald-300">
+                        <Zap className="h-8 w-8 sm:h-10 sm:w-10 group-hover:animate-pulse" />
+                      </div>
+                      <div className="flex flex-col items-end gap-1.5">
+                        <span className="flex items-center gap-2 text-xs font-black text-emerald-800 bg-emerald-100/90 border border-emerald-300/80 px-3.5 py-1.5 rounded-full shadow-2xs">
+                          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+                          <span>المعيار الوطني 🇸🇦</span>
+                        </span>
+                        <span className="text-[11px] font-bold text-slate-500 bg-slate-100/80 px-2.5 py-0.5 rounded-full border border-slate-200">
+                          ألعاب تفاعلية + اختبار سريع
+                        </span>
+                      </div>
                     </div>
 
-                    <div className="grid gap-6 sm:gap-8 md:grid-cols-2">
-                      {/* Central Exam */}
-                      <button
-                        type="button"
-                        onClick={() => handleTrackChange("central")}
-                        className="group relative overflow-hidden rounded-[2rem] sm:rounded-[3rem] border-4 border-slate-100 bg-white/80 p-6 sm:p-10 text-right transition-all duration-500 hover:border-indigo-500 hover:shadow-[0_20px_60px_rgba(99,102,241,0.2)] hover:scale-[1.05] active:scale-95 shadow-sm"
-                      >
-                        <div className="absolute top-0 right-0 w-48 h-48 bg-indigo-500/5 rounded-full -translate-y-1/2 translate-x-1/2 group-hover:scale-150 transition-transform duration-700" />
-                        <div className="relative">
-                          <div className="mb-6 sm:mb-8 flex h-16 w-16 sm:h-24 sm:w-24 items-center justify-center rounded-[1.25rem] sm:rounded-[2rem] bg-indigo-600 text-white group-hover:rotate-[360deg] transition-all duration-700 shadow-xl shadow-indigo-500/30">
-                            <Target className="h-8 w-8 sm:h-12 sm:w-12" />
-                          </div>
-                          <h3 className="text-2xl sm:text-3xl md:text-4xl font-black text-slate-900 mb-3 sm:mb-4 tracking-tight">الاختبار المركزي</h3>
-                          <p className="text-base sm:text-lg text-slate-500 leading-relaxed font-bold">
-                            أثبت قوتك العلمية في تخصصات دقيقة وشاملة وممتعة
-                          </p>
-                          <div className="mt-8 sm:mt-10 flex items-center justify-between">
-                            <div className="flex items-center text-indigo-600 font-black text-lg sm:text-xl">
-                              <span>انطلق للاكتساح</span>
-                              <span className="mr-3 group-hover:translate-x-[-12px] transition-transform duration-300">←</span>
-                            </div>
-                          </div>
-                        </div>
-                      </button>
-
-                      {/* Nafis */}
-                      <button
-                        type="button"
-                        onClick={() => handleTrackChange("nafis")}
-                        className="group relative overflow-hidden rounded-[2rem] sm:rounded-[3rem] border-4 border-slate-100 bg-white/80 p-6 sm:p-10 text-right transition-all duration-500 hover:border-emerald-500 hover:shadow-[0_20px_60px_rgba(16,185,129,0.2)] hover:scale-[1.05] active:scale-95 shadow-sm"
-                      >
-                        <div className="absolute top-0 right-0 w-48 h-48 bg-emerald-500/5 rounded-full -translate-y-1/2 translate-x-1/2 group-hover:scale-150 transition-transform duration-700" />
-                        <div className="relative">
-                          <div className="mb-6 sm:mb-8 flex h-16 w-16 sm:h-24 sm:w-24 items-center justify-center rounded-[1.25rem] sm:rounded-[2rem] bg-emerald-500 text-white group-hover:rotate-[360deg] transition-all duration-700 shadow-xl shadow-emerald-500/30">
-                            <Zap className="h-8 w-8 sm:h-12 sm:w-12" />
-                          </div>
-                          <h3 className="text-2xl sm:text-3xl md:text-4xl font-black text-slate-900 mb-3 sm:mb-4 tracking-tight">بنك نافس</h3>
-                          <p className="text-base sm:text-lg text-slate-500 leading-relaxed font-bold">
-                            تعلم بذكاء من خلال ألعاب وتحديات تفاعلية مشوقة جداً
-                          </p>
-                          <div className="mt-8 sm:mt-10 flex items-center justify-between">
-                            <div className="flex items-center text-emerald-600 font-black text-lg sm:text-xl">
-                              <span>ابدأ المغامرة</span>
-                              <span className="mr-3 group-hover:translate-x-[-12px] transition-transform duration-300">←</span>
-                            </div>
-                          </div>
-                        </div>
-                      </button>
-
-                    </div>
-                  </>
-                ) : step === 2 && selection.trackType === "central" ? (
-                  <>
-                    <div className="text-center space-y-6 sm:space-y-8 mb-12 sm:mb-20 animate-in fade-in slide-in-from-top-10 duration-1000">
-                      <div className="inline-flex items-center justify-center w-20 h-20 sm:w-28 sm:h-28 rounded-[2rem] sm:rounded-[2.5rem] bg-indigo-600 text-white shadow-[0_10px_30px_rgba(79,70,229,0.3)]">
-                        <Target className="h-10 w-10 sm:h-14 sm:w-14 animate-bounce" />
-                      </div>
-                      <h2 className="text-3xl sm:text-5xl md:text-7xl font-black text-slate-900 tracking-tighter">
-                        اختر التخصص
-                      </h2>
-                      <p className="text-slate-600 text-lg sm:text-2xl max-w-2xl mx-auto leading-relaxed font-semibold">
-                        بطل! حدد المجال العلمي الذي ترغب في اكتساحه اليوم بتفاؤل
+                    {/* Title & Description */}
+                    <div className="space-y-2">
+                      <h3 className="text-2xl sm:text-3xl font-black text-slate-900 group-hover:text-emerald-700 transition-colors">
+                        بنك اختبارات نافس
+                      </h3>
+                      <p className="text-sm sm:text-base text-slate-600 leading-relaxed font-bold">
+                        استعداد وطني شامل وفق معايير الاختبارات الوطنية (نافس) مع ألعاب تعليمية وتحديات سريعة لرفع نواتج التعلم وتثبيت المفاهيم.
                       </p>
                     </div>
 
-                    <div className="grid gap-8 md:grid-cols-2">
-                      {availableDomains.length > 0 ? (
-                        availableDomains.map((domain, idx) => {
-                          const meta = getDomainMeta(domain.slug, domain.name);
-                          const DomainIcon = meta.icon;
-                          return (
-                            <button
-                              key={domain.id}
-                              type="button"
-                              onClick={() => handleDomainSelection(domain.id)}
-                              className={`group relative overflow-hidden rounded-[1.5rem] sm:rounded-[2.5rem] border-4 p-6 sm:p-10 text-right transition-all duration-500 shadow-sm border-slate-100 bg-white/80 ${meta.borderHover} hover:scale-[1.05] active:scale-95`}
-                              style={{ animationDelay: `${idx * 100}ms` }}
-                            >
-                              <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full -translate-y-1/2 translate-x-1/2 group-hover:scale-125 transition-transform duration-700" />
-                              <div className="relative">
-                                <div className="flex items-center justify-between mb-4 sm:mb-6">
-                                  <div className={`flex h-14 w-14 sm:h-18 sm:w-18 items-center justify-center rounded-2xl transition-all duration-500 shadow-md ${meta.iconBg}`}>
-                                    <DomainIcon className="h-7 w-7 sm:h-9 sm:w-9 transition-transform group-hover:rotate-12 duration-500" />
-                                  </div>
-                                  <span className="px-3 py-1.5 rounded-full text-xs font-black bg-emerald-100 text-emerald-800 border border-emerald-200">
-                                    متاح للاختبار ✓
-                                  </span>
-                                </div>
-                                <h3 className="text-2xl sm:text-3xl font-black text-slate-900 mb-2">
-                                  {domain.name}
-                                </h3>
-                                <p className="text-slate-500 text-sm sm:text-base leading-relaxed font-bold">
-                                  {meta.desc}
-                                </p>
-                                <div className="mt-4 flex items-center gap-2 text-indigo-600 font-bold text-sm">
-                                  <span>دخول التحدي</span>
-                                  <span className="group-hover:translate-x-[-6px] transition-transform">←</span>
-                                </div>
-                              </div>
-                            </button>
-                          );
-                        })
-                      ) : (
-                        <div className="col-span-full py-40 text-center">
-                          <p className="text-4xl font-black text-slate-400">لا توجد تخصصات متاحة الآن</p>
-                        </div>
-                      )}
+                    {/* Features Preview Chips */}
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      <span className="px-3 py-1.5 rounded-xl bg-emerald-50 group-hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-black transition-colors shadow-2xs">
+                        🏆 اختبار سريع فوري
+                      </span>
+                      <span className="px-3 py-1.5 rounded-xl bg-teal-50 group-hover:bg-teal-100 text-teal-800 border border-teal-200 text-xs font-black transition-colors shadow-2xs">
+                        🗝️ مغامرة صائد الكنز
+                      </span>
+                      <span className="px-3 py-1.5 rounded-xl bg-cyan-50 group-hover:bg-cyan-100 text-cyan-800 border border-cyan-200 text-xs font-black transition-colors shadow-2xs">
+                        ⚡ تحدي السرعة
+                      </span>
+                      <span className="px-3 py-1.5 rounded-xl bg-amber-50 group-hover:bg-amber-100 text-amber-800 border border-amber-200 text-xs font-black transition-colors shadow-2xs">
+                        ⭐ نقاط وأوسمة
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Card Action Footer */}
+                  <div className="relative mt-8 pt-5 border-t border-emerald-100/90 flex items-center justify-between">
+                    <span className="flex items-center gap-1.5 text-xs font-black text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>جاهز للاستعداد</span>
+                    </span>
+                    <div className="flex items-center gap-2.5 px-5 py-3 rounded-2xl bg-emerald-600 group-hover:bg-emerald-700 text-white font-black text-sm sm:text-base border-b-4 border-emerald-800 active:border-b-0 active:translate-y-1 shadow-md shadow-emerald-600/30 group-hover:shadow-lg group-hover:shadow-emerald-600/40 transition-all">
+                      <span>ابدأ تدريب نافس الوطني</span>
+                      <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1.5 transition-transform duration-300" />
+                    </div>
+                  </div>
+                </button>
+
+                {/* Card 2: Central Exam (Indigo & Sky Edition) */}
+                <button
+                  type="button"
+                  onMouseEnter={() => audioManager.playClick()}
+                  onClick={() => {
+                    audioManager.playPowerUp();
+                    handleTrackChange("central");
+                  }}
+                  className="group relative text-right p-8 sm:p-10 rounded-[2.5rem] bg-gradient-to-b from-white via-indigo-50/40 to-white border-2 border-indigo-200/90 hover:border-indigo-500 shadow-xl shadow-indigo-500/5 hover:shadow-[0_28px_80px_rgba(79,70,229,0.24)] transition-all duration-500 hover:-translate-y-2.5 active:scale-[0.99] flex flex-col justify-between overflow-hidden cursor-pointer"
+                >
+                  {/* Subtle Background Glow Auras */}
+                  <div className="absolute -top-24 -left-24 w-72 h-72 bg-indigo-500/15 rounded-full blur-3xl group-hover:scale-150 group-hover:bg-indigo-500/25 transition-all duration-700 pointer-events-none" />
+                  <div className="absolute -bottom-24 -right-24 w-72 h-72 bg-sky-400/10 rounded-full blur-3xl group-hover:scale-125 transition-all duration-700 pointer-events-none" />
+
+                  {/* Specular Shimmer Sweep on Hover */}
+                  <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/40 to-transparent pointer-events-none skew-x-12" />
+
+                  <div className="relative space-y-6">
+                    {/* Top Header of Card */}
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="h-16 w-16 sm:h-20 sm:w-20 rounded-3xl bg-gradient-to-tr from-indigo-600 via-blue-600 to-indigo-700 text-white flex items-center justify-center shadow-xl shadow-indigo-500/30 group-hover:scale-110 group-hover:rotate-3 transition-transform duration-500 ring-4 ring-indigo-100 group-hover:ring-indigo-300">
+                        <Target className="h-8 w-8 sm:h-10 sm:w-10 group-hover:animate-pulse" />
+                      </div>
+                      <div className="flex flex-col items-end gap-1.5">
+                        <span className="flex items-center gap-2 text-xs font-black text-indigo-800 bg-indigo-100/90 border border-indigo-300/80 px-3.5 py-1.5 rounded-full shadow-2xs">
+                          <span className="w-2 h-2 rounded-full bg-indigo-500 animate-ping" />
+                          <span>تخصصات علمية 🎯</span>
+                        </span>
+                        <span className="text-[11px] font-bold text-slate-500 bg-slate-100/80 px-2.5 py-0.5 rounded-full border border-slate-200">
+                          6 مجالات علمية مقننة
+                        </span>
+                      </div>
                     </div>
 
-                    <div className="mt-20 flex justify-center">
-                      <Button
-                        variant="ghost"
-                        onClick={handleBack}
-                        className="text-slate-500 hover:text-indigo-600 gap-3 sm:gap-4 text-lg sm:text-2xl font-black px-8 sm:px-12 h-12 sm:h-16 rounded-[1.5rem] sm:rounded-[2rem] hover:bg-white/10 transition-all border border-slate-200"
-                      >
-                        <ArrowRight className="h-6 w-6 sm:h-8 sm:w-8" />
-                        العودة للمسارات
-                      </Button>
+                    {/* Title & Description */}
+                    <div className="space-y-2">
+                      <h3 className="text-2xl sm:text-3xl font-black text-slate-900 group-hover:text-indigo-700 transition-colors">
+                        الاختبار المركزي
+                      </h3>
+                      <p className="text-sm sm:text-base text-slate-600 leading-relaxed font-bold">
+                        تحديات علمية مقننة في مجالات دقيقة: الكيمياء، الفيزياء، الأحياء، علوم الأرض والفضاء، الكهرباء، وطبيعة العلم لقياس الفهم المعياري.
+                      </p>
                     </div>
-                  </>
+
+                    {/* Domain Pills Preview */}
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      <span className="px-3 py-1.5 rounded-xl bg-purple-50 group-hover:bg-purple-100 text-purple-800 border border-purple-200 text-xs font-black transition-colors shadow-2xs">
+                        🧪 كيمياء
+                      </span>
+                      <span className="px-3 py-1.5 rounded-xl bg-blue-50 group-hover:bg-blue-100 text-blue-800 border border-blue-200 text-xs font-black transition-colors shadow-2xs">
+                        ⚛️ فيزياء
+                      </span>
+                      <span className="px-3 py-1.5 rounded-xl bg-emerald-50 group-hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-black transition-colors shadow-2xs">
+                        🧬 أحياء
+                      </span>
+                      <span className="px-3 py-1.5 rounded-xl bg-amber-50 group-hover:bg-amber-100 text-amber-800 border border-amber-200 text-xs font-black transition-colors shadow-2xs">
+                        ⚡ كهرباء
+                      </span>
+                      <span className="px-3 py-1.5 rounded-xl bg-cyan-50 group-hover:bg-cyan-100 text-cyan-800 border border-cyan-200 text-xs font-black transition-colors shadow-2xs">
+                        🌍 فضاء وأرض
+                      </span>
+                      <span className="px-3 py-1.5 rounded-xl bg-rose-50 group-hover:bg-rose-100 text-rose-800 border border-rose-200 text-xs font-black transition-colors shadow-2xs">
+                        🧭 طبيعة العلم
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Card Action Footer */}
+                  <div className="relative mt-8 pt-5 border-t border-indigo-100/90 flex items-center justify-between">
+                    <span className="flex items-center gap-1.5 text-xs font-black text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-200">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-indigo-600" />
+                      <span>بنك أسئلة معياري</span>
+                    </span>
+                    <div className="flex items-center gap-2.5 px-5 py-3 rounded-2xl bg-indigo-600 group-hover:bg-indigo-700 text-white font-black text-sm sm:text-base border-b-4 border-indigo-800 active:border-b-0 active:translate-y-1 shadow-md shadow-indigo-600/30 group-hover:shadow-lg group-hover:shadow-indigo-600/40 transition-all">
+                      <span>انطلق للاختبار المركزي</span>
+                      <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1.5 transition-transform duration-300" />
+                    </div>
+                  </div>
+                </button>
+              </div>
+
+              {/* Excellence & Motivation Hub (Leaderboard, Achievements, Progress, Certificates) */}
+              <div className="pt-10 sm:pt-14 border-t border-slate-200/80">
+                <div className="flex items-center justify-center gap-3 mb-6 select-none">
+                  <div className="h-px w-12 sm:w-24 bg-gradient-to-r from-transparent to-indigo-300" />
+                  <span className="text-xs sm:text-sm font-black text-slate-500 tracking-wide flex items-center gap-1.5 bg-white/80 px-4 py-1.5 rounded-full border border-slate-200/80 shadow-2xs">
+                    <Trophy className="w-4 h-4 text-amber-500" />
+                    <span>لوحة الشرف والإنجازات الشخصية</span>
+                  </span>
+                  <div className="h-px w-12 sm:w-24 bg-gradient-to-l from-transparent to-indigo-300" />
+                </div>
+                <StudentPortalHub studentName={studentName} className="mt-0 pt-0 border-t-0" />
+              </div>
+            </div>
+          )}
+
+          {/* Step: Specializations / Domains (Central Exam Step 2 OR Nafis Quick Quiz Step 3) */}
+          {((step === 2 && selection.trackType === "central") || (step === 3 && selection.trackType === "nafis")) && (
+            <div className="space-y-8 sm:space-y-12 animate-in fade-in slide-in-from-bottom-6 duration-500 relative">
+              {/* Domain Step Hero Banner */}
+              <div className="text-center space-y-4 max-w-3xl mx-auto pt-2">
+                <div className="inline-flex items-center gap-2.5 px-4 sm:px-5 py-2 rounded-full bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 border border-indigo-200/90 text-indigo-800 text-xs sm:text-sm font-black shadow-sm">
+                  <Sparkles className="w-4 h-4 text-amber-500 animate-pulse" />
+                  <span>
+                    {selection.trackType === "nafis"
+                      ? "مسار بنك نافس • مجلدات المواد والتخصصات العلمية 🇸🇦"
+                      : "المسار المركزي • 6 مجالات علمية متخصصة 🎯"}
+                  </span>
+                  <span className="text-indigo-300">|</span>
+                  <span className="text-emerald-600 font-extrabold">اختر وانطلق 🚀</span>
+                </div>
+
+                <h2 className="text-3xl sm:text-5xl lg:text-6xl font-black text-slate-900 tracking-tight">
+                  اختر <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-700 via-purple-600 to-pink-600">التخصص العلمي</span>
+                </h2>
+
+                <p className="text-sm sm:text-base font-bold text-slate-600 max-w-xl mx-auto leading-relaxed bg-white/80 backdrop-blur-md p-3.5 rounded-2xl border border-slate-200/80 shadow-xs">
+                  {selection.trackType === "nafis"
+                    ? "يا بطلنا المتميز! اختر مجالك العلمي المفضل لخوض الاختبار السريع وحصد النقاط والشهادات 🌟"
+                    : "بطلنا المتميز! حدد المجال العلمي الذي ترغب في اكتساحه اليوم بتفوق وثقة"}
+                </p>
+              </div>
+
+              {/* Expansive 3-Column Grid for Domains */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 max-w-6xl mx-auto">
+                {availableDomains.length > 0 ? (
+                  availableDomains.map((domain, idx) => {
+                    const meta = getDomainMeta(domain.slug, domain.name);
+                    const DomainIcon = meta.icon;
+                    return (
+                      <button
+                        key={domain.id}
+                        type="button"
+                        onMouseEnter={() => audioManager.playClick()}
+                        onClick={() => {
+                          audioManager.playPowerUp();
+                          handleDomainSelection(domain.id);
+                        }}
+                        className={`group relative text-right p-7 sm:p-8 rounded-[2.5rem] bg-gradient-to-b ${meta.gradient} border-2 border-slate-200/90 shadow-lg hover:shadow-[0_26px_75px_rgba(79,70,229,0.22)] transition-all duration-500 hover:-translate-y-3 hover:scale-[1.02] active:scale-[0.98] flex flex-col justify-between overflow-hidden cursor-pointer ${meta.borderHover}`}
+                        style={{ animationDelay: `${idx * 80}ms` }}
+                      >
+                        {/* Ambient Glow Aura */}
+                        <div className={`absolute -top-12 -left-12 w-48 h-48 rounded-full blur-3xl opacity-50 group-hover:opacity-90 group-hover:scale-150 transition-all duration-700 pointer-events-none ${meta.glowBg}`} />
+
+                        {/* Specular Shimmer Sweep on Hover */}
+                        <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/50 to-transparent pointer-events-none skew-x-12" />
+
+                        <div className="relative space-y-5">
+                          {/* Top: Icon + Gamified Badges */}
+                          <div className="flex items-center justify-between gap-3">
+                            <div className={`flex h-16 w-16 sm:h-20 sm:w-20 items-center justify-center rounded-3xl transition-all duration-500 ${meta.iconBg}`}>
+                              <DomainIcon className="h-8 w-8 sm:h-10 sm:w-10 transition-transform group-hover:scale-115 group-hover:rotate-6 duration-500" />
+                            </div>
+
+                            <div className="flex flex-col items-end gap-1.5">
+                              <span className="text-3xl filter drop-shadow-sm group-hover:scale-125 group-hover:-rotate-12 transition-transform duration-300 select-none">
+                                {meta.emoji}
+                              </span>
+                              <span className={`px-3 py-1 rounded-full text-[11px] font-black border shadow-2xs ${meta.chipStyle}`}>
+                                جاهز للتحدي 🌟
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Title & Tagline & Description */}
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <h3 className="text-2xl sm:text-3xl font-black text-slate-900 group-hover:text-indigo-700 transition-colors">
+                                {domain.name}
+                              </h3>
+                            </div>
+                            <p className="text-xs font-black text-indigo-600/90">
+                              {meta.tagline}
+                            </p>
+                            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-bold">
+                              {meta.desc}
+                            </p>
+                          </div>
+
+                          {/* Kid-friendly feature pills */}
+                          <div className="flex flex-wrap gap-1.5 pt-1">
+                            <span className="px-2.5 py-1 rounded-xl bg-white/90 text-slate-700 border border-slate-200/80 text-[11px] font-black shadow-2xs">
+                              ⭐ 10 أسئلة ذكية
+                            </span>
+                            <span className="px-2.5 py-1 rounded-xl bg-white/90 text-slate-700 border border-slate-200/80 text-[11px] font-black shadow-2xs">
+                              ⚡ تصحيح فوري
+                            </span>
+                            <span className="px-2.5 py-1 rounded-xl bg-white/90 text-slate-700 border border-slate-200/80 text-[11px] font-black shadow-2xs">
+                              🏆 نقاط وأوسمة
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Action Footer CTA with vibrant button */}
+                        <div className="relative mt-7 pt-4 border-t border-slate-200/70 flex items-center justify-between gap-3">
+                          <span className="text-xs font-black text-slate-500">
+                            مجلد علمي مقنن
+                          </span>
+                          <div className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl font-black text-xs sm:text-sm border-b-4 active:border-b-0 active:translate-y-1 transition-all duration-300 group-hover:shadow-lg ${meta.buttonStyle}`}>
+                            <span>انطلق للاختبار</span>
+                            <span className="text-base group-hover:-translate-x-1.5 transition-transform duration-300">🚀</span>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })
                 ) : (
-                  <>
-                    <div className="text-center space-y-8 sm:space-y-12 mb-12 sm:mb-20 animate-in zoom-in duration-1000">
-                      <div className="inline-flex items-center justify-center w-24 h-24 sm:w-36 sm:h-36 rounded-[2.5rem] sm:rounded-[3.5rem] bg-gradient-to-br from-amber-400 to-orange-500 text-white mb-4 sm:mb-6 shadow-[0_15px_40px_rgba(245,158,11,0.3)]">
-                        <Gamepad2 className="h-12 w-12 sm:h-18 sm:w-18 animate-pulse text-white" />
-                      </div>
-                      <h2 className="text-3xl sm:text-6xl md:text-8xl font-black text-slate-900 tracking-tight">
-                        اختر <span className="text-amber-500">نوع التحدي</span>
-                      </h2>
-                      <div className="bg-white/60 inline-block px-8 sm:px-14 py-4 sm:py-6 rounded-[1.5rem] sm:rounded-[2.5rem] border border-slate-200 backdrop-blur-3xl shadow-xl">
-                        <p className="text-slate-600 text-xl sm:text-3xl font-bold">
-                          {selection.trackType === 'central' && selectedDomain ? (
-                            <>المجال: <span className="font-black text-indigo-600 text-2xl sm:text-4xl">{selectedDomain.name}</span></>
-                          ) : (
-                            <>المسار: <span className="font-black text-emerald-600 text-2xl sm:text-4xl">{selection.trackType === 'nafis' ? 'نافس' : 'الاختبار المركزي'}</span></>
-                          )}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="grid gap-10 md:grid-cols-2">
-                      <button
-                        type="button"
-                        disabled={isActionLoading}
-                        onClick={() => handleExperienceChange("quick-quiz")}
-                        className="group relative overflow-hidden rounded-[2.5rem] sm:rounded-[4rem] border-4 border-slate-100 bg-white/80 p-8 sm:p-14 text-right transition-all duration-500 hover:border-amber-400 hover:shadow-[0_20px_80px_rgba(245,158,11,0.15)] hover:scale-[1.05] disabled:opacity-50 shadow-sm"
-                      >
-                        <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/5 rounded-full -translate-y-1/2 translate-x-1/2" />
-                        <div className="relative">
-                          <div className="mb-6 sm:mb-10 flex h-20 w-20 sm:h-28 sm:w-28 items-center justify-center rounded-[1.5rem] sm:rounded-[2.5rem] bg-amber-500 text-white group-hover:scale-110 group-hover:rotate-12 transition-all duration-500 shadow-xl shadow-amber-500/30">
-                            <Zap className="h-10 w-10 sm:h-14 sm:w-14" />
-                          </div>
-                          <h3 className="text-2xl sm:text-4xl font-black text-slate-900 mb-4 sm:mb-6 tracking-tight">
-                            اختبار سريع
-                          </h3>
-                          <p className="text-lg sm:text-2xl text-slate-500 leading-relaxed font-bold">
-                            أسئلة سريعة ومنوعة لقياس مستواك العلمي بطريقة ممتعة
-                          </p>
-                        </div>
-                      </button>
-
-                      <button
-                        type="button"
-                        disabled={isActionLoading}
-                        onClick={() => handleExperienceChange("interactive-games")}
-                        className="group relative overflow-hidden rounded-[2.5rem] sm:rounded-[4rem] border-4 border-slate-100 bg-white/80 p-8 sm:p-14 text-right transition-all duration-500 hover:border-fuchsia-400 hover:shadow-[0_20px_80px_rgba(192,38,211,0.15)] hover:scale-[1.05] disabled:opacity-50 shadow-sm"
-                      >
-                        <div className="absolute top-0 right-0 w-64 h-64 bg-fuchsia-500/5 rounded-full -translate-y-1/2 translate-x-1/2" />
-                        <div className="relative">
-                          <div className="mb-6 sm:mb-10 flex h-20 w-20 sm:h-28 sm:w-28 items-center justify-center rounded-[1.5rem] sm:rounded-[2.5rem] bg-fuchsia-600 text-white group-hover:scale-110 group-hover:-rotate-12 transition-all duration-500 shadow-xl shadow-fuchsia-500/30">
-                            <Gamepad2 className="h-10 w-10 sm:h-14 sm:w-14" />
-                          </div>
-                          <h3 className="text-2xl sm:text-4xl font-black text-slate-900 mb-4 sm:mb-6 tracking-tight">
-                            ألعاب تفاعلية
-                          </h3>
-                          <p className="text-lg sm:text-2xl text-slate-500 leading-relaxed font-bold">
-                            تعلم واستمتع من خلال مجموعة من الألعاب التعليمية المشوقة
-                          </p>
-                        </div>
-                      </button>
-                    </div>
-
-                    <div className="mt-12 sm:mt-24 flex justify-center">
-                      <Button
-                        variant="ghost"
-                        onClick={handleBack}
-                        className="text-slate-500 hover:text-slate-900 gap-3 sm:gap-5 text-xl sm:text-3xl font-black px-10 sm:px-14 h-14 sm:h-20 rounded-[1.5rem] sm:rounded-[2.5rem] hover:bg-slate-100 transition-all border border-slate-200"
-                      >
-                        <ArrowRight className="h-7 w-7 sm:h-10 sm:w-10" />
-                        العودة للخلف
-                      </Button>
-                    </div>
-                  </>
-                )}
-
-                {currentContext && (
-                  <div className="rounded-xl border border-emerald-100 bg-emerald-50/50 p-4">
-                    <div className="flex items-center gap-2 mb-1">
-                      <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                      <p className="text-sm font-bold text-emerald-800">جاهز للبدء</p>
-                    </div>
-                    <p className="text-sm text-emerald-600 leading-relaxed">
-                      {getSelectionDisplayText(currentContext)}
-                    </p>
+                  <div className="col-span-full py-20 text-center bg-white/80 rounded-3xl border border-slate-200">
+                    <p className="text-xl font-black text-slate-400">لا توجد تخصصات متاحة لهذا الصف حالياً</p>
                   </div>
                 )}
-
-
               </div>
-            </Card>
-          </div>
+
+              {/* Back Button with Modern Tactile Pill */}
+              <div className="flex justify-center pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    audioManager.playClick();
+                    handleBack();
+                  }}
+                  className="rounded-2xl border-2 border-slate-200/90 bg-white/95 text-slate-700 hover:bg-slate-100 hover:text-indigo-600 hover:border-indigo-300 h-12 px-6 font-black text-sm gap-2.5 shadow-sm hover:shadow-md transition-all hover:scale-105 active:scale-95"
+                >
+                  <ArrowRight className="w-4 h-4" />
+                  <span>{selection.trackType === "nafis" ? "العودة لاختيار نوع التحدي" : "العودة لاختيار المسار التعليمي"}</span>
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Step: Challenge Mode Selection (Nafis Step 2 OR Central Exam Step 3) */}
+          {((step === 2 && selection.trackType === "nafis") || (step === 3 && selection.trackType === "central")) && (
+            <div className="space-y-8 sm:space-y-12 animate-in fade-in slide-in-from-bottom-6 duration-500 relative">
+              {/* Floating Ambient Science Badges (Desktop) */}
+              <div
+                className="hidden lg:flex absolute -top-4 -right-6 items-center gap-2 px-3.5 py-1.5 rounded-2xl bg-white/95 backdrop-blur-xl border border-amber-200/90 shadow-lg shadow-amber-500/10 text-amber-800 pointer-events-none select-none z-10"
+                style={{ animation: "floatSlow 5.5s ease-in-out infinite" }}
+              >
+                <Zap className="w-4 h-4 text-amber-500 fill-amber-500 animate-pulse" />
+                <span className="text-xs font-black">سرعة خارقة وتصحيح فوري ⚡</span>
+              </div>
+
+              <div
+                className="hidden lg:flex absolute -top-4 -left-6 items-center gap-2 px-3.5 py-1.5 rounded-2xl bg-white/95 backdrop-blur-xl border border-fuchsia-200/90 shadow-lg shadow-fuchsia-500/10 text-fuchsia-800 pointer-events-none select-none z-10"
+                style={{ animation: "floatSlowReverse 6.5s ease-in-out infinite" }}
+              >
+                <Gamepad2 className="w-4 h-4 text-fuchsia-600" />
+                <span className="text-xs font-black">4 ألعاب ومغامرة الكنز 🗝️</span>
+              </div>
+
+              {/* Step Hero Mission Banner & Friendly Mascot Capsule */}
+              <div className="text-center space-y-4 max-w-3xl mx-auto pt-1">
+                {/* Hero Mascot Greeting Capsule */}
+                <div className="inline-flex items-center gap-2.5 px-4 sm:px-6 py-2 rounded-full bg-gradient-to-r from-amber-50 via-orange-50 to-pink-50 border-2 border-amber-200/90 shadow-sm text-xs sm:text-sm font-black text-slate-800">
+                  <span className="flex h-2.5 w-2.5 relative">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500" />
+                  </span>
+                  <Sparkles className="w-4 h-4 text-amber-500 animate-spin" style={{ animationDuration: "6s" }} />
+                  <span>
+                    {selection.trackType === "central" && selectedDomain
+                      ? `المسار المركزي 🎯 • التخصص: ${selectedDomain.name}`
+                      : "مسار بنك اختبارات نافس الوطني 🇸🇦"}
+                  </span>
+                  <span className="text-slate-300">|</span>
+                  <span className="text-amber-700 font-extrabold">المرحلة 2: اختر بوابتك 🚀</span>
+                </div>
+
+                {/* Main 3D Title with Vibrancy */}
+                <div className="space-y-2">
+                  <h2 className="text-3xl sm:text-5xl lg:text-6xl font-black text-slate-900 tracking-tight">
+                    اختر <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-500 via-orange-500 to-rose-600 filter drop-shadow-xs">نوع التحدي</span>
+                  </h2>
+                  <p className="text-sm sm:text-base font-bold text-slate-600 max-w-xl mx-auto leading-relaxed bg-white/85 backdrop-blur-md p-3.5 rounded-2xl border border-slate-200/90 shadow-xs">
+                    يا بطلنا الذكي! 🌟 اختر طريقتك المفضلة اليوم: هل تفضل الاختبار السريع الخاطف ⚡ أم الانطلاق في ساحة الألعاب والمغامرات التفاعلية 🎮؟
+                  </p>
+                </div>
+
+                {/* Kid-friendly Motivating Badges */}
+                <div className="flex items-center justify-center gap-2 sm:gap-3 flex-wrap pt-1">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-amber-50 text-amber-800 border border-amber-200/90 text-xs font-black shadow-2xs">
+                    <Zap className="w-3.5 h-3.5 text-amber-600 fill-amber-500" />
+                    <span>نقاط XP مضاعفة</span>
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-purple-50 text-purple-800 border border-purple-200/90 text-xs font-black shadow-2xs">
+                    <Trophy className="w-3.5 h-3.5 text-purple-600" />
+                    <span>أوسمة ولوحة شرف</span>
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200/90 text-xs font-black shadow-2xs">
+                    <Award className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>شهادات تفوق فورية</span>
+                  </span>
+                </div>
+              </div>
+
+              {/* The Two Grand Masterpiece Challenge Mode Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 max-w-5xl mx-auto pt-2">
+                {/* Mode 1: Quick Quiz (بركان الطاقة والسرعة ⚡) */}
+                <button
+                  type="button"
+                  disabled={isActionLoading}
+                  onMouseEnter={() => audioManager.playClick()}
+                  onClick={() => {
+                    audioManager.playPowerUp();
+                    handleExperienceChange("quick-quiz");
+                  }}
+                  className="group relative text-right p-7 sm:p-9 rounded-[2.5rem] bg-gradient-to-b from-white via-amber-50/50 to-orange-50/30 border-3 border-amber-300/90 hover:border-amber-500 shadow-xl shadow-amber-500/10 hover:shadow-[0_28px_80px_rgba(245,158,11,0.28)] transition-all duration-500 hover:-translate-y-2.5 active:scale-[0.99] flex flex-col justify-between overflow-hidden disabled:opacity-50 cursor-pointer text-slate-800"
+                >
+                  {/* Subtle Background Glow Auras */}
+                  <div className="absolute -top-24 -left-24 w-72 h-72 bg-amber-400/20 rounded-full blur-3xl group-hover:scale-150 group-hover:bg-amber-400/30 transition-all duration-700 pointer-events-none" />
+                  <div className="absolute -bottom-24 -right-24 w-72 h-72 bg-orange-400/15 rounded-full blur-3xl group-hover:scale-125 transition-all duration-700 pointer-events-none" />
+
+                  {/* Specular Shimmer Sweep on Hover */}
+                  <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/50 to-transparent pointer-events-none skew-x-12" />
+
+                  <div className="relative space-y-6 w-full">
+                    {/* Top Header of Card */}
+                    <div className="flex items-center justify-between gap-4">
+                      {/* 3D Emblems with Glow */}
+                      <div className="relative">
+                        <div className="absolute -inset-2 rounded-3xl bg-gradient-to-r from-amber-400 to-orange-500 opacity-40 blur-md group-hover:opacity-75 transition-opacity" />
+                        <div className="relative h-18 w-18 sm:h-22 sm:w-22 rounded-3xl bg-gradient-to-tr from-amber-500 via-orange-500 to-amber-600 text-white flex items-center justify-center shadow-xl shadow-amber-500/40 group-hover:scale-110 group-hover:rotate-6 transition-transform duration-500 ring-4 ring-amber-100 group-hover:ring-amber-300">
+                          <Zap className="h-9 w-9 sm:h-11 sm:w-11 fill-white group-hover:animate-bounce" />
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col items-end gap-1.5">
+                        <span className="flex items-center gap-2 text-xs font-black text-amber-900 bg-amber-100 border border-amber-300/90 px-3.5 py-1.5 rounded-full shadow-2xs">
+                          <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
+                          <span>التحدي الخاطف ⚡</span>
+                        </span>
+                        <span className="text-[11px] font-black text-orange-700 bg-orange-100/90 border border-orange-200 px-3 py-1 rounded-full shadow-2xs">
+                          +100 XP ⭐ مكافأة بطل
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Title & Description */}
+                    <div className="space-y-2 text-right">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="text-2xl sm:text-3xl font-black text-slate-900 group-hover:text-amber-600 transition-colors">
+                          اختبار سريع
+                        </h3>
+                        <span className="text-xs font-black text-amber-700 bg-amber-100/80 px-2.5 py-0.5 rounded-lg border border-amber-200">
+                          10 أسئلة ذكية
+                        </span>
+                      </div>
+                      <p className="text-xs font-black text-amber-700">
+                        سباق الذكاء والسرعة الخارقة! ⏱️
+                      </p>
+                      <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-bold">
+                        {selection.trackType === "nafis"
+                          ? "اختر التخصص العلمي وانطلق في اختبار فوري مقنن (10 أسئلة). تصحيح فوري لكل إجابة، شروحات مبسّطة، وحصد نقاط ترفعك في لوحة الشرف!"
+                          : "أسئلة سريعة لقياس مستواك العلمي بدقة وحصد النقاط والمستويات مع تقرير أداء فوري وشهادة إنجاز."}
+                      </p>
+                    </div>
+
+                    {/* Kid-friendly feature pills */}
+                    <div className="grid grid-cols-2 gap-2 pt-1">
+                      <div className="flex items-center gap-2 p-2 rounded-xl bg-amber-50/90 border border-amber-200/80 text-amber-900 text-xs font-black shadow-2xs">
+                        <span className="text-sm">⏱️</span>
+                        <span>تصحيح وشرح فوري</span>
+                      </div>
+                      <div className="flex items-center gap-2 p-2 rounded-xl bg-orange-50/90 border border-orange-200/80 text-orange-900 text-xs font-black shadow-2xs">
+                        <span className="text-sm">📜</span>
+                        <span>شهادة إنجاز باسمك</span>
+                      </div>
+                      <div className="flex items-center gap-2 p-2 rounded-xl bg-yellow-50/90 border border-yellow-200/80 text-yellow-900 text-xs font-black shadow-2xs">
+                        <span className="text-sm">🏆</span>
+                        <span>ترتيب بلوحة الشرف</span>
+                      </div>
+                      <div className="flex items-center gap-2 p-2 rounded-xl bg-rose-50/90 border border-rose-200/80 text-rose-900 text-xs font-black shadow-2xs">
+                        <span className="text-sm">🎯</span>
+                        <span>10 أسئلة علمية منوعة</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 3D Chunky Action Button */}
+                  <div className="relative mt-8 pt-5 border-t border-amber-200/80 w-full space-y-3">
+                    <div className="w-full py-4 px-6 rounded-2xl font-black text-base sm:text-lg text-white bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 border-b-4 border-amber-700 active:border-b-0 active:translate-y-1 shadow-lg shadow-amber-500/35 group-hover:shadow-amber-500/55 group-hover:brightness-105 flex items-center justify-center gap-3 transition-all">
+                      <Zap className="w-5 h-5 fill-white" />
+                      <span>{selection.trackType === "nafis" ? "اختر التخصص وابدأ الاختبار ⚡" : "ابدأ الاختبار السريع الآن ⚡"}</span>
+                      <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1.5 transition-transform duration-300" />
+                    </div>
+
+                    <div className="flex items-center justify-between text-[11px] font-black text-amber-800 px-2">
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                        <span>جاهز للانطلاق المباشر</span>
+                      </span>
+                      <span>مدة الاختبار: 5-8 دقائق</span>
+                    </div>
+                  </div>
+                </button>
+
+                {/* Mode 2: Interactive Games (ساحة الألعاب والمغامرات 🎮) */}
+                <button
+                  type="button"
+                  disabled={isActionLoading}
+                  onMouseEnter={() => audioManager.playClick()}
+                  onClick={() => {
+                    audioManager.playPowerUp();
+                    handleExperienceChange("interactive-games");
+                  }}
+                  className="group relative text-right p-7 sm:p-9 rounded-[2.5rem] bg-gradient-to-b from-white via-fuchsia-50/50 to-purple-50/30 border-3 border-fuchsia-300/90 hover:border-fuchsia-500 shadow-xl shadow-fuchsia-500/10 hover:shadow-[0_28px_80px_rgba(192,38,211,0.28)] transition-all duration-500 hover:-translate-y-2.5 active:scale-[0.99] flex flex-col justify-between overflow-hidden disabled:opacity-50 cursor-pointer text-slate-800"
+                >
+                  {/* Subtle Background Glow Auras */}
+                  <div className="absolute -top-24 -left-24 w-72 h-72 bg-fuchsia-400/20 rounded-full blur-3xl group-hover:scale-150 group-hover:bg-fuchsia-400/30 transition-all duration-700 pointer-events-none" />
+                  <div className="absolute -bottom-24 -right-24 w-72 h-72 bg-purple-400/15 rounded-full blur-3xl group-hover:scale-125 transition-all duration-700 pointer-events-none" />
+
+                  {/* Specular Shimmer Sweep on Hover */}
+                  <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/50 to-transparent pointer-events-none skew-x-12" />
+
+                  <div className="relative space-y-6 w-full">
+                    {/* Top Header of Card */}
+                    <div className="flex items-center justify-between gap-4">
+                      {/* 3D Emblems with Glow */}
+                      <div className="relative">
+                        <div className="absolute -inset-2 rounded-3xl bg-gradient-to-r from-fuchsia-500 to-purple-600 opacity-40 blur-md group-hover:opacity-75 transition-opacity" />
+                        <div className="relative h-18 w-18 sm:h-22 sm:w-22 rounded-3xl bg-gradient-to-tr from-fuchsia-600 via-purple-600 to-pink-600 text-white flex items-center justify-center shadow-xl shadow-fuchsia-500/40 group-hover:scale-110 group-hover:-rotate-6 transition-transform duration-500 ring-4 ring-fuchsia-100 group-hover:ring-fuchsia-300">
+                          <Gamepad2 className="h-9 w-9 sm:h-11 sm:w-11 group-hover:animate-pulse" />
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col items-end gap-1.5">
+                        <span className="flex items-center gap-2 text-xs font-black text-fuchsia-900 bg-fuchsia-100 border border-fuchsia-300/90 px-3.5 py-1.5 rounded-full shadow-2xs">
+                          <span className="w-2 h-2 rounded-full bg-fuchsia-500 animate-ping" />
+                          <span>ساحة الألعاب 🎮</span>
+                        </span>
+                        <span className="text-[11px] font-black text-purple-700 bg-purple-100/90 border border-purple-200 px-3 py-1 rounded-full shadow-2xs">
+                          4 ألعاب تفاعلية 🗝️
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Title & Description */}
+                    <div className="space-y-2 text-right">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="text-2xl sm:text-3xl font-black text-slate-900 group-hover:text-fuchsia-600 transition-colors">
+                          ألعاب تفاعلية
+                        </h3>
+                        <span className="text-xs font-black text-fuchsia-700 bg-fuchsia-100/80 px-2.5 py-0.5 rounded-lg border border-fuchsia-200">
+                          تلعيب ومغامرة
+                        </span>
+                      </div>
+                      <p className="text-xs font-black text-fuchsia-700">
+                        عالم التحديات والألغاز والمرح! 🌟
+                      </p>
+                      <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-bold">
+                        تعلم باللعب والمغامرة! اقتحم واحة الكنز وفك الأقفال الثلاثة 🗝️، ونافس في تحدي السرعة الخاطف ⚡، وألغاز المطابقة والترتيب 🧩 بأسلوب شيق لا يُنسى!
+                      </p>
+                    </div>
+
+                    {/* Kid-friendly feature pills */}
+                    <div className="grid grid-cols-2 gap-2 pt-1">
+                      <div className="flex items-center gap-2 p-2 rounded-xl bg-fuchsia-50/90 border border-fuchsia-200/80 text-fuchsia-900 text-xs font-black shadow-2xs">
+                        <span className="text-sm">🗝️</span>
+                        <span>مغامرة صائد الكنز 3D</span>
+                      </div>
+                      <div className="flex items-center gap-2 p-2 rounded-xl bg-purple-50/90 border border-purple-200/80 text-purple-900 text-xs font-black shadow-2xs">
+                        <span className="text-sm">⚡</span>
+                        <span>تحدي سرعة البديهة</span>
+                      </div>
+                      <div className="flex items-center gap-2 p-2 rounded-xl bg-indigo-50/90 border border-indigo-200/80 text-indigo-900 text-xs font-black shadow-2xs">
+                        <span className="text-sm">🧩</span>
+                        <span>ألغاز المطابقة والترتيب</span>
+                      </div>
+                      <div className="flex items-center gap-2 p-2 rounded-xl bg-pink-50/90 border border-pink-200/80 text-pink-900 text-xs font-black shadow-2xs">
+                        <span className="text-sm">💎</span>
+                        <span>جمع الجواهر والأوسمة</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 3D Chunky Action Button */}
+                  <div className="relative mt-8 pt-5 border-t border-fuchsia-200/80 w-full space-y-3">
+                    <div className="w-full py-4 px-6 rounded-2xl font-black text-base sm:text-lg text-white bg-gradient-to-r from-fuchsia-600 via-purple-600 to-pink-600 border-b-4 border-purple-800 active:border-b-0 active:translate-y-1 shadow-lg shadow-fuchsia-500/35 group-hover:shadow-fuchsia-500/55 group-hover:brightness-105 flex items-center justify-center gap-3 transition-all">
+                      <Gamepad2 className="w-5 h-5" />
+                      <span>ادخل ساحة الألعاب والمغامرة 🎮</span>
+                      <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1.5 transition-transform duration-300" />
+                    </div>
+
+                    <div className="flex items-center justify-between text-[11px] font-black text-fuchsia-800 px-2">
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-fuchsia-500 animate-pulse" />
+                        <span>بوابة الألعاب مفتوحة</span>
+                      </span>
+                      <span>4 ألعاب شيقة بانتظارك</span>
+                    </div>
+                  </div>
+                </button>
+              </div>
+
+              {/* Back Button with Modern Tactile Pill */}
+              <div className="flex justify-center pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    audioManager.playClick();
+                    handleBack();
+                  }}
+                  className="rounded-2xl border-2 border-slate-200/90 bg-white/95 text-slate-700 hover:bg-slate-100 hover:text-indigo-600 hover:border-indigo-300 h-12 px-6 font-black text-sm gap-2.5 shadow-sm hover:shadow-md transition-all hover:scale-105 active:scale-95"
+                >
+                  <ArrowRight className="w-4 h-4" />
+                  <span>{selection.trackType === "nafis" ? "العودة لاختيار المسار التعليمي" : "العودة لاختيار التخصص"}</span>
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Academic Context Status Pill */}
+          {currentContext && (
+            <div className="max-w-xl mx-auto mt-12 p-3.5 rounded-2xl bg-white/70 backdrop-blur-xl border border-slate-200/80 shadow-sm flex items-center justify-between gap-3 flex-wrap">
+              <div className="flex items-center gap-2.5">
+                <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
+                <span className="text-xs font-black text-slate-700">
+                  {getSelectionDisplayText(currentContext)}
+                </span>
+              </div>
+              <span className="text-[11px] font-bold text-slate-400">
+                المتوسطة 82 • أ/ هيفا السلمي
+              </span>
+            </div>
+          )}
         </main>
       </div>
     </PremiumBackground>

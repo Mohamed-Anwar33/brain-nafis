@@ -49,6 +49,8 @@ import {
 } from "lucide-react";
 import { QuestionForm } from "@/components/admin/QuestionForm";
 import { CSVImport } from "@/components/admin/CSVImport";
+import { useAcademicCatalog } from "@/hooks/use-academic-catalog";
+import { Tag, Sparkles } from "lucide-react";
 
 interface Question {
   id: string;
@@ -57,6 +59,10 @@ interface Question {
   created_at: string;
   image_url?: string;
   stage_number?: number;
+  grade_subject_id?: string | null;
+  domain_id?: string | null;
+  wrong_reason?: string | null;
+  explanation_url?: string | null;
 }
 
 interface StageTitle {
@@ -74,10 +80,16 @@ interface Choice {
 }
 
 export default function NafisQuestions() {
+  const { data: catalog } = useAcademicCatalog();
+  const domains = catalog?.domains || [];
+
   const [questions, setQuestions] = useState<Question[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<"all" | "active" | "inactive">("all");
+  const [filterDomain, setFilterDomain] = useState<string>("all");
+  const [bulkDomainId, setBulkDomainId] = useState<string>("");
+  const [isBulkUpdating, setIsBulkUpdating] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [pageSize, setPageSize] = useState(25);
   const [currentPage, setCurrentPage] = useState(0);
@@ -139,6 +151,12 @@ export default function NafisQuestions() {
         query = query.eq("active", false);
       }
 
+      if (filterDomain === "unassigned") {
+        query = query.is("domain_id", null);
+      } else if (filterDomain !== "all") {
+        query = query.eq("domain_id", filterDomain);
+      }
+
       if (activeStage !== null) {
         query = query.eq("stage_number", activeStage);
       }
@@ -155,7 +173,7 @@ export default function NafisQuestions() {
     } finally {
       setIsLoading(false);
     }
-  }, [currentPage, pageSize, searchQuery, filterStatus, sortOrder, activeStage]);
+  }, [currentPage, pageSize, searchQuery, filterStatus, filterDomain, sortOrder, activeStage]);
 
   const fetchStageMeta = useCallback(async () => {
     try {
@@ -193,7 +211,96 @@ export default function NafisQuestions() {
 
   useEffect(() => {
     setCurrentPage(0);
-  }, [searchQuery, filterStatus, pageSize, sortOrder, activeStage]);
+  }, [searchQuery, filterStatus, filterDomain, pageSize, sortOrder, activeStage]);
+
+  const handleBulkAssignDomain = async () => {
+    if (selectedIds.size === 0 || !bulkDomainId) return;
+    setIsBulkUpdating(true);
+    try {
+      const targetDomain = bulkDomainId === "none" ? null : bulkDomainId;
+      const { error } = await supabase
+        .from("questions")
+        .update({ domain_id: targetDomain })
+        .in("id", Array.from(selectedIds));
+
+      if (error) throw error;
+      toast.success(`تم تعيين التخصص لـ ${selectedIds.size} سؤال بنجاح`);
+      setSelectedIds(new Set());
+      setBulkDomainId("");
+      fetchQuestions();
+    } catch (err) {
+      console.error("Error updating domains:", err);
+      toast.error("فشل تعيين التخصص للأسئلة المحددة");
+    } finally {
+      setIsBulkUpdating(false);
+    }
+  };
+
+  const handleInlineDomainChange = async (questionId: string, domainId: string) => {
+    try {
+      const targetDomain = domainId === "none" ? null : domainId;
+      const { error } = await supabase
+        .from("questions")
+        .update({ domain_id: targetDomain })
+        .eq("id", questionId);
+
+      if (error) throw error;
+      toast.success("تم تحديث تخصص السؤال");
+      setQuestions(prev => prev.map(q => q.id === questionId ? { ...q, domain_id: targetDomain } : q));
+    } catch (err) {
+      console.error(err);
+      toast.error("فشل تحديث التخصص");
+    }
+  };
+
+  const getDomainBadge = (domainId?: string | null) => {
+    if (!domainId) {
+      return (
+        <Badge variant="outline" className="text-amber-700 bg-amber-50 border-amber-200 text-[11px] font-bold">
+          غير مصنف
+        </Badge>
+      );
+    }
+    const d = domains.find(item => item.id === domainId);
+    if (!d) {
+      return (
+        <Badge variant="outline" className="text-slate-500 bg-slate-50 border-slate-200 text-[11px] font-bold">
+          غير معروف
+        </Badge>
+      );
+    }
+    const name = d.name.toLowerCase();
+    const slug = (d.slug || "").toLowerCase();
+    let badgeStyle = "bg-indigo-50 text-indigo-700 border-indigo-200";
+    let icon = "🎯";
+
+    if (slug.includes("chem") || name.includes("كيمياء")) {
+      badgeStyle = "bg-purple-50 text-purple-700 border-purple-200";
+      icon = "🧪";
+    } else if (slug.includes("phys") || name.includes("فيزياء")) {
+      badgeStyle = "bg-blue-50 text-blue-700 border-blue-200";
+      icon = "⚛️";
+    } else if (slug.includes("bio") || name.includes("أحياء") || name.includes("احياء")) {
+      badgeStyle = "bg-emerald-50 text-emerald-700 border-emerald-200";
+      icon = "🧬";
+    } else if (slug.includes("elec") || name.includes("كهرباء")) {
+      badgeStyle = "bg-amber-50 text-amber-700 border-amber-200";
+      icon = "⚡";
+    } else if (slug.includes("earth") || slug.includes("space") || name.includes("أرض") || name.includes("ارض")) {
+      badgeStyle = "bg-cyan-50 text-cyan-700 border-cyan-200";
+      icon = "🌍";
+    } else if (slug.includes("nature") || name.includes("طبيعة") || name.includes("طبيعه")) {
+      badgeStyle = "bg-rose-50 text-rose-700 border-rose-200";
+      icon = "🧭";
+    }
+
+    return (
+      <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold border ${badgeStyle}`}>
+        <span>{icon}</span>
+        <span>{d.name}</span>
+      </span>
+    );
+  };
 
   const stageNumbers = Array.from(new Set([
     ...stageTitles.map(st => st.stage_number),
@@ -452,6 +559,20 @@ export default function NafisQuestions() {
                   <SelectItem value="inactive">غير نشط</SelectItem>
                 </SelectContent>
               </Select>
+              <Select value={filterDomain} onValueChange={(v) => setFilterDomain(v)}>
+                <SelectTrigger className="w-44">
+                  <SelectValue placeholder="التخصص / المجال" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">جميع التخصصات</SelectItem>
+                  <SelectItem value="unassigned">⚠️ غير مصنف (جديد)</SelectItem>
+                  {domains.map((d) => (
+                    <SelectItem key={d.id} value={d.id}>
+                      {d.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <Select value={pageSize.toString()} onValueChange={(v) => setPageSize(parseInt(v))}>
                 <SelectTrigger className="w-28">
                   <SelectValue />
@@ -495,6 +616,57 @@ export default function NafisQuestions() {
               </Dialog>
             </div>
           </div>
+
+          {/* Bulk Domain Assignment Bar */}
+          {selectedIds.size > 0 && (
+            <div className="flex items-center gap-3 p-3.5 mt-4 rounded-2xl bg-gradient-to-r from-indigo-50 via-sky-50 to-emerald-50 border-2 border-indigo-300/80 shadow-md flex-wrap animate-in fade-in slide-in-from-top-2 duration-300 justify-between">
+              <div className="flex items-center gap-2.5">
+                <span className="flex h-2.5 w-2.5 relative">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-indigo-600" />
+                </span>
+                <span className="text-xs font-black text-indigo-950 bg-white px-3 py-1.5 rounded-xl border border-indigo-200 shadow-2xs">
+                  تم تحديد {selectedIds.size} سؤال
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSelectedIds(new Set())}
+                  className="h-8 px-2.5 text-xs font-bold text-slate-500 hover:text-rose-600 hover:bg-rose-50"
+                >
+                  إلغاء التحديد
+                </Button>
+              </div>
+
+              <div className="flex items-center gap-2 flex-wrap">
+                <Select value={bulkDomainId} onValueChange={setBulkDomainId}>
+                  <SelectTrigger className="w-56 bg-white h-9 text-xs font-black border-indigo-200 shadow-2xs">
+                    <SelectValue placeholder="اختر التخصص لتعيينه..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none" className="font-bold text-slate-600">
+                      ⚪ بدون تخصص (إلغاء التصنيف)
+                    </SelectItem>
+                    {domains.map((d) => (
+                      <SelectItem key={d.id} value={d.id} className="font-bold">
+                        🎯 {d.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Button
+                  size="sm"
+                  disabled={!bulkDomainId || isBulkUpdating}
+                  onClick={handleBulkAssignDomain}
+                  className="gap-1.5 h-9 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white text-xs font-black shadow-md shadow-indigo-600/25 transition-all"
+                >
+                  {isBulkUpdating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Tag className="w-3.5 h-3.5" />}
+                  <span>تعيين التخصص دفعة واحدة ✨</span>
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -523,6 +695,7 @@ export default function NafisQuestions() {
                       />
                     </TableHead>
                     <TableHead>السؤال</TableHead>
+                    <TableHead className="w-36">المجال / التخصص</TableHead>
                     <TableHead className="w-24">المرحلة</TableHead>
                     <TableHead className="w-24">الحالة</TableHead>
                     <TableHead className="w-32">الإجراءات</TableHead>
@@ -539,6 +712,26 @@ export default function NafisQuestions() {
                       </TableCell>
                       <TableCell className="max-w-md">
                         <p className="line-clamp-2">{question.text}</p>
+                      </TableCell>
+                      <TableCell>
+                        <Select
+                          value={question.domain_id || "none"}
+                          onValueChange={(val) => handleInlineDomainChange(question.id, val)}
+                        >
+                          <SelectTrigger className="h-8 border-transparent hover:border-slate-200 bg-transparent hover:bg-white text-xs p-1 gap-1">
+                            <SelectValue>
+                              {getDomainBadge(question.domain_id)}
+                            </SelectValue>
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">بدون تخصص (غير مصنف)</SelectItem>
+                            {domains.map((d) => (
+                              <SelectItem key={d.id} value={d.id}>
+                                {d.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline" className="whitespace-nowrap">

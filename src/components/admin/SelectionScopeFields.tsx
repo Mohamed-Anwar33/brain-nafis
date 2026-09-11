@@ -15,6 +15,7 @@ interface SelectionScopeFieldsProps {
   onChange: (next: SelectionScopeValue) => void;
   trackMode?: "editable" | "nafis" | "central";
   requireDomainForCentral?: boolean;
+  showDomain?: boolean;
 }
 
 export function SelectionScopeFields({
@@ -22,6 +23,7 @@ export function SelectionScopeFields({
   onChange,
   trackMode = "editable",
   requireDomainForCentral = true,
+  showDomain = false,
 }: SelectionScopeFieldsProps) {
   const { data: catalog, isLoading } = useAcademicCatalog();
 
@@ -199,7 +201,7 @@ export function SelectionScopeFields({
               <SelectValue placeholder="اختر المسار" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="nafis">منصة SCIRISE (نافس)</SelectItem>
+              <SelectItem value="nafis">براين ساينس (نافس)</SelectItem>
               <SelectItem value="central">الاختبار المركزي</SelectItem>
             </SelectContent>
           </Select>
@@ -252,9 +254,9 @@ export function SelectionScopeFields({
         </Select>
       </div>
 
-      {resolvedTrackType === "central" && requireDomainForCentral && (
+      {(showDomain || (resolvedTrackType === "central" && requireDomainForCentral)) && (
         <div className="space-y-2">
-          <Label>المجال</Label>
+          <Label>المجال / التخصص</Label>
           <Select
             key={`domain-${effectiveGsId || "none"}-${effectiveDomainId || "none"}`}
             disabled={isLoading || (!effectiveGsId && !effectiveDomainId)}
@@ -262,7 +264,7 @@ export function SelectionScopeFields({
             onValueChange={handleDomainChange}
           >
             <SelectTrigger>
-              <SelectValue placeholder="اختر المجال">
+              <SelectValue placeholder="اختر المجال / التخصص">
                 {selectedDomain?.name}
               </SelectValue>
             </SelectTrigger>

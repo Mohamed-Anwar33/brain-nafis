@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { Trash2, Plus, Upload, X, Loader2 } from "lucide-react";
+import { Trash2, Plus, Upload, X, Loader2, Image as ImageIcon, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -24,14 +24,16 @@ import { useAcademicCatalog } from "@/hooks/use-academic-catalog";
 interface Props {
   question: CentralExamQuestion | null;
   onComplete: () => void;
+  defaultDomainId?: string;
 }
 
-export function CentralExamQuestionForm({ question, onComplete }: Props) {
+export function CentralExamQuestionForm({ question, onComplete, defaultDomainId }: Props) {
   const { data: catalog } = useAcademicCatalog();
   const [text, setText] = useState(question?.text || "");
   const [imageUrl, setImageUrl] = useState(question?.image_url || "");
   const [active, setActive] = useState(question?.active ?? true);
   const [orderIndex, setOrderIndex] = useState(question?.order_index || 0);
+  const [stageNumber, setStageNumber] = useState<number>(question?.stage_number || 1);
   const [wrongReason, setWrongReason] = useState(question?.wrong_reason || "");
   const [explanationUrl, setExplanationUrl] = useState(question?.explanation_url || "");
   const [scope, setScope] = useState<SelectionScopeValue>(() => ({
@@ -39,12 +41,13 @@ export function CentralExamQuestionForm({ question, onComplete }: Props) {
     gradeId: "",
     subjectId: "",
     gradeSubjectId: question?.grade_subject_id || "",
-    domainId: question?.domain_id || "",
+    domainId: question?.domain_id || (defaultDomainId && defaultDomainId !== "all" ? defaultDomainId : "") || "",
   }));
   
   const [choices, setChoices] = useState<Partial<CentralExamChoice>[]>([]);
   const [loading, setLoading] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [uploadingChoiceIdx, setUploadingChoiceIdx] = useState<number | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(question?.image_url || null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -53,10 +56,10 @@ export function CentralExamQuestionForm({ question, onComplete }: Props) {
       setChoices(question.choices);
     } else {
       setChoices([
-        { text: "", is_correct: true },
-        { text: "", is_correct: false },
-        { text: "", is_correct: false },
-        { text: "", is_correct: false },
+        { text: "", is_correct: true, image_url: null },
+        { text: "", is_correct: false, image_url: null },
+        { text: "", is_correct: false, image_url: null },
+        { text: "", is_correct: false, image_url: null },
       ]);
     }
     setText(question?.text || "");
@@ -64,6 +67,7 @@ export function CentralExamQuestionForm({ question, onComplete }: Props) {
     setImagePreview(question?.image_url || null);
     setActive(question?.active ?? true);
     setOrderIndex(question?.order_index || 0);
+    setStageNumber(question?.stage_number || 1);
     setWrongReason(question?.wrong_reason || "");
     setExplanationUrl(question?.explanation_url || "");
 
@@ -91,11 +95,11 @@ export function CentralExamQuestionForm({ question, onComplete }: Props) {
     setScope((prev) => ({
       trackType: "central",
       gradeSubjectId: targetGsId || prev.gradeSubjectId,
-      domainId: prev.domainId || derivedDomainId,
+      domainId: prev.domainId || derivedDomainId || (defaultDomainId && defaultDomainId !== "all" ? defaultDomainId : "") || "",
       gradeId: derivedGradeId || prev.gradeId,
       subjectId: derivedSubjectId || prev.subjectId,
     }));
-  }, [question, catalog]);
+  }, [question, catalog, defaultDomainId]);
 
   const addChoice = () => {
     setChoices([...choices, { text: "", is_correct: false }]);
@@ -174,6 +178,29 @@ export function CentralExamQuestionForm({ question, onComplete }: Props) {
     setUploadingImage(false);
   };
 
+  const handleChoiceImageUpload = async (idx: number, file: File) => {
+    if (!file.type.startsWith('image/')) {
+      toast.error('يجب اختيار ملف صورة');
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('حجم الصورة يجب أن يكون أقل من 2 ميجابايت');
+      return;
+    }
+
+    setUploadingChoiceIdx(idx);
+    try {
+      const url = await uploadImage(file);
+      if (url) {
+        updateChoice(idx, "image_url", url);
+        toast.success('تم رفع صورة الخيار بنجاح');
+      }
+    } finally {
+      setUploadingChoiceIdx(null);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!text.trim()) {
@@ -181,7 +208,7 @@ export function CentralExamQuestionForm({ question, onComplete }: Props) {
       return;
     }
     
-    const validChoices = choices.filter(c => c.text?.trim());
+    const validChoices = choices.filter(c => c.text?.trim() || c.image_url);
     if (validChoices.length < 2) {
       toast.error("يرجى إدخال خيارين على الأقل");
       return;
@@ -206,6 +233,7 @@ export function CentralExamQuestionForm({ question, onComplete }: Props) {
           image_url: imageUrl || null,
           active,
           order_index: orderIndex,
+          stage_number: stageNumber,
           track_type: "central",
           grade_subject_id: scope.gradeSubjectId,
           domain_id: scope.domainId,
@@ -219,6 +247,7 @@ export function CentralExamQuestionForm({ question, onComplete }: Props) {
           image_url: imageUrl || null,
           active,
           order_index: orderIndex,
+          stage_number: stageNumber,
           track_type: "central",
           grade_subject_id: scope.gradeSubjectId,
           domain_id: scope.domainId,
@@ -266,8 +295,8 @@ export function CentralExamQuestionForm({ question, onComplete }: Props) {
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="space-y-2 sm:col-span-1">
             <Label>صورة السؤال (اختياري)</Label>
             <div className="flex gap-2">
               <input
@@ -282,7 +311,7 @@ export function CentralExamQuestionForm({ question, onComplete }: Props) {
                 variant="outline"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploadingImage}
-                className="flex-1"
+                className="flex-1 text-xs"
               >
                 {uploadingImage ? (
                   <Loader2 className="w-4 h-4 ml-1 animate-spin" />
@@ -292,7 +321,7 @@ export function CentralExamQuestionForm({ question, onComplete }: Props) {
                 {imagePreview || imageUrl ? 'تغيير الصورة' : 'رفع صورة'}
               </Button>
               {(imagePreview || imageUrl) && (
-                <div className="relative w-10 h-10">
+                <div className="relative w-10 h-10 shrink-0">
                   <img
                     src={imagePreview || imageUrl || ''}
                     alt="Preview"
@@ -312,7 +341,19 @@ export function CentralExamQuestionForm({ question, onComplete }: Props) {
               )}
             </div>
           </div>
-          <div className="space-y-2">
+
+          <div className="space-y-2 sm:col-span-1">
+            <Label>رقم المرحلة</Label>
+            <Input 
+              type="number"
+              min={1}
+              max={10}
+              value={stageNumber} 
+              onChange={(e) => setStageNumber(parseInt(e.target.value) || 1)} 
+            />
+          </div>
+
+          <div className="space-y-2 sm:col-span-1">
             <Label>ترتيب الظهور (اختياري)</Label>
             <Input 
               type="number"
@@ -324,24 +365,38 @@ export function CentralExamQuestionForm({ question, onComplete }: Props) {
       </div>
 
       <div className="space-y-2">
-        <Label>سبب الخطأ</Label>
+        <Label>سبب الخطأ / التفسير العلمي</Label>
         <Textarea
           value={wrongReason}
           onChange={(e) => setWrongReason(e.target.value)}
-          placeholder="اكتب التفسير الذي سيظهر للطالب عند الإجابة الخاطئة"
-          className="min-h-[90px] resize-y"
+          placeholder="اكتب التفسير أو التوضيح الذي سيظهر للطالب عند الإجابة الخاطئة"
+          className="min-h-[85px] resize-y"
         />
       </div>
 
       <div className="space-y-2">
         <Label>رابط شرح السؤال (المنصة التعليمية / يوتيوب / فيديو)</Label>
-        <Input
-          value={explanationUrl}
-          onChange={(e) => setExplanationUrl(e.target.value)}
-          placeholder="https://www.youtube.com/watch?v=... أو رابط المنصة التعليمية أو مقطع فيديو"
-          dir="ltr"
-          className="text-left font-mono text-sm"
-        />
+        <div className="flex gap-2">
+          <Input
+            value={explanationUrl}
+            onChange={(e) => setExplanationUrl(e.target.value)}
+            placeholder="https://www.youtube.com/watch?v=... أو رابط المنصة التعليمية أو مقطع فيديو"
+            dir="ltr"
+            className="text-left font-mono text-sm flex-1"
+          />
+          {explanationUrl && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => window.open(explanationUrl, "_blank")}
+              className="gap-1.5 text-xs font-bold text-indigo-600 hover:text-indigo-700 shrink-0 h-10 px-3 border-indigo-200"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              <span>اختبار الرابط</span>
+            </Button>
+          )}
+        </div>
         <p className="text-xs text-muted-foreground">
           يظهر للطالب عند الإجابة الخاطئة لمشاهدة فيديو أو درس الشرح مباشرة
         </p>
@@ -357,25 +412,69 @@ export function CentralExamQuestionForm({ question, onComplete }: Props) {
 
         <div className="space-y-3">
           {choices.map((choice, idx) => (
-            <div key={idx} className={`flex items-start gap-3 p-3 rounded-lg border ${choice.is_correct ? 'border-green-500 bg-green-50' : 'border-slate-200 bg-slate-50'}`}>
-              <div className="pt-2">
-                <Switch 
-                  checked={choice.is_correct} 
-                  onCheckedChange={(v) => updateChoice(idx, "is_correct", v)} 
-                  className="data-[state=checked]:bg-green-500"
-                />
+            <div key={idx} className={`flex flex-col gap-2 p-3 rounded-xl border ${choice.is_correct ? 'border-green-500 bg-green-50/70' : 'border-slate-200 bg-slate-50'}`}>
+              <div className="flex items-center gap-3">
+                <div className="pt-1">
+                  <Switch 
+                    checked={choice.is_correct} 
+                    onCheckedChange={(v) => updateChoice(idx, "is_correct", v)} 
+                    className="data-[state=checked]:bg-green-500"
+                  />
+                </div>
+                <div className="flex-1">
+                  <Input 
+                    value={choice.text || ""} 
+                    onChange={(e) => updateChoice(idx, "text", e.target.value)} 
+                    placeholder={`الخيار ${idx + 1}`}
+                    className={choice.is_correct ? 'border-green-300 focus-visible:ring-green-500' : ''}
+                  />
+                </div>
+                <Button type="button" variant="ghost" size="icon" onClick={() => removeChoice(idx)} className="text-red-500 shrink-0">
+                  <Trash2 className="w-4 h-4" />
+                </Button>
               </div>
-              <div className="flex-1 space-y-2">
-                <Input 
-                  value={choice.text || ""} 
-                  onChange={(e) => updateChoice(idx, "text", e.target.value)} 
-                  placeholder={`الخيار ${idx + 1}`}
-                  className={choice.is_correct ? 'border-green-300 focus-visible:ring-green-500' : ''}
+
+              {/* Choice Image Attachment */}
+              <div className="flex items-center gap-2 pr-12">
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  id={`choice-img-${idx}`}
+                  onChange={(e) => {
+                    if (e.target.files?.[0]) handleChoiceImageUpload(idx, e.target.files[0]);
+                  }}
                 />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => document.getElementById(`choice-img-${idx}`)?.click()}
+                  disabled={uploadingChoiceIdx === idx}
+                  className="text-slate-600 hover:text-slate-900 h-7 text-xs gap-1.5 border-dashed border-slate-300 bg-white"
+                >
+                  {uploadingChoiceIdx === idx ? (
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                  ) : (
+                    <ImageIcon className="w-3 h-3 text-indigo-600" />
+                  )}
+                  <span>{choice.image_url ? "تغيير صورة الخيار" : "صورة للخيار (اختياري)"}</span>
+                </Button>
+
+                {choice.image_url && (
+                  <div className="relative w-8 h-8 rounded border overflow-hidden bg-white shadow-2xs">
+                    <img src={choice.image_url} alt="Choice preview" className="w-full h-full object-contain" />
+                    <button
+                      type="button"
+                      onClick={() => updateChoice(idx, "image_url", null as any)}
+                      className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-red-500 text-white rounded-full flex items-center justify-center text-[9px] hover:bg-red-600"
+                      title="حذف صورة الخيار"
+                    >
+                      ×
+                    </button>
+                  </div>
+                )}
               </div>
-              <Button type="button" variant="ghost" size="icon" onClick={() => removeChoice(idx)} className="text-red-500 shrink-0">
-                <Trash2 className="w-4 h-4" />
-              </Button>
             </div>
           ))}
         </div>

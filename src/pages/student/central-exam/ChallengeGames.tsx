@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,11 +11,15 @@ import {
   Timer,
   Trophy,
   Zap,
+  Compass,
 } from "lucide-react";
 import {
   getSelectionDisplayText,
   getStoredSelectionContext,
+  ensureStoredSelectionContext,
 } from "@/lib/selection-context";
+import { SelectionContext } from "@/types/selection";
+import { StudentPortalHub } from "@/components/student/StudentPortalHub";
 
 interface GameCard {
   id: string;
@@ -72,21 +76,29 @@ const games: GameCard[] = [
     path: "/games/speed",
     dotClass: "bg-amber-500",
   },
+  {
+    id: "treasure",
+    title: "مغامرة الكنز 🗝️",
+    description: "فك شفرات وأقفال البوابة الحجرية الثلاثة للوصول إلى غرفة الكنز.",
+    features: ["بيئة استكشافية", "3 تحديات موثقة", "شهادة مستكشف العلوم"],
+    icon: <Compass className="h-10 w-10" />,
+    gradient: "from-amber-600 to-yellow-600",
+    shadow: "shadow-amber-600/30",
+    path: "/games/treasure/active",
+    dotClass: "bg-amber-600",
+  },
 ];
 
 export default function ChallengeGames() {
   const navigate = useNavigate();
-  const selectionContext = useMemo(() => getStoredSelectionContext(), []);
+  const [selectionContext, setSelectionContext] = useState<SelectionContext | null>(() => {
+    return getStoredSelectionContext() || ensureStoredSelectionContext("central");
+  });
 
   useEffect(() => {
-    if (!selectionContext || selectionContext.trackType !== "central") {
-      navigate("/student/dashboard", { replace: true });
-    }
-  }, [navigate, selectionContext]);
-
-  if (!selectionContext || selectionContext.trackType !== "central") {
-    return null;
-  }
+    const active = ensureStoredSelectionContext("central");
+    setSelectionContext(active);
+  }, []);
 
   return (
     <div className="min-h-screen bg-slate-50" dir="rtl">
@@ -156,7 +168,12 @@ export default function ChallengeGames() {
           </div>
         </div>
 
-        <div className="mx-auto grid max-w-6xl grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {/* Excellence & Motivation Hub (Leaderboard, Achievements, Progress, Certificates) */}
+        <div className="mx-auto mb-10 max-w-7xl">
+          <StudentPortalHub className="mt-0 pt-0 border-t-0" />
+        </div>
+
+        <div className="mx-auto grid max-w-7xl grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
           {games.map((game, idx) => (
             <div
               key={game.id}

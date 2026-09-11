@@ -11,6 +11,7 @@ import { CertificateModal } from "@/components/exam/CertificateModal";
 import {
     getSelectionDisplayText,
     getStoredSelectionContext,
+    ensureStoredSelectionContext,
 } from "@/lib/selection-context";
 import {
     applySelectionFilters,
@@ -38,7 +39,7 @@ interface RawQuestion {
 
 interface Question {
     id: string;
-    source_id: string;
+    source_id?: string;
     left_text: string;
     right_text: string;
     left_image_url?: string;
@@ -53,7 +54,10 @@ interface GameState {
 
 export default function MatchingGame() {
     const navigate = useNavigate();
-    const selectionContext = useMemo(() => getStoredSelectionContext(), []);
+    const selectionContext = useMemo(
+        () => getStoredSelectionContext() || ensureStoredSelectionContext("nafis"),
+        []
+    );
     const [loading, setLoading] = useState(true);
     const [questions, setQuestions] = useState<Question[]>([]);
     const [leftItems, setLeftItems] = useState<{ id: string; text: string; imageUrl?: string; matched: boolean }[]>([]);
@@ -77,11 +81,6 @@ export default function MatchingGame() {
     const [showCertificateModal, setShowCertificateModal] = useState(false);
 
     useEffect(() => {
-        if (!selectionContext) {
-            navigate("/student/dashboard", { replace: true });
-            return;
-        }
-
         const fetchStudentName = async () => {
             try {
                 const { data: { user } } = await supabase.auth.getUser();
@@ -108,11 +107,6 @@ export default function MatchingGame() {
     const fetchQuestions = async () => {
         setLoading(true);
         try {
-            if (!selectionContext) {
-                navigate("/student/dashboard");
-                return;
-            }
-
             const { data: { session } } = await supabase.auth.getSession();
             if (!session) {
                 toast.error("يجب تسجيل الدخول أولاً");
@@ -123,7 +117,7 @@ export default function MatchingGame() {
             // Get Config
             const limit = 10;
 
-            const { data: allQuestions, error } = await applySelectionFilters(
+            let { data: allQuestions, error } = await applySelectionFilters(
                 supabase
                     .from("matching_game_questions")
                     .select("*")
@@ -131,8 +125,32 @@ export default function MatchingGame() {
                 selectionContext,
             );
 
-            if (error || !allQuestions || allQuestions.length === 0) {
-                toast.error("لا توجد أسئلة متاحة");
+            // Fallback 1: Query by grade_subject_id regardless of track_type
+            if (!allQuestions || allQuestions.length === 0) {
+                const retry = await supabase
+                    .from("matching_game_questions")
+                    .select("*")
+                    .eq("is_active", true)
+                    .eq("grade_subject_id", selectionContext.gradeSubjectId);
+                if (retry.data && retry.data.length > 0) {
+                    allQuestions = retry.data;
+                }
+            }
+
+            // Fallback 2: Any active matching questions in the entire system
+            if (!allQuestions || allQuestions.length === 0) {
+                const anyRes = await supabase
+                    .from("matching_game_questions")
+                    .select("*")
+                    .eq("is_active", true)
+                    .limit(15);
+                if (anyRes.data && anyRes.data.length > 0) {
+                    allQuestions = anyRes.data;
+                }
+            }
+
+            if (!allQuestions || allQuestions.length === 0) {
+                toast.error("لا توجد أسئلة مطابقة متاحة حالياً");
                 setLoading(false);
                 return;
             }
@@ -428,7 +446,7 @@ export default function MatchingGame() {
                             score={gameState.correctAnswers}
                             totalQuestions={questions.length}
                             percentage={questions.length > 0 ? Math.round((gameState.correctAnswers / questions.length) * 100) : 100}
-                            examTitle="لعبة المطابقة العلمية - منصة SCIRISE"
+                            examTitle="لعبة المطابقة العلمية - منصة براين ساينس"
                         />
                     </Card>
                 ) : (

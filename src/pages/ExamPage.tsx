@@ -161,7 +161,8 @@ export default function ExamPage() {
           studentName = (attempt as any)?.student_name || "";
         }
 
-        const transformedQuestions: ExamQuestionType[] = filteredQuestions.map(
+        // Enforce strict maximum of 10 questions per stage
+        const transformedQuestions: ExamQuestionType[] = filteredQuestions.slice(0, 10).map(
           (question, index) => ({
             id: question.id,
             text: question.text,
@@ -379,7 +380,7 @@ export default function ExamPage() {
                 >
                   <img
                     src="/logo.jpg"
-                    alt="SCIRISE"
+                    alt="براين ساينس"
                     className="w-full h-auto max-h-40 sm:max-h-52 object-contain mx-auto mix-blend-multiply hover:scale-105 transition-transform duration-500"
                   />
                 </div>

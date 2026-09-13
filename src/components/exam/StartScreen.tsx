@@ -175,21 +175,7 @@ export function StartScreen({ onStart, isLoading }: StartScreenProps) {
               <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black text-slate-900 tracking-tight">
                 منصة <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-700 via-sky-600 to-blue-700">براين ساينس</span> للتفوق
               </h1>
-
-              <div className="flex items-center justify-center gap-2 text-xs sm:text-sm font-black tracking-widest text-[#1e3a8a]">
-                <span className="hover:text-indigo-600 transition-colors cursor-default">تعلمي</span>
-                <span className="text-amber-400 text-base">✦</span>
-                <span className="hover:text-indigo-600 transition-colors cursor-default">تدربي</span>
-                <span className="text-emerald-400 text-base">✦</span>
-                <span className="hover:text-indigo-600 transition-colors cursor-default">ارتقي</span>
-                <span className="text-slate-300 mx-1">|</span>
-                <span className="text-slate-500 font-bold tracking-wider">LEARN • PRACTICE • RISE</span>
-              </div>
             </div>
-
-            <p className="text-xs sm:text-sm font-bold text-slate-600 max-w-xl mx-auto leading-relaxed bg-white/80 backdrop-blur-md p-3.5 rounded-2xl border border-slate-200/80 shadow-xs">
-              منصة تعليمية تفاعلية مشوقة لتنمية المهارات العلمية ورفع نواتج التعلم والاستعداد للاختبارات الوطنية (نافس) والمركزية بأعلى ثقة وتفوق 🌟
-            </p>
           </div>
 
           {/* Student Access Card (3D Gamified Entrance) */}
@@ -207,9 +193,6 @@ export function StartScreen({ onStart, isLoading }: StartScreenProps) {
                 <h3 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
                   سجّل اسمك يا بطل وابدأ المغامرة! 🌟
                 </h3>
-                <p className="text-xs sm:text-sm text-slate-500 font-bold mt-1">
-                  اكتب اسمك الثلاثي لحفظ إنجازاتك، وجمع نقاط XP، والمنافسة على لوحة الشرف 📜
-                </p>
               </div>
             </div>
 
@@ -258,13 +241,13 @@ export function StartScreen({ onStart, isLoading }: StartScreenProps) {
                   <span className="text-base">🎮</span>
                   <span>4 ألعاب ومغامرة الكنز</span>
                 </div>
-                <div className="flex items-center gap-2 p-2.5 rounded-2xl bg-purple-50/90 border border-purple-200/90 text-xs font-black text-purple-900 shadow-2xs">
-                  <span className="text-base">🏆</span>
-                  <span>لوحة الشرف وتنافس حي</span>
-                </div>
                 <div className="flex items-center gap-2 p-2.5 rounded-2xl bg-emerald-50/90 border border-emerald-200/90 text-xs font-black text-emerald-900 shadow-2xs">
                   <span className="text-base">📜</span>
                   <span>شهادات تكريم فورية</span>
+                </div>
+                <div className="flex items-center gap-2 p-2.5 rounded-2xl bg-purple-50/90 border border-purple-200/90 text-xs font-black text-purple-900 shadow-2xs">
+                  <span className="text-base">🏆</span>
+                  <span>لوحة الشرف وتنافس حي</span>
                 </div>
               </div>
 

@@ -394,7 +394,7 @@ export default function CentralExamPlay() {
 
           <p className="text-slate-600 text-base sm:text-lg leading-relaxed mb-8 font-medium">
             قسم <span className="font-black text-indigo-600">({domainName})</span> قيد التجهيز ولم يتم إدخال أسئلة له بعد من قِبل المعلمة. يمكنك التوجه للأقسام المتاحة التي تحتوي على أسئلة جاهزة: <br />
-            <span className="inline-block mt-2 font-black text-emerald-600">الكيمياء • الفيزياء • الكهرباء • الأحياء • علوم الأرض والفضاء • طبيعة العلم</span>
+            <span className="inline-block mt-2 font-black text-emerald-600">الكيمياء • الفيزياء • الكهرباء والمغناطيسية • الأحياء • علوم الأرض والفضاء • طبيعة العلم</span>
           </p>
 
           <div className="space-y-3">

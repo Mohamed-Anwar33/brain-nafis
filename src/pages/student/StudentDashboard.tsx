@@ -303,11 +303,64 @@ export default function StudentDashboard() {
     [domains, selection.gradeSubjectId],
   );
 
+  // Apply per-track name overrides and filtering
+  const displayDomains = useMemo(() => {
+    return availableDomains
+      .filter((domain) => {
+        // Remove "طبيعة العلم" from Nafis bank only
+        if (selection.trackType === "nafis") {
+          const s = (domain.slug || "").toLowerCase();
+          const n = domain.name || "";
+          if (
+            s.includes("nature") ||
+            n.includes("طبيعة العلم") ||
+            n.includes("طبيعه العلم") ||
+            n === "طبيعة العلم" ||
+            n === "طبيعه العلم"
+          ) {
+            return false;
+          }
+        }
+        return true;
+      })
+      .map((domain) => {
+        let name = domain.name;
+        const s = (domain.slug || "").toLowerCase();
+        // Rename "الكهرباء" → "الكهرباء والمغناطيسية" in both tracks (Nafis & Central)
+        if (
+          (name === "الكهرباء" ||
+            name === "كهرباء" ||
+            s.includes("elec") ||
+            name.includes("الكهرباء")) &&
+          !name.includes("المغناطيسية")
+        ) {
+          name = "الكهرباء والمغناطيسية";
+        }
+        // Rename "علم الارض والفضاء" → "علم الارض والفضاء والبيئة" in Nafis only
+        if (
+          selection.trackType === "nafis" &&
+          (name.includes("الأرض والفضاء") ||
+            name.includes("الارض والفضاء") ||
+            name.includes("أرض وفضاء") ||
+            name.includes("فضاء وأرض") ||
+            s.includes("earth") ||
+            s.includes("space")) &&
+          !name.includes("البيئة") &&
+          !name.includes("البيئه")
+        ) {
+          name = "علم الأرض والفضاء والبيئة";
+        }
+        return { ...domain, name };
+      });
+  }, [availableDomains, selection.trackType]);
+
   const selectedGrade = grades.find((grade) => grade.id === selection.gradeId);
   const selectedSubject = availableSubjects.find(
     (subject) => subject.id === selection.subjectId,
   );
-  const selectedDomain = availableDomains.find(
+  const selectedDomain = displayDomains.find(
+    (domain) => domain.id === selection.domainId,
+  ) || availableDomains.find(
     (domain) => domain.id === selection.domainId,
   );
 
@@ -884,117 +937,17 @@ export default function StudentDashboard() {
                 }
               `}} />
 
-              {/* Hero Banner Section with Floating Science Particles */}
-              <div className="relative text-center space-y-5 max-w-4xl mx-auto pt-2">
-                {/* Ambient Floating Science Elements (Desktop) */}
-                <div 
-                  className="hidden lg:flex absolute -top-2 -right-8 items-center gap-2 px-3 py-1.5 rounded-2xl bg-white/90 backdrop-blur-xl border border-emerald-200/80 shadow-lg shadow-emerald-500/10 text-emerald-700 pointer-events-none select-none z-10"
-                  style={{ animation: "floatSlow 5.5s ease-in-out infinite" }}
-                >
-                  <Atom className="w-4 h-4 text-emerald-600 animate-spin" style={{ animationDuration: "12s" }} />
-                  <span className="text-[11px] font-black">معايير نافس الوطنية</span>
-                </div>
-
-                <div 
-                  className="hidden lg:flex absolute -top-2 -left-8 items-center gap-2 px-3 py-1.5 rounded-2xl bg-white/90 backdrop-blur-xl border border-indigo-200/80 shadow-lg shadow-indigo-500/10 text-indigo-700 pointer-events-none select-none z-10"
-                  style={{ animation: "floatSlowReverse 6.5s ease-in-out infinite" }}
-                >
-                  <Rocket className="w-4 h-4 text-indigo-600" />
-                  <span className="text-[11px] font-black">تحديات علمية مقننة</span>
-                </div>
-
-                <div 
-                  className="hidden xl:flex absolute top-36 -right-16 items-center gap-2 px-3 py-1.5 rounded-2xl bg-white/90 backdrop-blur-xl border border-amber-200/80 shadow-lg shadow-amber-500/10 text-amber-700 pointer-events-none select-none z-10"
-                  style={{ animation: "floatSlowReverse 7s ease-in-out infinite" }}
-                >
-                  <Sparkles className="w-4 h-4 text-amber-500 animate-pulse" />
-                  <span className="text-[11px] font-black">ألعاب وتحديات 3D</span>
-                </div>
-
-                <div 
-                  className="hidden xl:flex absolute top-36 -left-16 items-center gap-2 px-3 py-1.5 rounded-2xl bg-white/90 backdrop-blur-xl border border-purple-200/80 shadow-lg shadow-purple-500/10 text-purple-700 pointer-events-none select-none z-10"
-                  style={{ animation: "floatSlow 6s ease-in-out infinite" }}
-                >
-                  <Trophy className="w-4 h-4 text-purple-600" />
-                  <span className="text-[11px] font-black">لوحة شرف وتنافس حي</span>
-                </div>
-
-                {/* Personalized Welcome Capsule */}
-                <div className="inline-flex items-center gap-2.5 px-4 sm:px-5 py-2 rounded-full bg-gradient-to-r from-indigo-50 via-sky-50 to-emerald-50 border border-indigo-200/90 shadow-sm text-xs sm:text-sm font-black text-slate-800">
-                  <span className="flex h-2.5 w-2.5 relative">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
-                  </span>
-                  <Sparkles className="w-4 h-4 text-amber-500 animate-pulse" />
-                  <span>{studentName ? `أهلاً بك يا بطل 🌟 ${studentName}` : "مرحباً بك في منصة براين ساينس"}</span>
-                  <span className="text-slate-300">|</span>
-                  <span className="text-indigo-600 font-extrabold">جاهز لاكتساح التحدي اليوم؟ 🚀</span>
-                </div>
-
-                {/* Logo Presentation with Glow Aura */}
-                <div className="relative inline-flex items-center justify-center my-1 group">
-                  <div className="absolute -inset-3 bg-gradient-to-r from-sky-400/30 via-indigo-500/30 to-emerald-400/30 rounded-3xl blur-2xl opacity-70 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
-                  <div className="relative p-3.5 sm:p-4 rounded-3xl bg-white/95 backdrop-blur-xl shadow-xl shadow-indigo-100/60 border border-white group-hover:scale-105 transition-transform duration-500">
-                    <img
-                      src="/logo.jpg"
-                      alt="براين ساينس"
-                      className="h-20 sm:h-24 w-auto object-contain mix-blend-multiply"
-                    />
+              {/* Compact Sleek Top Header so tracks appear right at the top */}
+              <div className="text-center space-y-2 max-w-2xl mx-auto pt-1 pb-2 animate-in fade-in slide-in-from-top-2 duration-500">
+                {studentName && (
+                  <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-indigo-50 border border-indigo-200/80 text-xs font-black text-indigo-900 shadow-2xs">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-500 animate-pulse" />
+                    <span>أهلاً بك يا بطل 🌟 {studentName}</span>
                   </div>
-                </div>
-
-                {/* Slogan */}
-                <div className="flex items-center justify-center gap-2 text-xs sm:text-sm font-black tracking-widest text-[#1e3a8a]">
-                  <span className="hover:text-indigo-600 transition-colors cursor-default">تعلمي</span>
-                  <span className="text-amber-400 text-base">✦</span>
-                  <span className="hover:text-indigo-600 transition-colors cursor-default">تدربي</span>
-                  <span className="text-emerald-400 text-base">✦</span>
-                  <span className="hover:text-indigo-600 transition-colors cursor-default">ارتقي</span>
-                  <span className="text-slate-300 mx-1">|</span>
-                  <span className="text-slate-500 font-bold tracking-wider">LEARN • PRACTICE • RISE</span>
-                </div>
-
-                {/* Main Heading */}
-                <h2 className="text-3xl sm:text-5xl lg:text-6xl font-black text-slate-900 tracking-tight">
+                )}
+                <h2 className="text-2xl sm:text-4xl font-black text-slate-900 tracking-tight">
                   اختر <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-700 via-sky-600 to-emerald-600">مسارك العلمي</span>
                 </h2>
-
-                <p className="text-sm sm:text-base font-bold text-slate-600 max-w-2xl mx-auto leading-relaxed bg-white/80 backdrop-blur-md p-3.5 rounded-2xl border border-slate-200/80 shadow-xs">
-                  بوابتك الذكية لتنمية المهارات العلمية وتثبيت المفاهيم والاستعداد للاختبارات الوطنية والمركزية بأعلى درجات الثقة والتميز
-                </p>
-
-                {/* 3-Capsule Interactive Highlights Bar */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-3xl mx-auto pt-2">
-                  <div className="flex items-center gap-3 p-3 rounded-2xl bg-white/80 backdrop-blur-xl border border-emerald-200/80 shadow-xs hover:shadow-md hover:bg-white hover:-translate-y-0.5 transition-all duration-300 group text-right">
-                    <div className="h-10 w-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 shadow-2xs group-hover:scale-110 group-hover:bg-emerald-600 group-hover:text-white transition-all">
-                      <Zap className="h-5 w-5" />
-                    </div>
-                    <div className="min-w-0">
-                      <h4 className="text-xs font-black text-slate-900 group-hover:text-emerald-700 transition-colors">تقييم فوري وتصحيح</h4>
-                      <p className="text-[11px] text-slate-500 font-bold truncate">شرح فوري وتغذية راجعة</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-3 p-3 rounded-2xl bg-white/80 backdrop-blur-xl border border-indigo-200/80 shadow-xs hover:shadow-md hover:bg-white hover:-translate-y-0.5 transition-all duration-300 group text-right">
-                    <div className="h-10 w-10 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center shrink-0 shadow-2xs group-hover:scale-110 group-hover:bg-indigo-600 group-hover:text-white transition-all">
-                      <Gamepad2 className="h-5 w-5" />
-                    </div>
-                    <div className="min-w-0">
-                      <h4 className="text-xs font-black text-slate-900 group-hover:text-indigo-700 transition-colors">ألعاب وتحديات 3D</h4>
-                      <p className="text-[11px] text-slate-500 font-bold truncate">صائد الكنز والسرعة الخارقة</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-3 p-3 rounded-2xl bg-white/80 backdrop-blur-xl border border-amber-200/80 shadow-xs hover:shadow-md hover:bg-white hover:-translate-y-0.5 transition-all duration-300 group text-right">
-                    <div className="h-10 w-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 shadow-2xs group-hover:scale-110 group-hover:bg-amber-600 group-hover:text-white transition-all">
-                      <Trophy className="h-5 w-5" />
-                    </div>
-                    <div className="min-w-0">
-                      <h4 className="text-xs font-black text-slate-900 group-hover:text-amber-700 transition-colors">لوحة الشرف والأوسمة</h4>
-                      <p className="text-[11px] text-slate-500 font-bold truncate">شهادات تقدير وتنافس حي</p>
-                    </div>
-                  </div>
-                </div>
               </div>
 
               {/* The Two Grand Masterpiece Track Cards */}
@@ -1113,7 +1066,7 @@ export default function StudentDashboard() {
                         الاختبار المركزي
                       </h3>
                       <p className="text-sm sm:text-base text-slate-600 leading-relaxed font-bold">
-                        تحديات علمية مقننة في مجالات دقيقة: الكيمياء، الفيزياء، الأحياء، علوم الأرض والفضاء، الكهرباء، وطبيعة العلم لقياس الفهم المعياري.
+                        تحديات علمية مقننة في مجالات دقيقة: الكيمياء، الفيزياء، الأحياء، علوم الأرض والفضاء، الكهرباء والمغناطيسية، وطبيعة العلم لقياس الفهم المعياري.
                       </p>
                     </div>
 
@@ -1129,7 +1082,7 @@ export default function StudentDashboard() {
                         🧬 أحياء
                       </span>
                       <span className="px-3 py-1.5 rounded-xl bg-amber-50 group-hover:bg-amber-100 text-amber-800 border border-amber-200 text-xs font-black transition-colors shadow-2xs">
-                        ⚡ كهرباء
+                       ⚡ كهرباء ومغناطيسية
                       </span>
                       <span className="px-3 py-1.5 rounded-xl bg-cyan-50 group-hover:bg-cyan-100 text-cyan-800 border border-cyan-200 text-xs font-black transition-colors shadow-2xs">
                         🌍 فضاء وأرض
@@ -1198,8 +1151,8 @@ export default function StudentDashboard() {
 
               {/* Expansive 3-Column Grid for Domains */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 max-w-6xl mx-auto">
-                {availableDomains.length > 0 ? (
-                  availableDomains.map((domain, idx) => {
+                {displayDomains.length > 0 ? (
+                  displayDomains.map((domain, idx) => {
                     const meta = getDomainMeta(domain.slug, domain.name);
                     const DomainIcon = meta.icon;
                     return (
@@ -1337,8 +1290,6 @@ export default function StudentDashboard() {
                       ? `المسار المركزي 🎯 • التخصص: ${selectedDomain.name}`
                       : "مسار بنك اختبارات نافس الوطني 🇸🇦"}
                   </span>
-                  <span className="text-slate-300">|</span>
-                  <span className="text-amber-700 font-extrabold">المرحلة 2: اختر بوابتك 🚀</span>
                 </div>
 
                 {/* Main 3D Title with Vibrancy */}
@@ -1349,22 +1300,6 @@ export default function StudentDashboard() {
                   <p className="text-sm sm:text-base font-bold text-slate-600 max-w-xl mx-auto leading-relaxed bg-white/85 backdrop-blur-md p-3.5 rounded-2xl border border-slate-200/90 shadow-xs">
                     يا بطلنا الذكي! 🌟 اختر طريقتك المفضلة اليوم: هل تفضل الاختبار السريع الخاطف ⚡ أم الانطلاق في ساحة الألعاب والمغامرات التفاعلية 🎮؟
                   </p>
-                </div>
-
-                {/* Kid-friendly Motivating Badges */}
-                <div className="flex items-center justify-center gap-2 sm:gap-3 flex-wrap pt-1">
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-amber-50 text-amber-800 border border-amber-200/90 text-xs font-black shadow-2xs">
-                    <Zap className="w-3.5 h-3.5 text-amber-600 fill-amber-500" />
-                    <span>نقاط XP مضاعفة</span>
-                  </span>
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-purple-50 text-purple-800 border border-purple-200/90 text-xs font-black shadow-2xs">
-                    <Trophy className="w-3.5 h-3.5 text-purple-600" />
-                    <span>أوسمة ولوحة شرف</span>
-                  </span>
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200/90 text-xs font-black shadow-2xs">
-                    <Award className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>شهادات تفوق فورية</span>
-                  </span>
                 </div>
               </div>
 
@@ -1398,16 +1333,6 @@ export default function StudentDashboard() {
                           <Zap className="h-9 w-9 sm:h-11 sm:w-11 fill-white group-hover:animate-bounce" />
                         </div>
                       </div>
-
-                      <div className="flex flex-col items-end gap-1.5">
-                        <span className="flex items-center gap-2 text-xs font-black text-amber-900 bg-amber-100 border border-amber-300/90 px-3.5 py-1.5 rounded-full shadow-2xs">
-                          <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
-                          <span>التحدي الخاطف ⚡</span>
-                        </span>
-                        <span className="text-[11px] font-black text-orange-700 bg-orange-100/90 border border-orange-200 px-3 py-1 rounded-full shadow-2xs">
-                          +100 XP ⭐ مكافأة بطل
-                        </span>
-                      </div>
                     </div>
 
                     {/* Title & Description */}
@@ -1419,34 +1344,6 @@ export default function StudentDashboard() {
                         <span className="text-xs font-black text-amber-700 bg-amber-100/80 px-2.5 py-0.5 rounded-lg border border-amber-200">
                           10 أسئلة ذكية
                         </span>
-                      </div>
-                      <p className="text-xs font-black text-amber-700">
-                        سباق الذكاء والسرعة الخارقة! ⏱️
-                      </p>
-                      <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-bold">
-                        {selection.trackType === "nafis"
-                          ? "اختر التخصص العلمي وانطلق في اختبار فوري مقنن (10 أسئلة). تصحيح فوري لكل إجابة، شروحات مبسّطة، وحصد نقاط ترفعك في لوحة الشرف!"
-                          : "أسئلة سريعة لقياس مستواك العلمي بدقة وحصد النقاط والمستويات مع تقرير أداء فوري وشهادة إنجاز."}
-                      </p>
-                    </div>
-
-                    {/* Kid-friendly feature pills */}
-                    <div className="grid grid-cols-2 gap-2 pt-1">
-                      <div className="flex items-center gap-2 p-2 rounded-xl bg-amber-50/90 border border-amber-200/80 text-amber-900 text-xs font-black shadow-2xs">
-                        <span className="text-sm">⏱️</span>
-                        <span>تصحيح وشرح فوري</span>
-                      </div>
-                      <div className="flex items-center gap-2 p-2 rounded-xl bg-orange-50/90 border border-orange-200/80 text-orange-900 text-xs font-black shadow-2xs">
-                        <span className="text-sm">📜</span>
-                        <span>شهادة إنجاز باسمك</span>
-                      </div>
-                      <div className="flex items-center gap-2 p-2 rounded-xl bg-yellow-50/90 border border-yellow-200/80 text-yellow-900 text-xs font-black shadow-2xs">
-                        <span className="text-sm">🏆</span>
-                        <span>ترتيب بلوحة الشرف</span>
-                      </div>
-                      <div className="flex items-center gap-2 p-2 rounded-xl bg-rose-50/90 border border-rose-200/80 text-rose-900 text-xs font-black shadow-2xs">
-                        <span className="text-sm">🎯</span>
-                        <span>10 أسئلة علمية منوعة</span>
                       </div>
                     </div>
                   </div>
@@ -1518,32 +1415,6 @@ export default function StudentDashboard() {
                         <span className="text-xs font-black text-fuchsia-700 bg-fuchsia-100/80 px-2.5 py-0.5 rounded-lg border border-fuchsia-200">
                           تلعيب ومغامرة
                         </span>
-                      </div>
-                      <p className="text-xs font-black text-fuchsia-700">
-                        عالم التحديات والألغاز والمرح! 🌟
-                      </p>
-                      <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-bold">
-                        تعلم باللعب والمغامرة! اقتحم واحة الكنز وفك الأقفال الثلاثة 🗝️، ونافس في تحدي السرعة الخاطف ⚡، وألغاز المطابقة والترتيب 🧩 بأسلوب شيق لا يُنسى!
-                      </p>
-                    </div>
-
-                    {/* Kid-friendly feature pills */}
-                    <div className="grid grid-cols-2 gap-2 pt-1">
-                      <div className="flex items-center gap-2 p-2 rounded-xl bg-fuchsia-50/90 border border-fuchsia-200/80 text-fuchsia-900 text-xs font-black shadow-2xs">
-                        <span className="text-sm">🗝️</span>
-                        <span>مغامرة صائد الكنز 3D</span>
-                      </div>
-                      <div className="flex items-center gap-2 p-2 rounded-xl bg-purple-50/90 border border-purple-200/80 text-purple-900 text-xs font-black shadow-2xs">
-                        <span className="text-sm">⚡</span>
-                        <span>تحدي سرعة البديهة</span>
-                      </div>
-                      <div className="flex items-center gap-2 p-2 rounded-xl bg-indigo-50/90 border border-indigo-200/80 text-indigo-900 text-xs font-black shadow-2xs">
-                        <span className="text-sm">🧩</span>
-                        <span>ألغاز المطابقة والترتيب</span>
-                      </div>
-                      <div className="flex items-center gap-2 p-2 rounded-xl bg-pink-50/90 border border-pink-200/80 text-pink-900 text-xs font-black shadow-2xs">
-                        <span className="text-sm">💎</span>
-                        <span>جمع الجواهر والأوسمة</span>
                       </div>
                     </div>
                   </div>

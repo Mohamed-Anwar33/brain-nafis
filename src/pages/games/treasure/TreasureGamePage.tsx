@@ -280,7 +280,7 @@ export default function TreasureGamePage() {
   };
 
   // Submit Challenge Answers Server-Side
-  const handleSubmitChallenge = async (answerPayload: Record<string, any>) => {
+  const handleSubmitChallenge = async (answerPayload: Record<string, any>): Promise<SubmitStepResponse | undefined> => {
     if (!sessionData || isSubmitting) return;
 
     const clientRequestId = crypto.randomUUID();
@@ -310,24 +310,15 @@ export default function TreasureGamePage() {
         });
       } else {
         if (!isMuted) audioManager.playWrong();
-        if (res.explanation) {
+        if (res.explanation && (res.explanation.wrong_reason || res.explanation.explanation_url)) {
           setWrongReason(res.explanation.wrong_reason || null);
           setExplanationUrl(res.explanation.explanation_url || null);
           setExplanationOpen(true);
         }
 
-        if (res.exhausted_attempts) {
-          toast.info("تم استنفاد المحاولات: الانتقال للقفل التالي دون نقاط.");
-          if (res.current_challenge_step > 3) {
-            handleFinalizeAttempt();
-          } else {
-            setCurrentChallengeStep(res.current_challenge_step);
-            setCurrentPhase(res.current_phase);
-          }
-        } else {
-          toast.error("إجابة غير صحيحة، حاول مجددًا!");
-        }
+        toast.error("إجابة غير صحيحة، راجع التلميح والشرح وحاول مجددًا!");
       }
+      return res;
     } catch (err: any) {
       const msg = err.message || "";
       console.warn("Challenge submission caught error:", msg);
@@ -357,6 +348,7 @@ export default function TreasureGamePage() {
       }
 
       toast.error(err.message || "فشل إرسال الإجابة");
+      throw err;
     } finally {
       setIsSubmitting(false);
     }

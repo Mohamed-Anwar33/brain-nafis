@@ -5,7 +5,7 @@ import { treasureHalalAudio } from "@/lib/treasureAudio";
 
 interface Challenge3HotspotProps {
   challenge: ClientChallengeItem;
-  onSubmitAnswer: (answerPayload: { x_percent: number; y_percent: number }) => Promise<void>;
+  onSubmitAnswer: (answerPayload: { x_percent: number; y_percent: number }) => Promise<any>;
   isSubmitting: boolean;
 }
 

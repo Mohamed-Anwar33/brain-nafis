@@ -22,7 +22,7 @@ import { CSS } from "@dnd-kit/utilities";
 
 interface Challenge2OrderingProps {
   challenge: ClientChallengeItem;
-  onSubmitAnswer: (answerPayload: { submitted_order: string[] }) => Promise<void>;
+  onSubmitAnswer: (answerPayload: { submitted_order: string[] }) => Promise<any>;
   isSubmitting: boolean;
 }
 

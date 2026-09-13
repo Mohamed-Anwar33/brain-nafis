@@ -21,7 +21,9 @@ export function getScopedPayload(context: SelectionContext) {
   return {
     track_type: context.trackType,
     grade_subject_id: context.gradeSubjectId,
-    domain_id: context.domainId || null,
+    // The domain_id column in attempts/game_attempts/history is strictly enforced for central track and restricted for nafis by DB triggers.
+    // The domain information for nafis is preserved fully in selection_snapshot.
+    domain_id: context.trackType === "central" ? context.domainId || null : null,
     selection_snapshot: buildSelectionSnapshot(context),
   };
 }
@@ -59,7 +61,7 @@ function withHistoryScope(
     .eq("track_type", context.trackType)
     .eq("grade_subject_id", context.gradeSubjectId);
 
-  if (context.domainId) {
+  if (context.trackType === "central" && context.domainId) {
     scopedQuery = scopedQuery.eq("domain_id", context.domainId);
   }
 

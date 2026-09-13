@@ -379,11 +379,7 @@ export default function StudentDashboard() {
   const handleBack = () => {
     if (step === 3) {
       setStep(2);
-      if (selection.trackType === "nafis") {
-        setSelection((curr) => ({ ...curr, domainId: "" }));
-      } else {
-        setExperienceType(null);
-      }
+      setExperienceType(null);
     } else if (step === 2) {
       setStep(1);
       setExperienceType(null);
@@ -405,32 +401,7 @@ export default function StudentDashboard() {
       )?.id ||
       "d5d10da4-4861-456d-a7a4-0b124e9a16d1";
 
-    if (selection.trackType === "nafis") {
-      if (type === "interactive-games") {
-        const context: SelectionContext = {
-          trackType: "nafis",
-          experienceType: "interactive-games",
-          gradeId: resolvedGrade?.id || "8db3f874-aa52-4893-8d04-4eb6ef74f0af",
-          gradeName: resolvedGrade?.name || "ثالث متوسط",
-          subjectId: resolvedSubject?.id || "a79e5e49-5a5e-4ccd-9ac8-c5e9c37c788b",
-          subjectName: resolvedSubject?.name || "علوم",
-          gradeSubjectId: resolvedGsId,
-          domainId: null,
-          domainName: null,
-        };
-        saveSelectionContext(context);
-        navigate("/student/games");
-        return;
-      }
-      if (type === "quick-quiz") {
-        // Move to step 3: Select Scientific Domain (folders)
-        setStep(3);
-        return;
-      }
-    }
-
-    // Central track or other
-    const context = buildSelectionContextExtended(selection.trackType, type) || {
+    const context: SelectionContext = {
       trackType: selection.trackType,
       experienceType: type,
       gradeId: resolvedGrade?.id || "8db3f874-aa52-4893-8d04-4eb6ef74f0af",
@@ -441,41 +412,13 @@ export default function StudentDashboard() {
       domainId: selectedDomain?.id || null,
       domainName: selectedDomain?.name || null,
     };
+
     await executeStart(context);
   };
 
   const handleDomainSelection = async (domainId: string) => {
     handleDomainChange(domainId);
-
-    const matchedDomain = availableDomains.find((d) => d.id === domainId);
-    const resolvedGrade = selectedGrade || grades[0];
-    const resolvedSubject = selectedSubject || availableSubjects[0];
-    const resolvedGsId =
-      selection.gradeSubjectId ||
-      gradeSubjects.find(
-        (gs) =>
-          gs.grade_id === (resolvedGrade?.id || selection.gradeId) &&
-          gs.subject_id === (resolvedSubject?.id || selection.subjectId)
-      )?.id ||
-      "d5d10da4-4861-456d-a7a4-0b124e9a16d1";
-
-    if (selection.trackType === "nafis") {
-      const context: SelectionContext = {
-        trackType: "nafis",
-        experienceType: "quick-quiz",
-        gradeId: resolvedGrade?.id || "8db3f874-aa52-4893-8d04-4eb6ef74f0af",
-        gradeName: resolvedGrade?.name || "ثالث متوسط",
-        subjectId: resolvedSubject?.id || "a79e5e49-5a5e-4ccd-9ac8-c5e9c37c788b",
-        subjectName: resolvedSubject?.name || "علوم",
-        gradeSubjectId: resolvedGsId,
-        domainId: domainId,
-        domainName: matchedDomain?.name || null,
-      };
-      await executeStart(context);
-      return;
-    }
-
-    // Central track moves to step 3 for challenge mode
+    // Both Nafis and Central move to step 3 to choose Challenge Mode (Quiz vs Games)
     setStep(3);
   };
 
@@ -535,9 +478,9 @@ export default function StudentDashboard() {
       }
 
       navigate("/central-exam/play");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to start student flow", error);
-      toast.error("حدث خطأ أثناء تجهيز التجربة");
+      toast.error(error?.message || "حدث خطأ أثناء تجهيز التجربة");
     } finally {
       setIsActionLoading(false);
     }
@@ -876,8 +819,8 @@ export default function StudentDashboard() {
                 }`}>
                   {step > 2 ? <CheckCircle2 className="w-4 h-4" /> : "2"}
                 </span>
-                <span className="hidden sm:inline">{selection.trackType === "central" ? "التخصص العلمي" : "نوع التحدي"}</span>
-                <span className="sm:hidden">{selection.trackType === "central" ? "التخصص" : "التحدي"}</span>
+                <span className="hidden sm:inline">المجال العلمي</span>
+                <span className="sm:hidden">المجال</span>
                 {step === 2 && (
                   <span className="flex h-2 w-2 relative">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75" />
@@ -893,7 +836,7 @@ export default function StudentDashboard() {
                 {step >= 3 && <div className="absolute inset-0 bg-white/40 animate-[shimmerSweep_2s_infinite]" />}
               </div>
 
-              {/* Step 3: Scientific Domain OR Mode */}
+              {/* Step 3: Challenge Mode Selection */}
               <div
                 className={`relative flex items-center gap-2 sm:gap-2.5 px-3 sm:px-5 py-2 sm:py-2.5 rounded-2xl text-xs sm:text-sm font-black transition-all duration-300 ${
                   step === 3
@@ -906,8 +849,8 @@ export default function StudentDashboard() {
                 }`}>
                   3
                 </span>
-                <span className="hidden sm:inline">{selection.trackType === "central" ? "نمط التحدي" : "التخصص العلمي"}</span>
-                <span className="sm:hidden">{selection.trackType === "central" ? "النمط" : "التخصص"}</span>
+                <span className="hidden sm:inline">نوع التحدي</span>
+                <span className="sm:hidden">التحدي</span>
                 {step === 3 && (
                   <span className="flex h-2 w-2 relative">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75" />
@@ -1122,8 +1065,8 @@ export default function StudentDashboard() {
             </div>
           )}
 
-          {/* Step: Specializations / Domains (Central Exam Step 2 OR Nafis Quick Quiz Step 3) */}
-          {((step === 2 && selection.trackType === "central") || (step === 3 && selection.trackType === "nafis")) && (
+          {/* Step 2: Specializations / Domains (for BOTH Nafis and Central) */}
+          {step === 2 && (
             <div className="space-y-8 sm:space-y-12 animate-in fade-in slide-in-from-bottom-6 duration-500 relative">
               {/* Domain Step Hero Banner */}
               <div className="text-center space-y-4 max-w-3xl mx-auto pt-2">
@@ -1144,7 +1087,7 @@ export default function StudentDashboard() {
 
                 <p className="text-sm sm:text-base font-bold text-slate-600 max-w-xl mx-auto leading-relaxed bg-white/80 backdrop-blur-md p-3.5 rounded-2xl border border-slate-200/80 shadow-xs">
                   {selection.trackType === "nafis"
-                    ? "يا بطلنا المتميز! اختر مجالك العلمي المفضل لخوض الاختبار السريع وحصد النقاط والشهادات 🌟"
+                    ? "يا بطلنا المتميز! اختر مجالك العلمي المفضل لخوض الاختبار أو الألعاب التفاعلية وحصد النقاط والشهادات 🌟"
                     : "بطلنا المتميز! حدد المجال العلمي الذي ترغب في اكتساحه اليوم بتفوق وثقة"}
                 </p>
               </div>
@@ -1225,7 +1168,7 @@ export default function StudentDashboard() {
                             مجلد علمي مقنن
                           </span>
                           <div className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl font-black text-xs sm:text-sm border-b-4 active:border-b-0 active:translate-y-1 transition-all duration-300 group-hover:shadow-lg ${meta.buttonStyle}`}>
-                            <span>انطلق للاختبار</span>
+                            <span>اختيار التخصص</span>
                             <span className="text-base group-hover:-translate-x-1.5 transition-transform duration-300">🚀</span>
                           </div>
                         </div>
@@ -1250,14 +1193,14 @@ export default function StudentDashboard() {
                   className="rounded-2xl border-2 border-slate-200/90 bg-white/95 text-slate-700 hover:bg-slate-100 hover:text-indigo-600 hover:border-indigo-300 h-12 px-6 font-black text-sm gap-2.5 shadow-sm hover:shadow-md transition-all hover:scale-105 active:scale-95"
                 >
                   <ArrowRight className="w-4 h-4" />
-                  <span>{selection.trackType === "nafis" ? "العودة لاختيار نوع التحدي" : "العودة لاختيار المسار التعليمي"}</span>
+                  <span>العودة لاختيار المسار التعليمي</span>
                 </Button>
               </div>
             </div>
           )}
 
-          {/* Step: Challenge Mode Selection (Nafis Step 2 OR Central Exam Step 3) */}
-          {((step === 2 && selection.trackType === "nafis") || (step === 3 && selection.trackType === "central")) && (
+          {/* Step 3: Challenge Mode Selection (for BOTH Nafis and Central) */}
+          {step === 3 && (
             <div className="space-y-8 sm:space-y-12 animate-in fade-in slide-in-from-bottom-6 duration-500 relative">
               {/* Floating Ambient Science Badges (Desktop) */}
               <div
@@ -1286,8 +1229,10 @@ export default function StudentDashboard() {
                   </span>
                   <Sparkles className="w-4 h-4 text-amber-500 animate-spin" style={{ animationDuration: "6s" }} />
                   <span>
-                    {selection.trackType === "central" && selectedDomain
-                      ? `المسار المركزي 🎯 • التخصص: ${selectedDomain.name}`
+                    {selectedDomain
+                      ? `${selection.trackType === "central" ? "المسار المركزي 🎯" : "مسار بنك نافس الوطني 🇸🇦"} • المجال: ${selectedDomain.name}`
+                      : selection.trackType === "central"
+                      ? "المسار المركزي 🎯"
                       : "مسار بنك اختبارات نافس الوطني 🇸🇦"}
                   </span>
                 </div>
@@ -1352,7 +1297,7 @@ export default function StudentDashboard() {
                   <div className="relative mt-8 pt-5 border-t border-amber-200/80 w-full space-y-3">
                     <div className="w-full py-4 px-6 rounded-2xl font-black text-base sm:text-lg text-white bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 border-b-4 border-amber-700 active:border-b-0 active:translate-y-1 shadow-lg shadow-amber-500/35 group-hover:shadow-amber-500/55 group-hover:brightness-105 flex items-center justify-center gap-3 transition-all">
                       <Zap className="w-5 h-5 fill-white" />
-                      <span>{selection.trackType === "nafis" ? "اختر التخصص وابدأ الاختبار ⚡" : "ابدأ الاختبار السريع الآن ⚡"}</span>
+                      <span>ابدأ الاختبار السريع الآن ⚡</span>
                       <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1.5 transition-transform duration-300" />
                     </div>
 
@@ -1449,7 +1394,7 @@ export default function StudentDashboard() {
                   className="rounded-2xl border-2 border-slate-200/90 bg-white/95 text-slate-700 hover:bg-slate-100 hover:text-indigo-600 hover:border-indigo-300 h-12 px-6 font-black text-sm gap-2.5 shadow-sm hover:shadow-md transition-all hover:scale-105 active:scale-95"
                 >
                   <ArrowRight className="w-4 h-4" />
-                  <span>{selection.trackType === "nafis" ? "العودة لاختيار المسار التعليمي" : "العودة لاختيار التخصص"}</span>
+                  <span>العودة لاختيار التخصص العلمي</span>
                 </Button>
               </div>
             </div>

@@ -78,6 +78,16 @@ export async function getAcademicCatalog(): Promise<AcademicCatalog> {
     });
   });
 
+  domains.forEach((d) => {
+    const s = (d.slug || "").toLowerCase();
+    if (
+      (d.name === "الكهرباء" || d.name === "كهرباء" || s.includes("elec") || d.name.includes("الكهرباء")) &&
+      !d.name.includes("المغناطيسية")
+    ) {
+      d.name = "الكهرباء والمغناطيسية";
+    }
+  });
+
   domains.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
 
   const gradeMap = new Map(grades.map((grade) => [grade.id, grade]));

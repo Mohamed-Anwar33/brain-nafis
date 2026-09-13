@@ -81,7 +81,27 @@ interface Choice {
 
 export default function NafisQuestions() {
   const { data: catalog } = useAcademicCatalog();
-  const domains = catalog?.domains || [];
+  const rawDomains = catalog?.domains || [];
+  const domains = useMemo(() => {
+    return rawDomains
+      .filter((d) => {
+        const s = (d.slug || "").toLowerCase();
+        const n = d.name || "";
+        return !(s.includes("nature") || n.includes("طبيعة") || n.includes("طبيعه"));
+      })
+      .map((d) => {
+        let name = d.name;
+        const s = (d.slug || "").toLowerCase();
+        if (
+          (name.includes("الأرض") || name.includes("الارض") || s.includes("earth") || s.includes("space")) &&
+          !name.includes("البيئة") &&
+          !name.includes("البيئه")
+        ) {
+          name = "علم الأرض والفضاء والبيئة";
+        }
+        return { ...d, name };
+      });
+  }, [rawDomains]);
 
   const [questions, setQuestions] = useState<Question[]>([]);
   const [isLoading, setIsLoading] = useState(true);

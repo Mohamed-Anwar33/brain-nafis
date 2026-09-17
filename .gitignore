@@ -1,24 +1,116 @@
-# Logs
-logs
+# =======================================================
+# 1. Secrets & Environment Variables (Critical for Security)
+# =======================================================
+.env
+.env.*
+.env*.local
+!.env.example
+
+# =======================================================
+# 2. AI Assistants & Agent Internal Workspaces
+# =======================================================
+.antigravity
+.antigravity/
+.antigravity*
+.gemini
+.gemini/
+.gemini*
+.agents
+.agents/
+.agents*
+.system_generated/
+scratch/
+_dev_archive/
+_local_archive/
+
+# =======================================================
+# 3. Dependencies & Package Managers
+# =======================================================
+node_modules/
+.pnp
+.pnp.js
+
+# =======================================================
+# 4. Production Builds & Outputs
+# =======================================================
+dist/
+dist-ssr/
+build/
+out/
+*.local
+
+# =======================================================
+# 5. Logs & Debug Artifacts
+# =======================================================
+logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
+debug-*.log
 
-node_modules
-dist
-dist-ssr
-*.local
+# =======================================================
+# 6. Supabase Local CLI Temporary Cache & Dumps
+# =======================================================
+supabase/.temp/
+supabase/.temp*
+supabase/local-dump.sql
+supabase/.branches/
 
-# Editor directories and files
+# =======================================================
+# 7. IDE & Editor Configurations
+# =======================================================
 .vscode/*
 !.vscode/extensions.json
-.idea
-.DS_Store
+.idea/
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+*.swp
+*.swo
+.cursor/
+.windsurf/
+.zed/
+
+# =======================================================
+# 8. OS System Files
+# =======================================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# =======================================================
+# 9. Test & Coverage Outputs
+# =======================================================
+coverage/
+.nyc_output/
+*.lcov
+vitest.config.ts.timestamp-*
+vite.config.ts.timestamp-*
+
+# =======================================================
+# 10. Temporary, Scratch & Local Debug Scripts
+# =======================================================
+*.tmp
+*.temp
+*.bak
+*.orig
+*~
+WhatsApp Image*
+check_*.txt
+check_*.js
+clean_*.js
+create_admin.js
+debug_*.js
+make_me_*.sql
+email_template_*.html
+*_REPORT_AR.md

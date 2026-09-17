@@ -92,14 +92,14 @@ export function StartScreen({ onStart, isLoading }: StartScreenProps) {
               </div>
             </div>
 
-            {/* School & Teacher Attribution */}
+            {/* Teacher Attribution */}
             <div className="flex items-center gap-3">
-              <div className="text-left sm:text-right px-3.5 py-1.5 rounded-2xl bg-indigo-50/80 border border-indigo-200/70 shadow-2xs">
-                <span className="text-xs font-black text-indigo-900 block leading-tight">
-                  المتوسطة الثانية والثمانون
+              <div className="text-left sm:text-right px-4 py-2 rounded-2xl bg-gradient-to-r from-indigo-50 to-sky-50 border border-indigo-200/90 shadow-2xs">
+                <span className="text-xs font-black text-indigo-950 block leading-tight">
+                  المعلمة: أ/ هيفاء السلمي
                 </span>
-                <span className="text-[10px] font-bold text-indigo-700/80 block leading-tight">
-                  المعلمة: أ/ هيفا السلمي
+                <span className="text-[10px] font-bold text-indigo-700/90 block leading-tight mt-0.5">
+                  معاً نحو عقول أكثر إبداعاً 🌟
                 </span>
               </div>
 

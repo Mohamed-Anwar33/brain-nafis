@@ -173,56 +173,58 @@ export default function ChallengeGames() {
           <StudentPortalHub className="mt-0 pt-0 border-t-0" />
         </div>
 
-        <div className="mx-auto grid max-w-7xl grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+        {/* Games Arena List (as requested: على شكل قوائم) */}
+        <div className="mx-auto flex max-w-4xl flex-col gap-4 w-full">
           {games.map((game, idx) => (
             <div
               key={game.id}
               onClick={() => navigate(game.path)}
-              className="group relative cursor-pointer overflow-hidden rounded-[2rem] border border-slate-100 bg-white p-6 shadow-lg shadow-slate-200/50 transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl"
-              style={{ animationDelay: `${idx * 100}ms` }}
+              className="group relative cursor-pointer overflow-hidden rounded-3xl border-2 border-slate-200/90 bg-white p-5 sm:p-6 shadow-sm transition-all duration-300 hover:shadow-xl hover:border-indigo-400 hover:-translate-y-0.5"
+              style={{ animationDelay: `${idx * 80}ms` }}
             >
               <div
-                className={`absolute inset-0 bg-gradient-to-br ${game.gradient} opacity-0 transition-opacity duration-500 group-hover:opacity-5`}
-              />
-              <div
-                className={`absolute left-0 top-0 h-1 w-full origin-left scale-x-0 bg-gradient-to-r ${game.gradient} transition-transform duration-500 group-hover:scale-x-100`}
+                className={`absolute inset-0 bg-gradient-to-r ${game.gradient} opacity-0 transition-opacity duration-500 group-hover:opacity-5`}
               />
 
-              <div
-                className={`mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br ${game.gradient} ${game.shadow} text-white shadow-lg transition-all duration-300 group-hover:rotate-6 group-hover:scale-110`}
-              >
-                {game.icon}
-              </div>
+              <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="flex items-start sm:items-center gap-4 flex-1 min-w-0">
+                  <div
+                    className={`flex h-14 w-14 sm:h-16 sm:w-16 items-center justify-center rounded-2xl bg-gradient-to-br ${game.gradient} ${game.shadow} text-white shadow-md transition-all duration-300 group-hover:scale-105 shrink-0`}
+                  >
+                    {game.icon}
+                  </div>
 
-              <div className="relative z-10">
-                <h3 className="mb-2 text-xl font-bold text-slate-800 group-hover:text-slate-900">
-                  {game.title}
-                </h3>
-                <p className="mb-4 text-sm leading-relaxed text-slate-500">
-                  {game.description}
-                </p>
+                  <div className="space-y-1 min-w-0 flex-1">
+                    <h3 className="text-lg sm:text-xl font-black text-slate-800 group-hover:text-indigo-700 transition-colors">
+                      {game.title}
+                    </h3>
+                    <p className="text-xs sm:text-sm leading-relaxed text-slate-500 font-bold line-clamp-2">
+                      {game.description}
+                    </p>
 
-                <ul className="mb-6 space-y-2">
-                  {game.features.map((feature) => (
-                    <li
-                      key={feature}
-                      className="flex items-center gap-2 text-xs text-slate-600"
-                    >
-                      <div className={`h-1.5 w-1.5 rounded-full ${game.dotClass}`} />
-                      {feature}
-                    </li>
-                  ))}
-                </ul>
+                    <div className="flex flex-wrap items-center gap-2 pt-1">
+                      {game.features.map((feature) => (
+                        <span
+                          key={feature}
+                          className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-100 text-[10px] sm:text-xs font-bold text-slate-600 border border-slate-200/60"
+                        >
+                          <span className={`h-1.5 w-1.5 rounded-full ${game.dotClass}`} />
+                          {feature}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
 
-                <div
-                  className={`flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r px-6 py-3 text-sm font-bold text-white shadow-lg transition-all duration-300 group-hover:-translate-y-[2px] group-hover:shadow-xl ${game.gradient} ${game.shadow}`}
-                >
-                  <Zap className="h-4 w-4" />
-                  ابدأ اللعب
+                <div className="flex items-center justify-end w-full sm:w-auto shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
+                  <div
+                    className={`flex w-full sm:w-auto items-center justify-center gap-2 rounded-2xl bg-gradient-to-r px-6 py-3 text-xs sm:text-sm font-black text-white shadow-md transition-all duration-300 group-hover:shadow-lg ${game.gradient} ${game.shadow}`}
+                  >
+                    <Zap className="h-4 w-4" />
+                    <span>ابدأ التحدي الآن</span>
+                  </div>
                 </div>
               </div>
-
-              <div className="absolute -bottom-4 -right-4 h-24 w-24 rounded-full bg-gradient-to-br from-slate-100 to-transparent opacity-50 transition-transform duration-500 group-hover:scale-150" />
             </div>
           ))}
         </div>

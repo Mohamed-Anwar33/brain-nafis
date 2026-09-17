@@ -82,7 +82,9 @@ export function Challenge1MCQ({
         <div className="flex items-center justify-center mb-4">
           <div className="bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-600 text-white px-4 py-1.5 rounded-full font-black text-xs sm:text-sm shadow-md shadow-amber-500/25 flex items-center gap-2">
             <Key className="w-3.5 h-3.5 text-amber-200" />
-            <span>القفل الأثري: سؤال {challenge.step} من 3</span>
+            <span>
+              المرحلة {Math.min(4, Math.floor((challenge.step - 1) / 3) + 1)}: سؤال {((challenge.step - 1) % 3) + 1} من 3
+            </span>
             <Sparkles className="w-3.5 h-3.5 text-amber-200" />
           </div>
         </div>

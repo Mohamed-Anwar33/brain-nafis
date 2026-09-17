@@ -15,11 +15,9 @@ export const Footer = () => {
                     <span className="text-base">🌴</span>
                 </p>
                 <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 text-xs font-bold text-slate-500">
-                    <span>المتوسطة الثانية والثمانون</span>
+                    <span>المعلمة: أ/ هيفاء السلمي</span>
                     <span className="text-slate-300">•</span>
-                    <span>المعلمة: أ/ هيفا السلمي</span>
-                    <span className="text-slate-300">•</span>
-                    <span className="text-[#1e3a8a] font-black">منصة براين ساينس للتفوق 2026 © جميع الحقوق محفوظة</span>
+                    <span className="text-[#1e3a8a] font-black">منصة براين ساينس للتفوق © جميع الحقوق محفوظة</span>
                 </div>
             </div>
         </footer>

@@ -37,7 +37,8 @@ import {
   Flame,
   Key,
   Award,
-  Play,
+  Menu,
+  ChevronDown,
 } from "lucide-react";
 import { toast } from "sonner";
 import { SaudiLoader } from "@/components/ui/SaudiLoader";
@@ -46,6 +47,8 @@ import { useAcademicCatalog } from "@/hooks/use-academic-catalog";
 import { SoundToggle } from "@/components/ui/SoundToggle";
 import { audioManager } from "@/lib/audio";
 import { StudentPortalHub } from "@/components/student/StudentPortalHub";
+import { StudentSidebar } from "@/components/student/StudentSidebar";
+import { isStudentFemale } from "@/lib/studentUtils";
 import {
   clearSelectionContext,
   getSelectionDisplayText,
@@ -216,9 +219,14 @@ const getDomainMeta = (slug?: string, name?: string) => {
 export default function StudentDashboard() {
   const navigate = useNavigate();
   const { data: catalog, isLoading: isCatalogLoading } = useAcademicCatalog();
+  const storedStudentName =
+    localStorage.getItem("student_name") ||
+    sessionStorage.getItem("student_name") ||
+    null;
 
-  const [isLoading, setIsLoading] = useState(true);
-  const [studentName, setStudentName] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(!storedStudentName);
+  const [studentName, setStudentName] = useState<string | null>(storedStudentName);
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [selection, setSelection] =
     useState<DashboardSelectionState>(defaultSelectionState);
   const [experienceType, setExperienceType] = useState<ExperienceType | null>(
@@ -250,19 +258,22 @@ export default function StudentDashboard() {
           data: { session },
         } = await supabase.auth.getSession();
 
-        if (!session) {
+        if (!session && !storedStudentName) {
           navigate("/");
           return;
         }
 
-        const { data: profile } = await supabase
-          .from("student_profiles")
-          .select("full_name")
-          .eq("id", session.user.id)
-          .single();
+        if (session?.user?.id) {
+          const { data: profile } = await supabase
+            .from("student_profiles")
+            .select("full_name")
+            .eq("id", session.user.id)
+            .single();
 
-        if (profile?.full_name) {
-          setStudentName(profile.full_name);
+          if (profile?.full_name) {
+            setStudentName(profile.full_name);
+            localStorage.setItem("student_name", profile.full_name);
+          }
         }
       } catch (error) {
         console.error("Failed to bootstrap student dashboard", error);
@@ -272,7 +283,7 @@ export default function StudentDashboard() {
     };
 
     bootstrap();
-  }, [navigate]);
+  }, [navigate, storedStudentName]);
 
   const gradeSubjects = useMemo(
     () => catalog?.gradeSubjects ?? [],
@@ -700,32 +711,81 @@ export default function StudentDashboard() {
                 </Button>
               )}
 
-              {/* School Logo */}
-              <div className="relative group">
-                <div className="absolute -inset-1 rounded-2xl bg-gradient-to-r from-indigo-500 to-sky-500 opacity-20 blur-sm group-hover:opacity-40 transition-opacity" />
-                <div className="relative flex h-11 w-11 sm:h-13 sm:w-13 items-center justify-center rounded-2xl bg-white shadow-md border border-slate-200 overflow-hidden p-1.5">
-                  <img src="/logo.jpg" alt="Logo" className="w-full h-full object-contain" />
+              {/* 1. Platform Brand Identity */}
+              <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
+                <div className="relative group">
+                  <div className="absolute -inset-1 rounded-2xl bg-gradient-to-r from-indigo-500 to-sky-500 opacity-20 blur-sm group-hover:opacity-40 transition-opacity" />
+                  <div className="relative flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-2xl bg-white shadow-xs border border-slate-200/80 overflow-hidden p-1 sm:p-1.5">
+                    <img src="/brain-science-logo.png" alt="Logo" className="w-full h-full object-contain" />
+                  </div>
+                </div>
+                <div className="hidden sm:flex flex-col text-right leading-tight">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-black text-xs sm:text-sm text-slate-900 tracking-tight">براين ساينس</span>
+                    <span className="text-[9.5px] font-black px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200/70">
+                      للتفوق 🚀
+                    </span>
+                  </div>
+                  <span className="text-[10.5px] font-bold text-slate-500 mt-0.5">
+                    المعلمة: أ/ هيفاء السلمي
+                  </span>
                 </div>
               </div>
 
-              <div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-black text-[10px] sm:text-xs text-indigo-700 bg-indigo-50 border border-indigo-200/80 px-2.5 py-0.5 rounded-full tracking-wider shadow-2xs">
-                    منصة براين ساينس للتفوق 🚀
-                  </span>
-                  <span className="hidden md:inline-flex text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">
-                    المتوسطة 82 • أ/ هيفا السلمي
+              {/* Subtle Vertical Divider */}
+              <div className="h-8 w-px bg-slate-200/80 hidden md:block shrink-0 mx-1" />
+
+              {/* 2. Interactive Student Profile Capsule */}
+              <button
+                type="button"
+                onClick={() => {
+                  audioManager.playClick();
+                  setIsProfileMenuOpen((prev) => !prev);
+                }}
+                className={`flex items-center gap-2.5 sm:gap-3 px-2.5 sm:px-3.5 py-1.5 rounded-2xl transition-all duration-200 cursor-pointer text-right group select-none min-w-0 ${
+                  isProfileMenuOpen
+                    ? "bg-indigo-50/90 ring-2 ring-indigo-200/80 shadow-xs"
+                    : "hover:bg-slate-100/80 active:scale-[0.98]"
+                }`}
+                title="اضغط لفتح قائمة الخدمات والملف الشخصي"
+                aria-label="اضغط لفتح قائمة الخدمات والملف الشخصي"
+                aria-expanded={isProfileMenuOpen}
+              >
+                {/* Student Avatar (Gender-aware with active status dot) */}
+                <div className="relative shrink-0">
+                  <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-gradient-to-tr from-indigo-600 via-sky-500 to-emerald-400 p-0.5 shadow-xs flex items-center justify-center transition-transform group-hover:scale-105">
+                    <div className="w-full h-full rounded-[13px] bg-white flex items-center justify-center overflow-hidden">
+                      <span className="text-lg sm:text-xl select-none">
+                        {isStudentFemale(studentName) ? "👩‍🎓" : "🧑‍🎓"}
+                      </span>
+                    </div>
+                  </div>
+                  <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-white shadow-xs" />
+                </div>
+
+                {/* Student Details: Name & Level */}
+                <div className="flex flex-col text-right min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs sm:text-sm font-black text-slate-900 tracking-tight truncate max-w-[130px] sm:max-w-[200px] md:max-w-[280px]">
+                      {studentName ? `أهلاً، ${studentName}` : "طالب متميز"}
+                    </span>
+                    <div
+                      className={`p-0.5 rounded-md text-slate-400 group-hover:text-indigo-600 transition-transform duration-200 ${
+                        isProfileMenuOpen ? "rotate-180 text-indigo-600" : ""
+                      }`}
+                    >
+                      <ChevronDown className="w-3.5 h-3.5" />
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-bold text-indigo-600 flex items-center gap-1 mt-0.5">
+                    <span>طالب/ة متفوق/ة</span>
+                    <span className="text-amber-500 text-[10px]">⭐</span>
                   </span>
                 </div>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  <h1 className="text-base sm:text-xl font-black text-slate-900 tracking-tight">
-                    {studentName ? `أهلاً، ${studentName}` : "منصة براين ساينس"}
-                  </h1>
-                </div>
-              </div>
+              </button>
             </div>
 
+            {/* Left side actions: Sound Toggle & Clean Logout */}
             <div className="flex items-center gap-2 sm:gap-3">
               <SoundToggle />
 
@@ -736,16 +796,29 @@ export default function StudentDashboard() {
                   handleLogout();
                 }}
                 className="gap-2 rounded-2xl text-slate-600 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 h-10 sm:h-11 px-3 sm:px-4 font-bold border border-slate-200 text-xs sm:text-sm transition-all shadow-2xs"
+                title="تسجيل الخروج"
               >
                 <LogOut className="h-4 w-4" />
-                <span className="hidden sm:inline-block">خروج</span>
+                <span className="hidden md:inline-block">خروج</span>
               </Button>
             </div>
           </div>
         </header>
 
-        {/* Main Content Area: Expansive & Modern Layout */}
-        <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8 space-y-6">
+        {/* Floating Profile Dropdown / Drawer Menu */}
+        <StudentSidebar
+          studentName={studentName}
+          activeItem="home"
+          isOpen={isProfileMenuOpen}
+          onClose={() => setIsProfileMenuOpen(false)}
+          onNavigateHome={() => setStep(1)}
+          onLogout={handleLogout}
+        />
+
+        {/* Main Content Layout - Centered, Wide, and Spacious */}
+        <div className="flex-1 max-w-6xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8">
+          {/* Main Stage Content */}
+          <main className="space-y-6 sm:space-y-8">
           {/* Gamified Quest Adventure Stepper */}
           <div className="flex items-center justify-center mb-8 sm:mb-12 select-none px-2">
             <div className="relative flex items-center gap-2 sm:gap-4 p-2 sm:p-2.5 rounded-[2rem] bg-white/90 backdrop-blur-2xl border-2 border-indigo-100/90 shadow-xl shadow-indigo-500/5 max-w-2xl w-full justify-between sm:justify-center">
@@ -1092,8 +1165,8 @@ export default function StudentDashboard() {
                 </p>
               </div>
 
-              {/* Expansive 3-Column Grid for Domains */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 max-w-6xl mx-auto">
+              {/* Elegant Vertical List View for Domains (as requested: شكل قوائم) */}
+              <div className="flex flex-col gap-3.5 max-w-4xl mx-auto w-full">
                 {displayDomains.length > 0 ? (
                   displayDomains.map((domain, idx) => {
                     const meta = getDomainMeta(domain.slug, domain.name);
@@ -1107,76 +1180,46 @@ export default function StudentDashboard() {
                           audioManager.playPowerUp();
                           handleDomainSelection(domain.id);
                         }}
-                        className={`group relative text-right p-7 sm:p-8 rounded-[2.5rem] bg-gradient-to-b ${meta.gradient} border-2 border-slate-200/90 shadow-lg hover:shadow-[0_26px_75px_rgba(79,70,229,0.22)] transition-all duration-500 hover:-translate-y-3 hover:scale-[1.02] active:scale-[0.98] flex flex-col justify-between overflow-hidden cursor-pointer ${meta.borderHover}`}
-                        style={{ animationDelay: `${idx * 80}ms` }}
+                        className="group relative text-right p-4 sm:p-5 rounded-3xl bg-white/95 hover:bg-gradient-to-r hover:from-white hover:via-indigo-50/40 hover:to-white border-2 border-slate-200/90 hover:border-indigo-400 shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5 active:scale-[0.99] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 cursor-pointer overflow-hidden"
+                        style={{ animationDelay: `${idx * 60}ms` }}
                       >
-                        {/* Ambient Glow Aura */}
-                        <div className={`absolute -top-12 -left-12 w-48 h-48 rounded-full blur-3xl opacity-50 group-hover:opacity-90 group-hover:scale-150 transition-all duration-700 pointer-events-none ${meta.glowBg}`} />
-
-                        {/* Specular Shimmer Sweep on Hover */}
-                        <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/50 to-transparent pointer-events-none skew-x-12" />
-
-                        <div className="relative space-y-5">
-                          {/* Top: Icon + Gamified Badges */}
-                          <div className="flex items-center justify-between gap-3">
-                            <div className={`flex h-16 w-16 sm:h-20 sm:w-20 items-center justify-center rounded-3xl transition-all duration-500 ${meta.iconBg}`}>
-                              <DomainIcon className="h-8 w-8 sm:h-10 sm:w-10 transition-transform group-hover:scale-115 group-hover:rotate-6 duration-500" />
-                            </div>
-
-                            <div className="flex flex-col items-end gap-1.5">
-                              <span className="text-3xl filter drop-shadow-sm group-hover:scale-125 group-hover:-rotate-12 transition-transform duration-300 select-none">
-                                {meta.emoji}
-                              </span>
-                              <span className={`px-3 py-1 rounded-full text-[11px] font-black border shadow-2xs ${meta.chipStyle}`}>
-                                جاهز للتحدي 🌟
-                              </span>
-                            </div>
+                        {/* Right Section: Icon + Domain Details */}
+                        <div className="flex items-start sm:items-center gap-3.5 sm:gap-4 flex-1 min-w-0">
+                          <div className={`flex h-14 w-14 sm:h-16 sm:w-16 items-center justify-center rounded-2xl shrink-0 transition-transform group-hover:scale-105 shadow-md ${meta.iconBg}`}>
+                            <DomainIcon className="h-7 w-7 sm:h-8 sm:w-8" />
                           </div>
 
-                          {/* Title & Tagline & Description */}
-                          <div className="space-y-2">
+                          <div className="space-y-1 min-w-0 flex-1">
                             <div className="flex items-center gap-2 flex-wrap">
-                              <h3 className="text-2xl sm:text-3xl font-black text-slate-900 group-hover:text-indigo-700 transition-colors">
+                              <h3 className="text-lg sm:text-xl font-black text-slate-900 group-hover:text-indigo-700 transition-colors">
                                 {domain.name}
                               </h3>
+                              <span className="text-xl select-none">{meta.emoji}</span>
+                              <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black border shadow-2xs ${meta.chipStyle}`}>
+                                {meta.badgeTitle}
+                              </span>
                             </div>
-                            <p className="text-xs font-black text-indigo-600/90">
-                              {meta.tagline}
-                            </p>
-                            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-bold">
+                            <p className="text-xs sm:text-sm text-slate-600 font-bold leading-relaxed line-clamp-2">
                               {meta.desc}
                             </p>
                           </div>
-
-                          {/* Kid-friendly feature pills */}
-                          <div className="flex flex-wrap gap-1.5 pt-1">
-                            <span className="px-2.5 py-1 rounded-xl bg-white/90 text-slate-700 border border-slate-200/80 text-[11px] font-black shadow-2xs">
-                              ⭐ 10 أسئلة ذكية
-                            </span>
-                            <span className="px-2.5 py-1 rounded-xl bg-white/90 text-slate-700 border border-slate-200/80 text-[11px] font-black shadow-2xs">
-                              ⚡ تصحيح فوري
-                            </span>
-                            <span className="px-2.5 py-1 rounded-xl bg-white/90 text-slate-700 border border-slate-200/80 text-[11px] font-black shadow-2xs">
-                              🏆 نقاط وأوسمة
-                            </span>
-                          </div>
                         </div>
 
-                        {/* Action Footer CTA with vibrant button */}
-                        <div className="relative mt-7 pt-4 border-t border-slate-200/70 flex items-center justify-between gap-3">
-                          <span className="text-xs font-black text-slate-500">
-                            مجلد علمي مقنن
+                        {/* Left Section: Badges & Action CTA */}
+                        <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
+                          <span className="hidden md:inline-block px-3 py-1 rounded-xl bg-slate-100 text-slate-600 text-xs font-black border border-slate-200/80">
+                            ⭐ 10 أسئلة ذكية
                           </span>
-                          <div className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl font-black text-xs sm:text-sm border-b-4 active:border-b-0 active:translate-y-1 transition-all duration-300 group-hover:shadow-lg ${meta.buttonStyle}`}>
+                          <div className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl font-black text-xs sm:text-sm border-b-4 active:border-b-0 active:translate-y-0.5 transition-all shadow-md group-hover:shadow-lg ${meta.buttonStyle}`}>
                             <span>اختيار التخصص</span>
-                            <span className="text-base group-hover:-translate-x-1.5 transition-transform duration-300">🚀</span>
+                            <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1.5 transition-transform duration-300" />
                           </div>
                         </div>
                       </button>
                     );
                   })
                 ) : (
-                  <div className="col-span-full py-20 text-center bg-white/80 rounded-3xl border border-slate-200">
+                  <div className="py-20 text-center bg-white/80 rounded-3xl border border-slate-200">
                     <p className="text-xl font-black text-slate-400">لا توجد تخصصات متاحة لهذا الصف حالياً</p>
                   </div>
                 )}
@@ -1409,12 +1452,13 @@ export default function StudentDashboard() {
                   {getSelectionDisplayText(currentContext)}
                 </span>
               </div>
-              <span className="text-[11px] font-bold text-slate-400">
-                المتوسطة 82 • أ/ هيفا السلمي
+              <span className="text-[11px] font-bold text-slate-500">
+                المعلمة: أ/ هيفاء السلمي
               </span>
             </div>
           )}
-        </main>
+          </main>
+        </div>
       </div>
     </PremiumBackground>
   );

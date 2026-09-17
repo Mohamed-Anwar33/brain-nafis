@@ -43,7 +43,8 @@ import {
   AlertTriangle,
   Maximize2,
   PlayCircle,
-  HelpCircle
+  HelpCircle,
+  Lock,
 } from "lucide-react";
 import { toast } from "sonner";
 import confetti from "canvas-confetti";
@@ -593,28 +594,67 @@ export default function CentralExamPlay() {
               </Card>
             </div>
             
+            {/* Motivational Progressive Banner between stages */}
+            <div className={`p-4 sm:p-5 rounded-3xl border-2 mb-6 text-center space-y-2 shadow-xs ${
+              stage === 1
+                ? "bg-gradient-to-r from-amber-50 via-orange-50 to-amber-50 border-amber-200 text-amber-950"
+                : stage === 2
+                ? "bg-gradient-to-r from-sky-50 via-indigo-50 to-sky-50 border-sky-200 text-sky-950"
+                : stage === 3
+                ? "bg-gradient-to-r from-purple-50 via-pink-50 to-purple-50 border-purple-200 text-purple-950"
+                : "bg-gradient-to-r from-emerald-50 via-amber-50 to-emerald-50 border-emerald-300 text-emerald-950"
+            }`}>
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/90 border border-current/20 text-xs font-black shadow-2xs">
+                <Sparkles className="w-3.5 h-3.5 text-amber-500 animate-pulse" />
+                <span>
+                  {stage >= 4
+                    ? "أكملت المراحل الأربع بنجاح! 🏆"
+                    : `المرحلة ${stage} من 4 • باقي ${4 - stage} مراحل للشهادة`}
+                </span>
+              </div>
+              <h3 className="text-lg sm:text-xl font-black">
+                {stage === 1 && "أحسنت يا بطل! أنهيت المرحلة الأولى بنجاح 🌟"}
+                {stage === 2 && "رائع ومتميز! استمر في هذا التألق والذكاء 🔥"}
+                {stage === 3 && "إنجاز مبهر! أنت على بعد خطوة واحدة فقط من الشهادة الكبرى 💪"}
+                {stage >= 4 && "ألف مبروك يا بطل العلوم! استحققت شهادة التقدير الرسمية 🎓"}
+              </h3>
+              <p className="text-xs sm:text-sm font-bold text-slate-600 max-w-lg mx-auto leading-relaxed">
+                {stage === 1 && "تقدم للمرحلة الثانية لكي تقترب من الحصول على الشهادة المعتمدة!"}
+                {stage === 2 && "واصل حصد النقاط، تقدم للمرحلة الثالثة نحو وسام التفوق!"}
+                {stage === 3 && "انتقل إلى المرحلة الرابعة الأخيرة لتتويج رحلتك والحصول على شهادتك الرسمية!"}
+                {stage >= 4 && "تم تتويجك بنجاح من معلمتك: أ/ هيفاء السلمي بدرجة التميز والإتقان!"}
+              </p>
+            </div>
+
             {/* Action Buttons */}
             <div className="flex flex-col gap-3">
-              <Button 
-                onClick={() => setShowCertificateModal(true)}
-                className="w-full h-14 text-xl font-black rounded-2xl bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-amber-500/20 text-slate-950"
-              >
-                <Award className="w-6 h-6 ml-3" />
-                🎓 عرض وتحميل شهادة الشكر والتقدير
-              </Button>
+              {stage >= 4 ? (
+                <Button 
+                  onClick={() => setShowCertificateModal(true)}
+                  className="w-full h-14 text-xl font-black rounded-2xl bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-600 hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-amber-500/25 text-slate-950"
+                >
+                  <Award className="w-6 h-6 ml-3" />
+                  🎓 عرض وتحميل شهادة الشكر والتقدير
+                </Button>
+              ) : (
+                <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-center flex items-center justify-center gap-2 text-xs sm:text-sm font-black text-slate-600">
+                  <Lock className="w-4 h-4 text-amber-500 shrink-0" />
+                  <span>الشهادة المعتمدة تُمنح بعد إتمام 4 مراحل (أنجزت {stage} من 4)</span>
+                </div>
+              )}
 
               <Button 
                 onClick={startNextStage}
-                className="w-full h-14 text-xl font-black rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-emerald-500/20 text-white"
+                className="w-full h-14 text-xl font-black rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-600 hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-emerald-500/20 text-white"
               >
                 <Sparkles className="w-6 h-6 ml-3" />
-                الانتقال للمرحلة {stage + 1}
+                {stage >= 4 ? `الانتقال لمرحلة إضافية (${stage + 1})` : `الانتقال للمرحلة ${stage + 1}`}
               </Button>
               
               <Button 
                 onClick={() => navigate("/student/dashboard")}
                 variant="outline"
-                className="w-full h-12 text-lg font-bold rounded-xl border-2 border-slate-300 hover:bg-slate-100"
+                className="w-full h-12 text-base font-bold rounded-xl border-2 border-slate-300 hover:bg-slate-100"
               >
                 العودة للصفحة الرئيسية
               </Button>
@@ -627,7 +667,7 @@ export default function CentralExamPlay() {
               score={correctCount}
               totalQuestions={totalCount}
               percentage={percentage}
-              examTitle="الاختبار المركزي - منصة براين ساينس"
+              examTitle="الاختبار المركزي - منصة براين ساينس للتفوق"
             />
             
             <div className="mt-6 flex items-center justify-center gap-2 text-sm">

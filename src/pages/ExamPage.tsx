@@ -379,14 +379,14 @@ export default function ExamPage() {
                   }}
                 >
                   <img
-                    src="/logo.jpg"
-                    alt="براين ساينس"
-                    className="w-full h-auto max-h-40 sm:max-h-52 object-contain mx-auto mix-blend-multiply hover:scale-105 transition-transform duration-500"
+                    src="/brain-science-logo.png"
+                    alt="براين ساينس للتفوق"
+                    className="w-full h-auto max-h-40 sm:max-h-52 object-contain mx-auto hover:scale-105 transition-transform duration-500"
                   />
                 </div>
               </div>
               <h1 className="text-3xl md:text-5xl font-black text-gray-900 tracking-tight leading-tight">
-                المتوسطة الثانية والثمانون
+                منصة براين ساينس للتفوق
               </h1>
               <p className="text-sm md:text-base font-bold text-slate-700 max-w-lg mx-auto leading-relaxed bg-blue-50/70 p-3 rounded-xl border border-blue-100">
                 منصة تعليمية تفاعلية لتنمية المهارات العلمية ورفع نواتج التعلم والاستعداد للاختبارات الوطنية ( نافس ) والمركزية
@@ -405,7 +405,7 @@ export default function ExamPage() {
                   </div>
                   <div>
                     <p className="text-sm font-bold text-primary/70 mb-1">معلمة مادة العلوم</p>
-                    <h3 className="text-2xl font-black text-gray-800">أ/ هيفا السلمي</h3>
+                    <h3 className="text-2xl font-black text-gray-800">أ/ هيفاء السلمي</h3>
                   </div>
                 </div>
               </div>

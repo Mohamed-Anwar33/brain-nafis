@@ -123,8 +123,8 @@ export default function StudentGamesHub() {
                   بيئة التعلم التفاعلي والتلعيب
                 </p>
               </div>
-              <div className="w-11 h-11 rounded-2xl bg-white p-1 border border-slate-200 shadow-sm flex items-center justify-center">
-                <img src="/logo.jpg" alt="Logo" className="w-full h-full object-contain" />
+              <div className="w-11 h-11 rounded-2xl bg-white p-1 border border-slate-200 shadow-sm flex items-center justify-center overflow-hidden">
+                <img src="/brain-science-logo.png" alt="Logo" className="w-full h-full object-contain" />
               </div>
             </div>
           </div>
@@ -169,8 +169,8 @@ export default function StudentGamesHub() {
           {/* Excellence & Motivation Hub (Leaderboard, Achievements, Progress, Certificates) */}
           <StudentPortalHub className="mt-0 pt-0 border-t-0" />
 
-          {/* Games Arena Grid */}
-          <div className="grid gap-6 sm:gap-8 sm:grid-cols-2 lg:grid-cols-4">
+          {/* Games Arena List (as requested: على شكل قوائم) */}
+          <div className="flex flex-col gap-4 max-w-4xl mx-auto w-full">
             {games.map((game, idx) => {
               const Icon = game.icon;
 
@@ -179,55 +179,45 @@ export default function StudentGamesHub() {
                   key={game.path}
                   onMouseEnter={() => audioManager.playClick()}
                   onClick={() => handleSelectGame(game.path)}
-                  className="group relative cursor-pointer text-right flex flex-col h-full"
+                  className="group relative cursor-pointer text-right w-full"
                 >
-                  {/* Subtle hover glow aura */}
                   <div
-                    className={`absolute -inset-2 rounded-[2.5rem] bg-gradient-to-r ${game.themeGradient} opacity-0 group-hover:opacity-40 blur-2xl transition-all duration-500 pointer-events-none`}
-                  />
-
-                  <div className={`relative flex flex-col justify-between h-full rounded-[2.5rem] bg-gradient-to-b from-white via-slate-50/50 to-white p-6 sm:p-7 border-3 border-slate-200/90 shadow-xl shadow-slate-200/60 transition-all duration-500 group-hover:-translate-y-3 group-hover:scale-[1.02] group-hover:shadow-2xl ${game.borderHover}`}>
-                    {/* Specular Shimmer Sweep on Hover */}
-                    <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/50 to-transparent pointer-events-none skew-x-12 rounded-[2.5rem]" />
-
-                    <div className="relative space-y-4">
-                      {/* Top Badge & Icon Row */}
-                      <div className="flex items-center justify-between gap-2 mb-2">
-                        <span className={`text-xs font-black px-3 py-1 rounded-full border shadow-2xs ${game.badgeColor}`}>
-                          {game.badge}
-                        </span>
-
-                        <div
-                          className={`w-16 h-16 rounded-3xl flex items-center justify-center text-white bg-gradient-to-br ${game.themeGradient} shadow-lg ${game.glowColor} group-hover:scale-115 group-hover:rotate-6 transition-transform duration-500 ring-4 ring-white/80`}
-                        >
-                          <Icon className="w-8 h-8" />
-                        </div>
+                    className={`relative flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-3xl bg-white/95 hover:bg-gradient-to-r hover:from-white hover:via-slate-50/60 hover:to-white p-5 sm:p-6 border-2 border-slate-200/90 shadow-sm hover:shadow-xl hover:border-indigo-400 transition-all duration-300 hover:-translate-y-0.5 active:scale-[0.99] overflow-hidden`}
+                  >
+                    {/* Right part: Icon + Title + Description */}
+                    <div className="flex items-start sm:items-center gap-4 flex-1 min-w-0">
+                      <div
+                        className={`w-14 h-14 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center text-white bg-gradient-to-br ${game.themeGradient} shadow-md ${game.glowColor} group-hover:scale-105 transition-transform shrink-0`}
+                      >
+                        <Icon className="w-7 h-7 sm:w-8 sm:h-8" />
                       </div>
 
-                      {/* Title & Tagline */}
-                      <div className="space-y-1">
-                        <h3 className="text-xl sm:text-2xl font-black text-slate-900 group-hover:text-indigo-700 transition-colors">
-                          {game.title}
-                        </h3>
+                      <div className="space-y-1 min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="text-lg sm:text-xl font-black text-slate-900 group-hover:text-indigo-700 transition-colors">
+                            {game.title}
+                          </h3>
+                          <span className={`text-[10px] sm:text-xs font-black px-2.5 py-0.5 rounded-full border shadow-2xs ${game.badgeColor}`}>
+                            {game.badge}
+                          </span>
+                        </div>
                         <p className="text-xs font-black text-indigo-600/90">
                           {game.tagline}
                         </p>
+                        <p className="text-xs sm:text-sm text-slate-600 font-bold leading-relaxed line-clamp-2">
+                          {game.description}
+                        </p>
                       </div>
-
-                      {/* Description */}
-                      <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-bold">
-                        {game.description}
-                      </p>
                     </div>
 
-                    {/* 3D Tactile Launch Action Button */}
-                    <div className="pt-6 border-t border-slate-100/90 relative mt-4">
+                    {/* Left part: Action CTA */}
+                    <div className="flex items-center justify-end w-full sm:w-auto shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
                       <div
-                        className={`w-full py-3.5 px-5 rounded-2xl font-black text-xs sm:text-sm flex items-center justify-center gap-2 text-white bg-gradient-to-r ${game.themeGradient} border-b-4 border-black/25 active:border-b-0 active:translate-y-1 shadow-md group-hover:shadow-xl transition-all group-hover:brightness-105`}
+                        className={`w-full sm:w-auto py-3 px-6 rounded-2xl font-black text-xs sm:text-sm flex items-center justify-center gap-2 text-white bg-gradient-to-r ${game.themeGradient} border-b-4 border-black/20 active:border-b-0 active:translate-y-0.5 shadow-md group-hover:shadow-lg transition-all group-hover:brightness-105`}
                       >
                         <Zap className="w-4 h-4 fill-white" />
                         <span>العب وتحدَّ الآن</span>
-                        <ChevronLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1.5 duration-300" />
+                        <ChevronLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1 duration-300" />
                       </div>
                     </div>
                   </div>

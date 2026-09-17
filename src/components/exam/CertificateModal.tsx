@@ -293,14 +293,14 @@ export function CertificateModal({
                   <p className="text-[11px] font-bold text-slate-500">المملكة العربية السعودية</p>
                   <p className="text-[11px] font-bold text-slate-500">وزارة التعليم</p>
                   <p className="text-xs font-black text-slate-800">الإدارة العامة للتعليم بمحافظة جدة</p>
-                  <p className="text-xs font-black text-[#0f172a]">المتوسطة الثانية والثمانون</p>
+                  <p className="text-xs font-black text-[#b45309]">المعلمة: أ/ هيفاء السلمي</p>
                 </div>
 
                 <div className="flex flex-col items-center">
                   <div className="relative">
                     <div className="w-16 h-16 rounded-full p-1 bg-gradient-to-tr from-amber-400 via-yellow-200 to-amber-500 shadow-md mb-1 flex items-center justify-center overflow-hidden">
                       <div className="w-full h-full rounded-full bg-white flex items-center justify-center p-1">
-                        <img src="/logo.jpg" alt="Logo" className="w-full h-full object-contain" />
+                        <img src="/brain-science-logo.png" alt="Logo" className="w-full h-full object-contain" />
                       </div>
                     </div>
                     <span className="absolute -top-2.5 right-1/2 translate-x-1/2 text-sm">👑</span>
@@ -395,9 +395,9 @@ export function CertificateModal({
                 </div>
 
                 <p className="text-xs sm:text-sm font-bold text-slate-700 leading-relaxed max-w-xl mx-auto pt-0.5">
-                  تتشرف إدارة <span className="text-[#0f172a] font-black">المتوسطة الثانية والثمانون</span> ومعلمة المادة الأستاذة / <span className="text-[#0f172a] font-black">هيفا السلمي</span>
+                  تتشرف معلمة المادة الأستاذة / <span className="text-[#0f172a] font-black">هيفاء السلمي</span>
                   <br />
-                  بمنح هذا الوسام الملكي الرفيع لبطل التميز والصدارة:
+                  بمنح هذا الوسام الرفيع لبطل التميز والصدارة:
                 </p>
 
                 {/* Student Name */}
@@ -456,7 +456,7 @@ export function CertificateModal({
               >
                 <div className="text-right space-y-0.5">
                   <p className="text-[11px] font-bold text-slate-500">معلمة مادة العلوم</p>
-                  <p className="text-xs sm:text-sm font-black text-[#0f172a]">أ/ هيفا السلمي</p>
+                  <p className="text-xs sm:text-sm font-black text-[#0f172a]">أ/ هيفاء السلمي</p>
                   <div className="w-20 h-0.5 bg-amber-300 mt-1" />
                 </div>
 
@@ -499,7 +499,7 @@ export function CertificateModal({
 
                 <div className="text-left space-y-0.5">
                   <p className="text-[11px] font-bold text-slate-500">الختم والاعتماد</p>
-                  <p className="text-xs font-black text-[#0f172a]">إدارة المدرسة • تعليم جدة</p>
+                  <p className="text-xs font-black text-[#0f172a]">منصة براين ساينس للتفوق</p>
                   <div className="w-20 h-0.5 bg-amber-300 mt-1 mr-auto" />
                 </div>
               </div>
@@ -536,12 +536,12 @@ export function CertificateModal({
                 <div className="text-right space-y-1">
                   <p className="text-xs font-bold text-slate-500">المملكة العربية السعودية</p>
                   <p className="text-xs font-bold text-slate-500">وزارة التعليم</p>
-                  <p className="text-sm font-black text-[#1e3a8a]">المتوسطة الثانية والثمانون</p>
+                  <p className="text-sm font-black text-[#1e3a8a]">المعلمة: أ/ هيفاء السلمي</p>
                 </div>
 
                 <div className="flex flex-col items-center">
                   <div className="w-16 h-16 rounded-full p-1 bg-white shadow-md border border-slate-100 mb-1 flex items-center justify-center overflow-hidden">
-                    <img src="/logo.jpg" alt="Logo" className="w-full h-full object-contain" />
+                    <img src="/brain-science-logo.png" alt="Logo" className="w-full h-full object-contain" />
                   </div>
                   <span className="text-[11px] font-black text-[#1e3a8a] tracking-wider">براين ساينس</span>
                 </div>
@@ -592,7 +592,7 @@ export function CertificateModal({
                 </div>
 
                 <p className="text-sm font-bold text-slate-600 leading-relaxed max-w-xl mx-auto pt-1">
-                  تسر إدارة <span className="text-[#1e3a8a] font-black">المتوسطة الثانية والثمانون</span> ومعلمة المادة الأستاذة / <span className="text-[#1e3a8a] font-black">هيفا السلمي</span>
+                  تسر معلمة المادة الأستاذة / <span className="text-[#1e3a8a] font-black">هيفاء السلمي</span>
                 </p>
 
                 <div className="space-y-1">
@@ -657,7 +657,7 @@ export function CertificateModal({
               >
                 <div className="text-right space-y-1">
                   <p className="text-xs font-bold text-slate-500">معلمة مادة العلوم</p>
-                  <p className="text-sm font-black text-[#1e3a8a]">أ/ هيفا السلمي</p>
+                  <p className="text-sm font-black text-[#1e3a8a]">أ/ هيفاء السلمي</p>
                   <div className="w-20 h-0.5 bg-slate-300 mt-1" />
                 </div>
 
@@ -700,7 +700,7 @@ export function CertificateModal({
 
                 <div className="text-left space-y-1">
                   <p className="text-xs font-bold text-slate-500">الختم والاعتماد</p>
-                  <p className="text-xs font-black text-[#1e3a8a]">إدارة المدرسة</p>
+                  <p className="text-xs font-black text-[#1e3a8a]">منصة براين ساينس للتفوق</p>
                   <div className="w-20 h-0.5 bg-slate-300 mt-1 mr-auto" />
                 </div>
               </div>

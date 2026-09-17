@@ -102,13 +102,13 @@ describe("Deterministic Question Flow (No Random Truncation)", () => {
   });
 });
 
-describe("School Identity & Appreciation Certificate", () => {
-  const schoolName = "المتوسطة الثانية والثمانون";
-  const teacherName = "أ/ هيفا السلمي";
+describe("Teacher Identity & Appreciation Certificate", () => {
+  const platformName = "براين ساينس للتفوق";
+  const teacherName = "أ/ هيفاء السلمي";
 
-  it("should use the exact requested school name and teacher", () => {
-    expect(schoolName).toBe("المتوسطة الثانية والثمانون");
-    expect(teacherName).toContain("هيفا السلمي");
+  it("should use the exact requested platform and teacher", () => {
+    expect(platformName).toBe("براين ساينس للتفوق");
+    expect(teacherName).toContain("هيفاء السلمي");
   });
 
   it("should calculate correct certificate score percentages", () => {

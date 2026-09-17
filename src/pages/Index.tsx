@@ -8,80 +8,64 @@ import PremiumBackground from "@/components/ui/PremiumBackground";
 
 const Index = () => {
   const navigate = useNavigate();
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
 
   useEffect(() => {
+    // Non-blocking background session health check
     checkSession();
   }, []);
 
   async function checkSession() {
     try {
-      const { error } = await supabase.auth.getSession();
-
+      const { data, error } = await supabase.auth.getSession();
       if (
-        error?.message.includes("Invalid Refresh Token") ||
-        error?.message.includes("Refresh Token Not Found")
+        error?.message?.includes("Invalid Refresh Token") ||
+        error?.message?.includes("Refresh Token Not Found")
       ) {
-        console.log("Stale session detected, clearing...");
-        await supabase.auth.signOut();
+        await supabase.auth.signOut().catch(() => {});
       }
-    } catch (error) {
-      console.error("Session check error:", error);
-      await supabase.auth.signOut().catch(() => {});
-    } finally {
-      setIsLoading(false);
+    } catch {
+      // Non-fatal, do not block student
     }
   }
 
   const handleStart = async (studentName: string) => {
-    setIsLoading(true);
-    setAuthError(null);
+    const cleanName = studentName.trim();
+    if (!cleanName) return;
 
-    try {
-      console.log("Starting anonymous login flow...", { enteredName: studentName });
+    // 1. Instantaneous synchronous persistence so all pages know the student immediately
+    localStorage.setItem("student_name", cleanName);
+    sessionStorage.setItem("student_name", cleanName);
 
-      // Shared classroom devices can keep the previous student's anonymous session
-      // in localStorage. Always create a fresh user before saving the entered name.
-      await supabase.auth.signOut();
+    // 2. Immediate optimistic transition to student dashboard (0ms latency!)
+    navigate("/student/dashboard");
 
-      const { data, error: authErr } = await supabase.auth.signInAnonymously();
+    // 3. Fast background persistence to Supabase
+    (async () => {
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        let user = sessionData?.session?.user;
 
-      if (authErr) {
-        console.error("Anonymous Sign-in Error:", authErr);
-        if (authErr.message.includes("Anonymous sign-ins are disabled")) {
-          setAuthError("AuthDisabled");
-          setIsLoading(false);
-          return;
+        if (!user) {
+          const { data: authData, error: authErr } = await supabase.auth.signInAnonymously();
+          if (!authErr && authData?.session?.user) {
+            user = authData.session.user;
+          }
         }
-        throw authErr;
+
+        if (user) {
+          await supabase.from("student_profiles").upsert({
+            id: user.id,
+            full_name: cleanName,
+            stage: "default",
+            created_at: new Date().toISOString(),
+          });
+        }
+      } catch (err) {
+        console.warn("Background student profile sync:", err);
       }
-
-      if (!data.session?.user) {
-        throw new Error("فشل إنشاء جلسة للمستخدم");
-      }
-
-      const { error: profileError } = await supabase
-        .from("student_profiles")
-        .upsert({
-          id: data.session.user.id,
-          full_name: studentName,
-          stage: "default",
-          created_at: new Date().toISOString(),
-        });
-
-      if (profileError) {
-        console.error("Profile Upsert Error:", profileError);
-        toast.error("فشل حفظ بيانات الطالب. يرجى المحاولة مرة أخرى.");
-        throw profileError;
-      }
-
-      navigate("/student/dashboard");
-    } catch (err) {
-      console.error("Error in handleStart:", err);
-      toast.error("حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى.");
-      setIsLoading(false);
-    }
+    })();
   };
 
   if (authError === "AuthDisabled") {

@@ -46,7 +46,6 @@ import PremiumBackground from "@/components/ui/PremiumBackground";
 import { useAcademicCatalog } from "@/hooks/use-academic-catalog";
 import { SoundToggle } from "@/components/ui/SoundToggle";
 import { audioManager } from "@/lib/audio";
-import { StudentPortalHub } from "@/components/student/StudentPortalHub";
 import { StudentSidebar } from "@/components/student/StudentSidebar";
 import { isStudentFemale } from "@/lib/studentUtils";
 import {
@@ -693,9 +692,11 @@ export default function StudentDashboard() {
     <PremiumBackground>
       <div className="min-h-screen flex flex-col justify-between" dir="rtl">
         {/* Full-width Glassmorphic Navbar */}
-        <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/80 backdrop-blur-2xl shadow-sm">
-          <div className="max-w-7xl mx-auto flex items-center justify-between px-4 sm:px-6 lg:px-8 py-3.5 sm:py-4 gap-4 flex-wrap">
-            <div className="flex items-center gap-3 sm:gap-4">
+        <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/85 backdrop-blur-2xl shadow-xs">
+          <div className="max-w-7xl mx-auto flex items-center justify-between px-3 sm:px-6 lg:px-8 py-2.5 sm:py-3 gap-2 sm:gap-4 relative">
+            
+            {/* 1. RIGHT SIDE: Back Button + Student Profile Capsule (Select Trigger) */}
+            <div className="flex items-center gap-2 sm:gap-3 shrink-0 z-10">
               {step > 1 && (
                 <Button
                   variant="outline"
@@ -704,89 +705,92 @@ export default function StudentDashboard() {
                     audioManager.playClick();
                     handleBack();
                   }}
-                  className="h-10 w-10 sm:h-11 sm:w-11 rounded-2xl border-slate-200 bg-white/90 text-slate-700 hover:bg-slate-100 hover:text-indigo-600 transition-all shadow-sm"
+                  className="h-10 w-10 sm:h-11 sm:w-11 rounded-2xl border-slate-200 bg-white/90 text-slate-700 hover:bg-slate-100 hover:text-indigo-600 transition-all shadow-xs"
                   title="العودة للخطوة السابقة"
                 >
                   <ChevronRight className="h-5 w-5 sm:h-6 sm:w-6" />
                 </Button>
               )}
 
-              {/* 1. Platform Brand Identity */}
-              <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
-                <div className="relative group">
-                  <div className="absolute -inset-1 rounded-2xl bg-gradient-to-r from-indigo-500 to-sky-500 opacity-20 blur-sm group-hover:opacity-40 transition-opacity" />
-                  <div className="relative flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-2xl bg-white shadow-xs border border-slate-200/80 overflow-hidden p-1 sm:p-1.5">
-                    <img src="/brain-science-logo.png" alt="Logo" className="w-full h-full object-contain" />
-                  </div>
-                </div>
-                <div className="hidden sm:flex flex-col text-right leading-tight">
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-black text-xs sm:text-sm text-slate-900 tracking-tight">براين ساينس</span>
-                    <span className="text-[9.5px] font-black px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200/70">
-                      للتفوق 🚀
-                    </span>
-                  </div>
-                  <span className="text-[10.5px] font-bold text-slate-500 mt-0.5">
-                    المعلمة: أ/ هيفاء السلمي
-                  </span>
-                </div>
-              </div>
-
-              {/* Subtle Vertical Divider */}
-              <div className="h-8 w-px bg-slate-200/80 hidden md:block shrink-0 mx-1" />
-
-              {/* 2. Interactive Student Profile Capsule */}
+              {/* Enhanced Student Profile Capsule Button */}
               <button
                 type="button"
                 onClick={() => {
                   audioManager.playClick();
                   setIsProfileMenuOpen((prev) => !prev);
                 }}
-                className={`flex items-center gap-2.5 sm:gap-3 px-2.5 sm:px-3.5 py-1.5 rounded-2xl transition-all duration-200 cursor-pointer text-right group select-none min-w-0 ${
+                className={`group flex items-center gap-2 sm:gap-3 px-2.5 sm:px-3.5 py-1.5 rounded-2xl border transition-all duration-200 cursor-pointer text-right select-none ${
                   isProfileMenuOpen
-                    ? "bg-indigo-50/90 ring-2 ring-indigo-200/80 shadow-xs"
-                    : "hover:bg-slate-100/80 active:scale-[0.98]"
+                    ? "bg-indigo-50/95 border-indigo-300 ring-2 ring-indigo-200/70 shadow-sm"
+                    : "bg-white/90 hover:bg-slate-50 border-slate-200/90 hover:border-indigo-300 shadow-2xs hover:shadow-xs active:scale-[0.98]"
                 }`}
                 title="اضغط لفتح قائمة الخدمات والملف الشخصي"
                 aria-label="اضغط لفتح قائمة الخدمات والملف الشخصي"
                 aria-expanded={isProfileMenuOpen}
               >
-                {/* Student Avatar (Gender-aware with active status dot) */}
+                {/* Modern Avatar with Glow Ring and Pulse Beacon */}
                 <div className="relative shrink-0">
-                  <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-gradient-to-tr from-indigo-600 via-sky-500 to-emerald-400 p-0.5 shadow-xs flex items-center justify-center transition-transform group-hover:scale-105">
-                    <div className="w-full h-full rounded-[13px] bg-white flex items-center justify-center overflow-hidden">
-                      <span className="text-lg sm:text-xl select-none">
+                  <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-gradient-to-tr from-indigo-600 via-sky-500 to-emerald-400 p-[2px] shadow-sm flex items-center justify-center transition-transform duration-200 group-hover:scale-105">
+                    <div className="w-full h-full rounded-[13px] bg-gradient-to-br from-white via-indigo-50/40 to-slate-50 flex items-center justify-center overflow-hidden">
+                      <span className="text-lg sm:text-xl select-none filter drop-shadow-xs">
                         {isStudentFemale(studentName) ? "👩‍🎓" : "🧑‍🎓"}
                       </span>
                     </div>
                   </div>
-                  <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-white shadow-xs" />
+                  <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 rounded-full border-2 border-white shadow-xs flex items-center justify-center">
+                    <span className="w-1.5 h-1.5 rounded-full bg-white/80 animate-pulse" />
+                  </span>
                 </div>
 
                 {/* Student Details: Name & Level */}
                 <div className="flex flex-col text-right min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-xs sm:text-sm font-black text-slate-900 tracking-tight truncate max-w-[130px] sm:max-w-[200px] md:max-w-[280px]">
+                  <div className="flex items-center gap-1">
+                    <span className="text-xs sm:text-sm font-black text-slate-900 tracking-tight truncate max-w-[110px] sm:max-w-[170px] md:max-w-[240px]">
                       {studentName ? `أهلاً، ${studentName}` : "طالب متميز"}
                     </span>
-                    <div
-                      className={`p-0.5 rounded-md text-slate-400 group-hover:text-indigo-600 transition-transform duration-200 ${
-                        isProfileMenuOpen ? "rotate-180 text-indigo-600" : ""
-                      }`}
-                    >
-                      <ChevronDown className="w-3.5 h-3.5" />
-                    </div>
                   </div>
-                  <span className="text-[10px] font-bold text-indigo-600 flex items-center gap-1 mt-0.5">
-                    <span>طالب/ة متفوق/ة</span>
-                    <span className="text-amber-500 text-[10px]">⭐</span>
-                  </span>
+                  <div className="flex items-center gap-1 mt-0.5">
+                    <span className="text-[9.5px] sm:text-[10px] font-black text-indigo-700 bg-indigo-50/90 border border-indigo-200/60 px-1.5 py-0.2 rounded-md">
+                      طالب/ة متفوق/ة ⭐
+                    </span>
+                  </div>
+                </div>
+
+                {/* Dropdown Indicator Pill */}
+                <div
+                  className={`w-6 h-6 rounded-xl flex items-center justify-center transition-all duration-300 shrink-0 ${
+                    isProfileMenuOpen
+                      ? "rotate-180 bg-indigo-600 text-white shadow-xs"
+                      : "bg-slate-100/90 text-slate-500 group-hover:bg-indigo-100 group-hover:text-indigo-700"
+                  }`}
+                >
+                  <ChevronDown className="w-3.5 h-3.5" />
                 </div>
               </button>
             </div>
 
-            {/* Left side actions: Sound Toggle & Clean Logout */}
-            <div className="flex items-center gap-2 sm:gap-3">
+            {/* 2. CENTER: Brand Logo & Teacher Name */}
+            <div className="flex items-center justify-center gap-2 sm:gap-3 py-1 px-2.5 sm:px-4 rounded-2xl bg-white/70 border border-slate-200/70 shadow-2xs backdrop-blur-md md:absolute md:left-1/2 md:-translate-x-1/2">
+              <div className="relative group shrink-0">
+                <div className="relative flex h-8 w-8 sm:h-11 sm:w-11 items-center justify-center rounded-2xl bg-white shadow-xs border border-slate-200/80 overflow-hidden p-1">
+                  <img src="/brain-science-logo.png" alt="Logo" className="w-full h-full object-contain" />
+                </div>
+              </div>
+              <div className="flex flex-col text-center sm:text-right leading-tight">
+                <div className="flex items-center justify-center sm:justify-start gap-1.5">
+                  <span className="font-black text-xs sm:text-sm text-slate-900 tracking-tight">براين ساينس</span>
+                  <span className="hidden xs:inline-block text-[9px] sm:text-[9.5px] font-black px-1.5 sm:px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200/70">
+                    للتفوق 🚀
+                  </span>
+                </div>
+                <span className="text-[9.5px] sm:text-[11px] font-bold text-slate-600 mt-0.5">
+                  المعلمة: أ/ هيفاء السلمي
+                </span>
+              </div>
+            </div>
+
+            {/* 3. LEFT SIDE: Sound Toggle & Clean Logout */}
+            <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0 z-10">
               <SoundToggle />
 
               <Button
@@ -795,7 +799,7 @@ export default function StudentDashboard() {
                   audioManager.playClick();
                   handleLogout();
                 }}
-                className="gap-2 rounded-2xl text-slate-600 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 h-10 sm:h-11 px-3 sm:px-4 font-bold border border-slate-200 text-xs sm:text-sm transition-all shadow-2xs"
+                className="gap-1.5 sm:gap-2 rounded-2xl text-slate-600 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 h-9 sm:h-11 px-2.5 sm:px-4 font-bold border border-slate-200 text-xs sm:text-sm transition-all shadow-2xs"
                 title="تسجيل الخروج"
               >
                 <LogOut className="h-4 w-4" />
@@ -1122,19 +1126,6 @@ export default function StudentDashboard() {
                   </div>
                 </button>
               </div>
-
-              {/* Excellence & Motivation Hub (Leaderboard, Achievements, Progress, Certificates) */}
-              <div className="pt-10 sm:pt-14 border-t border-slate-200/80">
-                <div className="flex items-center justify-center gap-3 mb-6 select-none">
-                  <div className="h-px w-12 sm:w-24 bg-gradient-to-r from-transparent to-indigo-300" />
-                  <span className="text-xs sm:text-sm font-black text-slate-500 tracking-wide flex items-center gap-1.5 bg-white/80 px-4 py-1.5 rounded-full border border-slate-200/80 shadow-2xs">
-                    <Trophy className="w-4 h-4 text-amber-500" />
-                    <span>لوحة الشرف والإنجازات الشخصية</span>
-                  </span>
-                  <div className="h-px w-12 sm:w-24 bg-gradient-to-l from-transparent to-indigo-300" />
-                </div>
-                <StudentPortalHub studentName={studentName} className="mt-0 pt-0 border-t-0" />
-              </div>
             </div>
           )}
 
@@ -1440,21 +1431,6 @@ export default function StudentDashboard() {
                   <span>العودة لاختيار التخصص العلمي</span>
                 </Button>
               </div>
-            </div>
-          )}
-
-          {/* Academic Context Status Pill */}
-          {currentContext && (
-            <div className="max-w-xl mx-auto mt-12 p-3.5 rounded-2xl bg-white/70 backdrop-blur-xl border border-slate-200/80 shadow-sm flex items-center justify-between gap-3 flex-wrap">
-              <div className="flex items-center gap-2.5">
-                <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
-                <span className="text-xs font-black text-slate-700">
-                  {getSelectionDisplayText(currentContext)}
-                </span>
-              </div>
-              <span className="text-[11px] font-bold text-slate-500">
-                المعلمة: أ/ هيفاء السلمي
-              </span>
             </div>
           )}
           </main>

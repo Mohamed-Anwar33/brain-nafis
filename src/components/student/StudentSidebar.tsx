@@ -155,45 +155,57 @@ export function StudentSidebar({
     {
       key: "home",
       label: "الرئيسية",
+      subtitle: "مسارات بنك نافس والمسار المركزي",
       icon: Home,
+      iconBg: "bg-sky-50 text-sky-600 group-hover:bg-sky-600 group-hover:text-white",
       badge: "المسارات",
-      badgeColor: "bg-indigo-50 text-indigo-700 border-indigo-200",
+      badgeColor: "bg-sky-50 text-sky-700 border-sky-200",
     },
     {
-      key: "progress",
-      label: "تقدمي",
-      icon: TrendingUp,
-      badge: stats ? `${stats.accuracy}%` : "0%",
-      badgeColor: "bg-blue-50 text-blue-700 border-blue-200",
+      key: "leaderboard",
+      label: "لوحة الصدارة",
+      subtitle: "المتصدرون وقائمة شرف الأوائل",
+      icon: Crown,
+      iconBg: "bg-purple-50 text-purple-600 group-hover:bg-purple-600 group-hover:text-white",
+      badge: stats?.rank ? `#${stats.rank}` : "#1",
+      badgeColor: "bg-purple-50 text-purple-700 border-purple-200",
     },
     {
       key: "achievements",
-      label: "إنجازي",
+      label: "إنجازاتي وأوسمتي",
+      subtitle: "الأوسمة والشارات العلمية المكتسبة",
       icon: Trophy,
+      iconBg: "bg-amber-50 text-amber-600 group-hover:bg-amber-500 group-hover:text-slate-950",
       badge: stats
         ? `${stats.achievements?.filter((a) => a.unlocked).length || 0} أوسمة`
         : "0 أوسمة",
       badgeColor: "bg-amber-50 text-amber-700 border-amber-200",
     },
     {
-      key: "certificates",
-      label: "شهاداتي",
-      icon: GraduationCap,
-      badge: "جوازي الإلكتروني",
-      badgeColor: "bg-emerald-50 text-emerald-700 border-emerald-200",
+      key: "progress",
+      label: "مؤشر تقدمي",
+      subtitle: "مستوى الدقة وإحصائيات الإنجاز",
+      icon: TrendingUp,
+      iconBg: "bg-blue-50 text-blue-600 group-hover:bg-blue-600 group-hover:text-white",
+      badge: stats ? `${stats.accuracy}% دقة` : "0% دقة",
+      badgeColor: "bg-blue-50 text-blue-700 border-blue-200",
     },
     {
-      key: "leaderboard",
-      label: "لوحة الصدارة",
-      icon: Crown,
-      badge: stats?.rank ? `#${stats.rank}` : "#97",
-      badgeColor: "bg-purple-50 text-purple-700 border-purple-200",
+      key: "certificates",
+      label: "شهادات التقدير",
+      subtitle: "جوازي الإلكتروني والشهادات الرسمية",
+      icon: GraduationCap,
+      iconBg: "bg-emerald-50 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white",
+      badge: "جوازي 🎓",
+      badgeColor: "bg-emerald-50 text-emerald-700 border-emerald-200",
     },
     {
       key: "games",
       label: "الألعاب التفاعلية",
+      subtitle: "4 ألعاب وتحديات علمية تفاعلية",
       icon: Gamepad2,
-      badge: "4 ألعاب",
+      iconBg: "bg-rose-50 text-rose-600 group-hover:bg-rose-600 group-hover:text-white",
+      badge: "4 ألعاب 🎮",
       badgeColor: "bg-rose-50 text-rose-700 border-rose-200",
     },
   ];
@@ -212,20 +224,22 @@ export function StudentSidebar({
 
           {/* Floating Dropdown Card smoothly descending from profile icon on the right */}
           <div
-            className="fixed top-[4.75rem] sm:top-20 right-2 sm:right-6 md:right-8 z-50 w-[calc(100vw-1rem)] sm:w-88 max-w-[360px] bg-white rounded-[2rem] shadow-[0_25px_60px_-15px_rgba(15,23,42,0.3)] border-2 border-slate-200/90 p-4 sm:p-5 flex flex-col justify-between max-h-[calc(100vh-5.5rem)] overflow-hidden animate-in fade-in slide-in-from-top-3 duration-300 ease-out"
+            className="fixed top-[4.25rem] sm:top-[4.5rem] right-2.5 sm:right-6 md:right-8 z-50 w-[calc(100vw-1.25rem)] sm:w-96 max-w-[380px] bg-white/95 backdrop-blur-2xl rounded-[2rem] shadow-[0_25px_60px_-15px_rgba(15,23,42,0.35)] border-2 border-slate-200/90 p-4 sm:p-5 flex flex-col justify-between max-h-[calc(100vh-5.5rem)] overflow-hidden animate-in fade-in slide-in-from-top-3 duration-300 ease-out"
             dir="rtl"
             role="dialog"
-            aria-label="قائمة الملف الشخصي"
+            aria-label="قائمة الملف الشخصي والخدمات"
           >
             {/* Scrollable Main Area (Profile + Nav) */}
             <div className="flex-1 overflow-y-auto pr-1 pl-1 space-y-3 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-200 hover:[&::-webkit-scrollbar-thumb]:bg-slate-300">
               {/* Drawer Header with Logo & Close button */}
               <div className="flex items-center justify-between pb-3 border-b border-slate-200/80">
                 <div className="flex items-center gap-2">
-                  <img src="/brain-science-logo.png" alt="Logo" className="w-8 h-8 object-contain" />
+                  <div className="w-8 h-8 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center p-1">
+                    <img src="/brain-science-logo.png" alt="Logo" className="w-full h-full object-contain" />
+                  </div>
                   <div>
-                    <span className="font-black text-xs text-slate-800 block leading-tight">قائمة المنصة</span>
-                    <span className="text-[10px] font-bold text-slate-400">الملف الشخصي والخدمات</span>
+                    <span className="font-black text-xs text-slate-900 block leading-tight">قائمة الخدمات والأنشطة</span>
+                    <span className="text-[10px] font-bold text-indigo-600">اختر وجهتك التفاعلية 🎯</span>
                   </div>
                 </div>
                 <button
@@ -241,9 +255,9 @@ export function StudentSidebar({
               {/* User Card: Clean, unclipped, full names */}
               <div className="p-3.5 rounded-3xl bg-gradient-to-br from-indigo-50/95 via-sky-50/80 to-emerald-50/85 border-2 border-indigo-100 shadow-xs flex items-center gap-3 relative overflow-hidden group">
                 <div className="relative shrink-0">
-                  <div className="w-12 h-12 sm:w-13 sm:h-13 rounded-2xl bg-gradient-to-tr from-indigo-600 via-sky-500 to-emerald-400 p-0.5 shadow-md flex items-center justify-center">
+                  <div className="w-12 h-12 sm:w-13 sm:h-13 rounded-2xl bg-gradient-to-tr from-indigo-600 via-sky-500 to-emerald-400 p-[2px] shadow-md flex items-center justify-center">
                     <div className="w-full h-full rounded-[14px] bg-white flex items-center justify-center overflow-hidden">
-                      <span className="text-2xl select-none">{isFemale ? "👩‍🎓" : "🧑‍🎓"}</span>
+                      <span className="text-2xl select-none filter drop-shadow-xs">{isFemale ? "👩‍🎓" : "🧑‍🎓"}</span>
                     </div>
                   </div>
                   <span className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-white flex items-center justify-center shadow-xs">
@@ -254,7 +268,7 @@ export function StudentSidebar({
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5">
                     <span className="text-[10px] font-black text-indigo-700 bg-indigo-100/90 px-2 py-0.5 rounded-md">
-                      طالب/ة متفوق/ة
+                      طالب/ة متفوق/ة ⭐
                     </span>
                   </div>
                   <h3
@@ -269,7 +283,7 @@ export function StudentSidebar({
                 </div>
               </div>
 
-              {/* Navigation List items */}
+              {/* Navigation List items styled as rich Select options */}
               <nav className="space-y-1.5 pt-1">
                 {navItems.map((item) => {
                   const Icon = item.icon;
@@ -280,28 +294,35 @@ export function StudentSidebar({
                       key={item.key}
                       type="button"
                       onClick={() => handleItemClick(item.key)}
-                      className={`w-full flex items-center justify-between p-2.5 sm:p-3 rounded-2xl text-right font-black transition-all duration-200 group cursor-pointer ${
+                      className={`w-full flex items-center justify-between p-2.5 rounded-2xl text-right transition-all duration-200 group cursor-pointer border ${
                         isActive
-                          ? "bg-gradient-to-r from-indigo-600 to-sky-600 text-white shadow-md shadow-indigo-500/20 scale-[1.01]"
-                          : "text-slate-700 hover:bg-slate-100/80 hover:text-indigo-700 active:scale-[0.99]"
+                          ? "bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-600 text-white shadow-md shadow-indigo-500/25 border-indigo-500 scale-[1.01]"
+                          : "bg-white/80 hover:bg-indigo-50/60 text-slate-800 border-slate-100 hover:border-indigo-200/80 active:scale-[0.99]"
                       }`}
                     >
-                      <div className="flex items-center gap-2.5 sm:gap-3">
+                      <div className="flex items-center gap-2.5 min-w-0">
                         <div
-                          className={`w-9 h-9 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110 shrink-0 ${
+                          className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl flex items-center justify-center transition-all duration-300 group-hover:scale-110 shrink-0 shadow-2xs ${
                             isActive
                               ? "bg-white/20 text-white"
-                              : "bg-slate-100 text-slate-600 group-hover:bg-indigo-100 group-hover:text-indigo-700"
+                              : item.iconBg
                           }`}
                         >
-                          <Icon className="w-4 h-4" />
+                          <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
                         </div>
-                        <span className="text-xs sm:text-sm font-black whitespace-nowrap">{item.label}</span>
+                        <div className="flex flex-col min-w-0">
+                          <span className={`text-xs sm:text-sm font-black truncate ${isActive ? "text-white" : "text-slate-900 group-hover:text-indigo-700"}`}>
+                            {item.label}
+                          </span>
+                          <span className={`text-[10px] font-bold truncate ${isActive ? "text-indigo-100" : "text-slate-400 group-hover:text-slate-500"}`}>
+                            {item.subtitle}
+                          </span>
+                        </div>
                       </div>
 
-                      <div className="flex items-center gap-1.5 shrink-0">
+                      <div className="flex items-center gap-1.5 shrink-0 mr-1">
                         <span
-                          className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${
+                          className={`text-[9.5px] font-black px-2 py-0.5 rounded-full border ${
                             isActive
                               ? "bg-white/20 text-white border-white/30"
                               : item.badgeColor

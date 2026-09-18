@@ -40,10 +40,10 @@ export function CertificateModal({
 
   const calculatedPercentage =
     customPercentage !== undefined
-      ? customPercentage
+      ? Math.min(100, Math.max(0, customPercentage))
       : totalQuestions > 0
-        ? Math.round((score / totalQuestions) * 100)
-        : 100;
+        ? Math.min(100, Math.max(0, Math.round((score / totalQuestions) * 100)))
+        : 0;
 
   const currentDate = date || new Date().toLocaleDateString("ar-SA", {
     year: "numeric",

@@ -43,6 +43,8 @@ interface GameState {
     answeringCount: number;
     level: number;
     stage: number;
+    cumulativeScore?: number;
+    cumulativeCorrect?: number;
 }
 
 export default function SpeedChallenge() {
@@ -64,7 +66,9 @@ export default function SpeedChallenge() {
         correctCount: 0,
         answeringCount: 0,
         level: 1,
-        stage: 1
+        stage: 1,
+        cumulativeScore: 0,
+        cumulativeCorrect: 0
     });
 
     const [initialTime, setInitialTime] = useState(60);
@@ -187,8 +191,8 @@ export default function SpeedChallenge() {
             // 3. Filter unseen questions
             let availableQuestions = allQuestions.filter(q => !seenIds.has(q.id));
 
-            // 4. Reset if needed (need at least 20 questions)
-            const requiredCount = 5;
+            // 4. Reset if needed (need at least 10 questions per stage)
+            const requiredCount = 10;
             if (availableQuestions.length < requiredCount) {
                 await resetScopedHistory(session.user.id, "speed", selectionContext);
 
@@ -198,13 +202,10 @@ export default function SpeedChallenge() {
 
             // 5. Fetch full data for available questions
             const availableIds = availableQuestions.map(q => q.id);
-            const { data: fullQuestions, error: fullError } = await applySelectionFilters(
-                supabase
-                    .from("speed_challenge_questions")
-                    .select("*")
-                    .in("id", availableIds),
-                selectionContext,
-            );
+            const { data: fullQuestions, error: fullError } = await supabase
+                .from("speed_challenge_questions")
+                .select("*")
+                .in("id", availableIds);
 
             if (fullError || !fullQuestions) {
                 toast.error("فشل تحميل بيانات الأسئلة");
@@ -212,14 +213,16 @@ export default function SpeedChallenge() {
                 return;
             }
 
+            const typedQuestions = (fullQuestions || []) as Question[];
+
             // 6. Shuffle with Fisher-Yates
-            const shuffled = [...fullQuestions];
+            const shuffled = [...typedQuestions];
             for (let i = shuffled.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
                 [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
             }
 
-            // 7. Select first 20
+            // 7. Select 10 questions for this stage
             const selectedQuestions = shuffled.slice(0, requiredCount);
 
             // 8. Record seen questions
@@ -230,7 +233,7 @@ export default function SpeedChallenge() {
                 selectionContext,
             );
 
-            console.log(`Pool: ${fullQuestions.length}, Selected: ${selectedQuestions.length}`);
+            console.log(`Pool: ${typedQuestions.length}, Selected: ${selectedQuestions.length}`);
 
             setQuestions(selectedQuestions);
             setLoading(false);
@@ -249,17 +252,42 @@ export default function SpeedChallenge() {
     const startGame = () => {
         setIsPlaying(true);
         setTimeLeft(initialTime);
-        setGameState({ score: 0, correctCount: 0, answeringCount: 0, level: 1, stage: 1 });
+        setGameState({
+            score: 0,
+            correctCount: 0,
+            answeringCount: 0,
+            level: 1,
+            stage: 1,
+            cumulativeScore: 0,
+            cumulativeCorrect: 0
+        });
+        scoreRef.current = 0;
+        correctCountRef.current = 0;
+        answeringCountRef.current = 0;
         setCurrentIndex(0);
         setIsGameOver(false);
         setFeedbackMessage(null);
+        setQuestionsWithErrors(new Set());
+        fetchQuestions();
     };
 
     const startNextStage = () => {
-        setGameState(prev => ({
-            ...prev,
-            stage: prev.stage + 1
-        }));
+        const nextStage = gameState.stage + 1;
+        const newCumScore = (gameState.cumulativeScore || 0) + gameState.score;
+        const newCumCorrect = (gameState.cumulativeCorrect || 0) + gameState.correctCount;
+
+        setGameState({
+            score: 0,
+            correctCount: 0,
+            answeringCount: 0,
+            level: 1,
+            stage: nextStage,
+            cumulativeScore: newCumScore,
+            cumulativeCorrect: newCumCorrect
+        });
+        scoreRef.current = 0;
+        correctCountRef.current = 0;
+        answeringCountRef.current = 0;
         setQuestionsWithErrors(new Set());
         setFeedbackMessage(null);
         fetchQuestions();
@@ -360,18 +388,20 @@ export default function SpeedChallenge() {
                     .eq("id", user.id)
                     .maybeSingle();
                 const resolvedStudentName = profile?.full_name || "طالب";
+                const stageQuestionsTotal = questions.length || 10;
                 const { data: attemptData, error: insertError } = await supabase.from("game_attempts").insert({
                     user_id: user.id,
                     game_type: "speed",
                     score: scoreRef.current,
                     correct_count: correctCountRef.current,
-                    total_questions: answeringCountRef.current,
+                    total_questions: stageQuestionsTotal,
                     duration_seconds: initialTime - timeLeft,
                     ...getScopedPayload(selectionContext),
                     metadata: {
                         student_name: resolvedStudentName,
                         selection_context: getSelectionDisplayText(selectionContext),
-                        game_name: "تحدي السرعة"
+                        game_name: "تحدي السرعة",
+                        stage: gameState.stage
                     }
                 }).select().single() as any;
 
@@ -456,69 +486,126 @@ export default function SpeedChallenge() {
                         <p className="text-orange-600 font-bold">جاري التحميل...</p>
                     </div>
                 ) : isGameOver ? (
-                    <Card className="p-10 text-center space-y-6 max-w-md w-full bg-white/90 backdrop-blur-xl border-0 shadow-2xl shadow-orange-500/20">
-                        <div>
-                            <h2 className="text-3xl font-black bg-gradient-to-r from-orange-600 to-amber-600 bg-clip-text text-transparent mb-2">أحسنت يا {studentName || "بطل"}!</h2>
-                            <p className="text-slate-500">أكملت المرحلة {gameState.stage} من تحدي السرعة بنجاح.</p>
-                        </div>
+                    (() => {
+                        const stageTotalQuestions = questions.length || 10;
+                        const stagePercentage = stageTotalQuestions > 0
+                            ? Math.round((gameState.correctCount / stageTotalQuestions) * 100)
+                            : 0;
 
-                        <div className="bg-gradient-to-r from-orange-50 to-amber-50 p-6 rounded-2xl border border-orange-200">
-                            <div className="text-sm text-orange-700 mb-2 font-bold">النسبة والدرجة</div>
-                            <div className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-amber-600">
-                                {gameState.answeringCount > 0 ? Math.round((gameState.correctCount / gameState.answeringCount) * 100) : 100}%
-                            </div>
-                            <div className="text-sm text-slate-500 font-bold mt-2">
-                                {gameState.correctCount} من {gameState.answeringCount} أسئلة صحيحة ({gameState.score} نقطة)
-                            </div>
-                        </div>
-                        
-                        <div className="grid grid-cols-2 gap-4">
-                            <Card className="p-4 bg-gradient-to-br from-emerald-50 to-green-50 border-emerald-200">
-                                <div className="text-2xl font-black text-emerald-600">{gameState.correctCount}</div>
-                                <div className="text-xs text-slate-500 font-bold">صحيحة</div>
+                        const allStagesFinalCorrect = (gameState.cumulativeCorrect || 0) + gameState.correctCount;
+                        const allStagesFinalScore = (gameState.cumulativeScore || 0) + gameState.score;
+                        const allStagesTotalQuestions = 40;
+                        const allStagesPercentage = Math.round((allStagesFinalCorrect / allStagesTotalQuestions) * 100);
+
+                        const isAllStagesComplete = gameState.stage >= 4;
+
+                        return (
+                            <Card className="p-6 sm:p-8 text-center space-y-6 max-w-lg w-full bg-white/95 backdrop-blur-xl border-0 shadow-2xl shadow-orange-500/20">
+                                <div>
+                                    <h2 className="text-2xl sm:text-3xl font-black bg-gradient-to-r from-orange-600 to-amber-600 bg-clip-text text-transparent mb-2">
+                                        {isAllStagesComplete ? `تهانينا يا ${studentName || "بطل"}!` : `أحسنت يا ${studentName || "بطل"}!`}
+                                    </h2>
+                                    <p className="text-slate-600 font-medium">
+                                        {isAllStagesComplete
+                                            ? "أكملت جميع مراحل تحدي السرعة الأربع (4) بنجاح فائق!"
+                                            : `أكملت المرحلة ${gameState.stage} من تحدي السرعة بنجاح.`}
+                                    </p>
+                                </div>
+
+                                <div className="bg-gradient-to-r from-orange-50 to-amber-50 p-5 sm:p-6 rounded-2xl border border-orange-200">
+                                    <div className="text-sm text-orange-700 mb-2 font-bold">
+                                        {isAllStagesComplete ? "النسبة والدرجة الإجمالية (4 مراحل)" : `النسبة والدرجة - المرحلة ${gameState.stage}`}
+                                    </div>
+                                    <div className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-amber-600">
+                                        {isAllStagesComplete ? allStagesPercentage : stagePercentage}%
+                                    </div>
+                                    <div className="text-sm text-slate-600 font-bold mt-2">
+                                        {isAllStagesComplete
+                                            ? `${allStagesFinalCorrect} من ${allStagesTotalQuestions} أسئلة صحيحة (${allStagesFinalScore} نقطة)`
+                                            : `${gameState.correctCount} من ${stageTotalQuestions} أسئلة صحيحة (${gameState.score} نقطة)`}
+                                    </div>
+                                </div>
+                                
+                                <div className="grid grid-cols-2 gap-4">
+                                    <Card className="p-4 bg-gradient-to-br from-emerald-50 to-green-50 border-emerald-200 shadow-sm">
+                                        <div className="text-2xl sm:text-3xl font-black text-emerald-600">
+                                            {isAllStagesComplete ? allStagesFinalCorrect : gameState.correctCount}
+                                        </div>
+                                        <div className="text-xs sm:text-sm text-slate-600 font-bold mt-1">صحيحة</div>
+                                    </Card>
+                                    <Card className="p-4 bg-gradient-to-br from-rose-50 to-red-50 border-rose-200 shadow-sm">
+                                        <div className="text-2xl sm:text-3xl font-black text-rose-600">
+                                            {isAllStagesComplete
+                                                ? Math.max(0, allStagesTotalQuestions - allStagesFinalCorrect)
+                                                : Math.max(0, stageTotalQuestions - gameState.correctCount)}
+                                        </div>
+                                        <div className="text-xs sm:text-sm text-slate-600 font-bold mt-1">خاطئة / لم تُحل</div>
+                                    </Card>
+                                </div>
+
+                                {/* Certificate Button - Only after 4 stages */}
+                                {isAllStagesComplete ? (
+                                    <Button
+                                        onClick={() => setShowCertificateModal(true)}
+                                        className="w-full min-h-[3.5rem] h-auto py-3 px-4 rounded-2xl bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 hover:from-amber-600 hover:to-yellow-700 text-slate-950 font-black text-base sm:text-lg shadow-xl shadow-amber-500/25 flex items-center justify-center gap-2 border-2 border-amber-300 text-center leading-snug whitespace-normal transition-all transform hover:scale-[1.01] active:scale-95"
+                                    >
+                                        <Award className="w-6 h-6 shrink-0 text-slate-950" />
+                                        <span>عرض وتحميل شهادة الشكر والتقدير</span>
+                                    </Button>
+                                ) : (
+                                    <div className="bg-amber-50 border-2 border-amber-200/80 rounded-2xl p-4 text-center space-y-1.5 shadow-sm">
+                                        <div className="flex items-center justify-center gap-2 text-amber-900 font-bold text-sm sm:text-base">
+                                            <Award className="w-5 h-5 text-amber-600 shrink-0" />
+                                            <span>شهادة الشكر والتقدير مقفلة حالياً</span>
+                                        </div>
+                                        <p className="text-xs sm:text-sm text-amber-700 font-medium">
+                                            تُمنح الشهادة المعتمدة بعد اجتياز جميع المراحل الأربع (أنجزت المرحلة {gameState.stage} من 4).
+                                        </p>
+                                    </div>
+                                )}
+                                
+                                <div className="flex flex-col gap-3">
+                                    {!isAllStagesComplete ? (
+                                        <Button
+                                            onClick={startNextStage}
+                                            className="w-full h-14 text-xl font-black rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-emerald-500/20 text-white flex items-center justify-center gap-2"
+                                        >
+                                            <Sparkles className="w-6 h-6 shrink-0" />
+                                            <span>الانتقال للمرحلة {gameState.stage + 1}</span>
+                                        </Button>
+                                    ) : (
+                                        <Button
+                                            onClick={startGame}
+                                            className="w-full h-14 text-xl font-black rounded-2xl bg-gradient-to-r from-indigo-600 to-blue-600 hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-indigo-500/20 text-white flex items-center justify-center gap-2"
+                                        >
+                                            <RefreshCw className="w-6 h-6 shrink-0" />
+                                            <span>بدء تحدي جديد من المرحلة 1</span>
+                                        </Button>
+                                    )}
+                                    
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <Button onClick={() => window.location.reload()} variant="outline" className="h-12 text-base sm:text-lg rounded-xl font-bold border-2">
+                                            <RefreshCw className="w-5 h-5 ml-2" />
+                                            إعادة المرحلة
+                                        </Button>
+                                        <Button asChild className="h-12 text-base sm:text-lg rounded-xl bg-slate-800 text-white hover:bg-slate-900 transition-colors">
+                                            <Link to="/student/dashboard" className="flex items-center justify-center font-bold">القائمة</Link>
+                                        </Button>
+                                    </div>
+                                </div>
+
+                                <CertificateModal
+                                    isOpen={showCertificateModal}
+                                    onClose={() => setShowCertificateModal(false)}
+                                    studentName={studentName || "طالب متميز"}
+                                    score={isAllStagesComplete ? allStagesFinalCorrect : gameState.correctCount}
+                                    totalQuestions={isAllStagesComplete ? allStagesTotalQuestions : stageTotalQuestions}
+                                    percentage={isAllStagesComplete ? allStagesPercentage : stagePercentage}
+                                    examTitle="تحدي السرعة العلمي (4 مراحل) - منصة براين ساينس"
+                                />
                             </Card>
-                            <Card className="p-4 bg-gradient-to-br from-rose-50 to-red-50 border-rose-200">
-                                <div className="text-2xl font-black text-rose-600">{gameState.answeringCount - gameState.correctCount}</div>
-                                <div className="text-xs text-slate-500 font-bold">خاطئة</div>
-                            </Card>
-                        </div>
-
-                        {/* Certificate Button */}
-                        <Button
-                            onClick={() => setShowCertificateModal(true)}
-                            className="w-full h-14 text-lg sm:text-xl font-black rounded-2xl bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-amber-500/20 text-slate-950"
-                        >
-                            <Award className="w-6 h-6 ml-3" />
-                            🎓 عرض وتحميل شهادة الشكر والتقدير
-                        </Button>
-                        
-                        <div className="flex flex-col gap-3">
-                            <Button onClick={startNextStage} className="w-full h-14 text-xl font-black rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-emerald-500/20">
-                                <Sparkles className="w-6 h-6 ml-3" />
-                                الانتقال للمرحلة {gameState.stage + 1}
-                            </Button>
-                            
-                            <div className="grid grid-cols-2 gap-3">
-                                <Button onClick={() => window.location.reload()} variant="outline" className="h-12 text-lg rounded-xl font-bold border-2">
-                                    <RefreshCw className="w-5 h-5 ml-2" />
-                                    إعادة اللعبة
-                                </Button>
-                                <Button asChild className="h-12 text-lg rounded-xl bg-slate-800 text-white hover:bg-slate-900 transition-colors">
-                                    <Link to="/student/dashboard" className="flex items-center justify-center font-bold">القائمة</Link>
-                                </Button>
-                            </div>
-                        </div>
-
-                        <CertificateModal
-                            isOpen={showCertificateModal}
-                            onClose={() => setShowCertificateModal(false)}
-                            studentName={studentName || "طالب متميز"}
-                            score={gameState.correctCount}
-                            totalQuestions={gameState.answeringCount || 1}
-                            percentage={gameState.answeringCount > 0 ? Math.round((gameState.correctCount / gameState.answeringCount) * 100) : 100}
-                            examTitle={`تحدي السرعة العلمي (المرحلة ${gameState.stage}) - منصة براين ساينس`}
-                        />
-                    </Card>
+                        );
+                    })()
                 ) : questions.length > 0 ? (
                     <div className="w-full space-y-8 animate-fade-in">
                         {/* Question Card */}

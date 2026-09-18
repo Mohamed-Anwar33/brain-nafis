@@ -47,7 +47,11 @@ export default function ExamPage() {
   // Stage State
   const [showStageTransition, setShowStageTransition] = useState(false);
   const [currentStage, setCurrentStage] = useState(1);
-  const QUESTIONS_PER_STAGE = 20;
+  const TOTAL_STAGES = 4;
+  const questionsPerStage = Math.max(
+    1,
+    Math.ceil((examData?.questions.length || 40) / TOTAL_STAGES)
+  );
 
   // Refs for synchronous access inside timeouts/callbacks
   const scoreRef = useRef(0);
@@ -161,15 +165,19 @@ export default function ExamPage() {
           studentName = (attempt as any)?.student_name || "";
         }
 
-        // Enforce strict maximum of 10 questions per stage
-        const transformedQuestions: ExamQuestionType[] = filteredQuestions.slice(0, 10).map(
+        // Enforce 4 stages for Nafis exam (up to 40 questions, 10 per stage)
+        const TARGET_QUESTIONS = 40;
+        const selected = filteredQuestions.slice(0, TARGET_QUESTIONS);
+        const qPerStage = Math.max(1, Math.ceil(selected.length / TOTAL_STAGES));
+
+        const transformedQuestions: ExamQuestionType[] = selected.map(
           (question, index) => ({
             id: question.id,
             text: question.text,
             image_url: question.image_url,
             wrong_reason: question.wrong_reason,
             explanation_url: question.explanation_url,
-            stage_number: question.stage_number,
+            stage_number: Math.min(TOTAL_STAGES, Math.floor(index / qPerStage) + 1),
             order_index: index,
             choices: question.choices.map((choice) => ({
               id: choice.id,
@@ -199,7 +207,7 @@ export default function ExamPage() {
     loadExam();
   }, [attemptId, navigate]);
 
-  const finishExam = useCallback(async () => {
+  const finishExam = useCallback(async (stagesCompletedCount: number = TOTAL_STAGES) => {
     if (!attemptId || !examData) return;
 
     setIsFinishing(true);
@@ -219,6 +227,8 @@ export default function ExamPage() {
         question_count: examData.question_count,
         total_questions: examData.question_count, // redundancy for safety
         total_penalty: finalPenalty,
+        stages_completed: stagesCompletedCount,
+        total_stages: TOTAL_STAGES,
         started_at: new Date().toISOString(), // approximate
         finished_at: new Date().toISOString()
       };
@@ -229,7 +239,12 @@ export default function ExamPage() {
         .update({
           score: finalScore,
           total_penalty: finalPenalty,
-          finished_at: new Date().toISOString()
+          finished_at: new Date().toISOString(),
+          selection_snapshot: {
+            ...((examData.selection_snapshot as any) || {}),
+            stages_completed: stagesCompletedCount,
+            total_stages: TOTAL_STAGES,
+          }
         })
         .eq("id", attemptId);
 
@@ -263,16 +278,16 @@ export default function ExamPage() {
     if (examData && currentIndex < examData.questions.length - 1) {
       const nextIndex = currentIndex + 1;
 
-      // Check if we reached a stage boundary
-      if (nextIndex % QUESTIONS_PER_STAGE === 0) {
+      // Check if we reached a stage boundary before the final stage
+      if (nextIndex % questionsPerStage === 0 && currentStage < TOTAL_STAGES) {
         setShowStageTransition(true);
       } else {
         setCurrentIndex(prev => prev + 1);
       }
     } else {
-      finishExam(); // refs will ensure correct score is used
+      finishExam(TOTAL_STAGES); // refs will ensure correct score is used
     }
-  }, [examData, currentIndex, finishExam]);
+  }, [examData, currentIndex, finishExam, questionsPerStage, currentStage]);
 
 
 
@@ -432,11 +447,15 @@ export default function ExamPage() {
     );
   }
 
+  const STAGE_TITLES: Record<number, string> = {
+    1: "المرحلة الأولى - الانطلاقة المعرفية",
+    2: "المرحلة الثانية - تعميق الفهم",
+    3: "المرحلة الثالثة - التحدي المتقدم",
+    4: "المرحلة الرابعة - قمة الإتقان والتفوق",
+  };
+
   // Calculate stage specific details
-  const currentStageTotalQuestions = Math.min(
-    QUESTIONS_PER_STAGE,
-    (examData?.questions.length || 0) - (currentStage - 1) * QUESTIONS_PER_STAGE
-  );
+  const currentStageTotalQuestions = questionsPerStage;
 
   if (showStageTransition) {
     // Calculate NET score for this stage (correct answers - penalties)
@@ -450,8 +469,9 @@ export default function ExamPage() {
         score={Math.max(0, stageNetScore)}
         totalQuestions={currentStageTotalQuestions}
         onNext={handleNextStage}
-        onFinishEarly={finishExam}
-        stageTitle={stageTitlesMap[currentStage]}
+        onFinishEarly={() => finishExam(currentStage)}
+        stageTitle={STAGE_TITLES[currentStage] || stageTitlesMap[currentStage] || `المرحلة ${currentStage}`}
+        totalStages={TOTAL_STAGES}
       />
     );
   }
@@ -459,8 +479,10 @@ export default function ExamPage() {
   return (
     <ExamQuestion
       question={currentQuestion}
-      currentIndex={currentIndex % QUESTIONS_PER_STAGE} // Relative index (0-19)
-      totalQuestions={currentStageTotalQuestions} // Total for this stage (20)
+      currentIndex={currentIndex % questionsPerStage} // Relative index within stage (0 to questionsPerStage - 1)
+      totalQuestions={currentStageTotalQuestions} // Total for this stage
+      stage={currentStage}
+      totalStages={TOTAL_STAGES}
       onAnswer={handleAnswer}
       disabled={isSubmitting}
       wrongReason={currentWrongReason}

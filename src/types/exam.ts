@@ -42,6 +42,8 @@ export interface ExamResult {
   total_penalty: number;
   started_at: string;
   finished_at: string;
+  stages_completed?: number;
+  total_stages?: number;
 }
 
 export interface Settings {

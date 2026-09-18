@@ -5,6 +5,16 @@ import { ExamResult } from "@/types/exam";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
 
+interface AttemptRow {
+  student_name: string;
+  score: number;
+  question_count: number;
+  total_penalty?: number | null;
+  started_at?: string | null;
+  finished_at?: string | null;
+  selection_snapshot?: Record<string, any> | null;
+}
+
 export default function ResultPage() {
   const { attemptId } = useParams<{ attemptId: string }>();
   const navigate = useNavigate();
@@ -39,13 +49,17 @@ export default function ResultPage() {
           return;
         }
 
+        const row = data as unknown as AttemptRow;
+        const snapshot = (row.selection_snapshot as any) || {};
         setResult({
-          student_name: data.student_name,
-          score: data.score,
-          question_count: data.question_count,
-          total_penalty: data.total_penalty ?? 0,
-          started_at: data.started_at ?? "",
-          finished_at: data.finished_at ?? "",
+          student_name: row.student_name || "طالب",
+          score: row.score || 0,
+          question_count: row.question_count || 40,
+          total_penalty: row.total_penalty ?? 0,
+          started_at: row.started_at ?? "",
+          finished_at: row.finished_at ?? "",
+          stages_completed: snapshot.stages_completed ?? 4,
+          total_stages: snapshot.total_stages ?? 4,
         });
       } catch (err) {
         console.error("Error loading result:", err);

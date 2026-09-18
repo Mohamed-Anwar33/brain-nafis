@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,8 +7,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
-import { CheckCircle2, Image as ImageIcon, Loader2, Plus, Timer, Trash2, X } from "lucide-react";
+import { CheckCircle2, Image as ImageIcon, Loader2, Plus, Search, Sparkles, Timer, Trash2, X, Tag } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,6 +26,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useAcademicCatalog } from "@/hooks/use-academic-catalog";
 
 type ImageField =
   | "question_image_url"
@@ -42,6 +50,8 @@ interface SpeedQuestion {
   answer_explanation?: string | null;
   correct_choice_index: number;
   is_active: boolean;
+  domain_id?: string | null;
+  grade_subject_id?: string | null;
 }
 
 const emptyQuestionForm = {
@@ -60,6 +70,29 @@ const emptyQuestionForm = {
 };
 
 export default function NafisSpeed() {
+  const { data: catalog } = useAcademicCatalog();
+  const rawDomains = catalog?.domains || [];
+  const domains = useMemo(() => {
+    return rawDomains
+      .filter((d) => {
+        const s = (d.slug || "").toLowerCase();
+        const n = d.name || "";
+        return !(s.includes("nature") || n.includes("طبيعة") || n.includes("طبيعه"));
+      })
+      .map((d) => {
+        let name = d.name;
+        const s = (d.slug || "").toLowerCase();
+        if (
+          (name.includes("الأرض") || name.includes("الارض") || s.includes("earth") || s.includes("space")) &&
+          !name.includes("البيئة") &&
+          !name.includes("البيئه")
+        ) {
+          name = "علم الأرض والفضاء والبيئة";
+        }
+        return { ...d, name };
+      });
+  }, [rawDomains]);
+
   const [questions, setQuestions] = useState<SpeedQuestion[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -67,6 +100,9 @@ export default function NafisSpeed() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
   const [newQuestion, setNewQuestion] = useState(emptyQuestionForm);
+  const [selectedDomainId, setSelectedDomainId] = useState<string>("");
+  const [filterDomain, setFilterDomain] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const uploadTargetRef = useRef<ImageField | null>(null);
 
@@ -148,36 +184,35 @@ export default function NafisSpeed() {
   };
 
   const renderImageControl = (field: ImageField, label: string) => {
-    const imageUrl = newQuestion[field];
+    const currentUrl = newQuestion[field];
+    const isBusy = isUploading === field;
 
     return (
       <div className="space-y-2">
-        <Label className="text-xs font-bold text-slate-500">{label}</Label>
-        {imageUrl ? (
-          <div className="relative h-24 overflow-hidden rounded-xl border bg-white">
-            <img src={imageUrl} alt={label} className="h-full w-full object-contain p-2" />
+        <Label className="text-xs font-bold text-slate-600">{label}</Label>
+        {currentUrl ? (
+          <div className="relative inline-block border rounded-xl overflow-hidden bg-slate-50 p-1">
+            <img src={currentUrl} alt="" className="h-20 w-20 object-cover rounded-lg" />
             <button
               type="button"
               onClick={() => setNewQuestion((prev) => ({ ...prev, [field]: "" }))}
-              className="absolute left-2 top-2 rounded-full bg-red-500 p-1 text-white shadow"
+              className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+              title="حذف الصورة"
             >
-              <X className="h-4 w-4" />
+              <X className="w-3 h-3" />
             </button>
           </div>
         ) : (
           <Button
             type="button"
             variant="outline"
+            size="sm"
             onClick={() => openUploadDialog(field)}
-            disabled={isUploading === field}
-            className="h-10 w-full rounded-xl border-dashed bg-white gap-2"
+            disabled={isBusy}
+            className="w-full h-9 border-dashed text-xs gap-2"
           >
-            {isUploading === field ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <ImageIcon className="h-4 w-4" />
-            )}
-            إضافة صورة
+            {isBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ImageIcon className="w-3.5 h-3.5" />}
+            {isBusy ? "جاري الرفع..." : "إضافة صورة (اختياري)"}
           </Button>
         )}
       </div>
@@ -186,7 +221,19 @@ export default function NafisSpeed() {
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newQuestion.question_text.trim() || !newQuestion.choice1.trim() || !newQuestion.choice2.trim()) {
+    if (!newQuestion.question_text.trim()) {
+      toast.error("يجب كتابة نص السؤال");
+      return;
+    }
+
+    const filledChoices = [
+      newQuestion.choice1,
+      newQuestion.choice2,
+      newQuestion.choice3,
+      newQuestion.choice4,
+    ].filter((c) => c.trim() !== "");
+
+    if (filledChoices.length < 2) {
       toast.error("يجب ملء السؤال وخيارين على الأقل");
       return;
     }
@@ -199,6 +246,9 @@ export default function NafisSpeed() {
 
     setIsSubmitting(true);
     try {
+      const defaultGradeSubjectId =
+        catalog?.gradeSubjects?.[0]?.id || "d5d10da4-4861-456d-a7a4-0b124e9a16d1";
+
       const { error } = await supabase.from("speed_challenge_questions").insert({
         question_text: newQuestion.question_text.trim(),
         question_image_url: newQuestion.question_image_url || null,
@@ -214,17 +264,38 @@ export default function NafisSpeed() {
         correct_choice_index: newQuestion.correct_choice_index,
         is_active: true,
         track_type: "nafis",
+        stage: "default",
+        grade_subject_id: defaultGradeSubjectId,
+        domain_id: selectedDomainId && selectedDomainId !== "none" ? selectedDomainId : null,
       });
 
       if (error) throw error;
-      toast.success("تمت الإضافة بنجاح");
+      toast.success("تمت إضافة السؤال بنجاح");
       setNewQuestion(emptyQuestionForm);
       fetchQuestions();
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      toast.error("فشل إضافة السؤال");
+      toast.error(err?.message || "فشل إضافة السؤال");
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleUpdateDomain = async (questionId: string, domainId: string) => {
+    try {
+      const targetDomain = domainId === "none" ? null : domainId;
+      const { error } = await supabase
+        .from("speed_challenge_questions")
+        .update({ domain_id: targetDomain })
+        .eq("id", questionId);
+
+      if (error) throw error;
+      setQuestions((prev) =>
+        prev.map((q) => (q.id === questionId ? { ...q, domain_id: targetDomain } : q))
+      );
+      toast.success("تم تحديث مجال السؤال");
+    } catch (err: any) {
+      toast.error("فشل تحديث المجال");
     }
   };
 
@@ -267,6 +338,36 @@ export default function NafisSpeed() {
     }
   };
 
+  // Filter questions based on selected domain and search query
+  const filteredQuestions = useMemo(() => {
+    return questions.filter((q) => {
+      // Domain filter
+      if (filterDomain === "unassigned") {
+        if (q.domain_id) return false;
+      } else if (filterDomain !== "all") {
+        if (q.domain_id !== filterDomain) return false;
+      }
+      // Search filter
+      if (searchQuery.trim()) {
+        const query = searchQuery.toLowerCase();
+        return (
+          q.question_text.toLowerCase().includes(query) ||
+          q.choice1.toLowerCase().includes(query) ||
+          q.choice2.toLowerCase().includes(query) ||
+          q.choice3?.toLowerCase().includes(query) ||
+          q.choice4?.toLowerCase().includes(query)
+        );
+      }
+      return true;
+    });
+  }, [questions, filterDomain, searchQuery]);
+
+  const getDomainName = (domainId?: string | null) => {
+    if (!domainId) return "غير مصنف";
+    const found = domains.find((d) => d.id === domainId);
+    return found ? found.name : "غير مصنف";
+  };
+
   return (
     <div className="space-y-6" dir="rtl">
       <input
@@ -283,15 +384,16 @@ export default function NafisSpeed() {
         </div>
         <div>
           <h1 className="text-3xl font-bold text-slate-800">تحدي السرعة - براين ساينس</h1>
-          <p className="text-slate-500">إدارة أسئلة السرعة في النظام العام مع الصور وشرح الخطأ</p>
+          <p className="text-slate-500">إدارة أسئلة تحدي السرعة وربطها بالمجالات العلمية التخصصية</p>
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
+      {/* Stats Cards */}
+      <div className="grid gap-4 md:grid-cols-3">
         <Card className="bg-gradient-to-br from-amber-50 to-amber-100/50 border-amber-200">
           <CardContent className="p-4">
             <div className="text-2xl font-bold text-amber-600">{questions.length}</div>
-            <div className="text-sm text-slate-600">إجمالي الأسئلة</div>
+            <div className="text-sm text-slate-600 font-bold">إجمالي أسئلة السرعة (نافس)</div>
           </CardContent>
         </Card>
         <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100/50 border-emerald-200">
@@ -299,19 +401,50 @@ export default function NafisSpeed() {
             <div className="text-2xl font-bold text-emerald-600">
               {questions.filter((q) => q.is_active).length}
             </div>
-            <div className="text-sm text-slate-600">الأسئلة النشطة</div>
+            <div className="text-sm text-slate-600 font-bold">الأسئلة النشطة</div>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-br from-indigo-50 to-indigo-100/50 border-indigo-200">
+          <CardContent className="p-4">
+            <div className="text-2xl font-bold text-indigo-600">
+              {questions.filter((q) => q.domain_id).length}
+            </div>
+            <div className="text-sm text-slate-600 font-bold">أسئلة مرتبطة بمجال علمي</div>
           </CardContent>
         </Card>
       </div>
 
+      {/* Add Question Card */}
       <Card className="card-elevated">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Plus className="w-5 h-5" /> إضافة سؤال جديد
+            <Plus className="w-5 h-5 text-amber-500" /> إضافة سؤال جديد لتحدي السرعة
           </CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleAdd} className="space-y-5">
+            {/* Domain Selection Field */}
+            <div className="space-y-2 bg-amber-50/60 p-4 rounded-2xl border border-amber-200/80">
+              <Label className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
+                <Tag className="w-4 h-4 text-amber-600" />
+                <span>المجال العلمي التخصصي</span>
+                <span className="text-xs text-amber-700 font-medium">(يربط السؤال بمجال الطالب)</span>
+              </Label>
+              <Select value={selectedDomainId} onValueChange={setSelectedDomainId}>
+                <SelectTrigger className="w-full bg-white border-amber-200 font-bold">
+                  <SelectValue placeholder="-- اختر المجال العلمي لهذا السؤال --" />
+                </SelectTrigger>
+                <SelectContent dir="rtl">
+                  <SelectItem value="none">بدون مجال محدد (عام)</SelectItem>
+                  {domains.map((domain) => (
+                    <SelectItem key={domain.id} value={domain.id}>
+                      {domain.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="space-y-2">
               <Label className="text-sm font-bold text-slate-700">نص السؤال</Label>
               <Input
@@ -324,12 +457,12 @@ export default function NafisSpeed() {
             {renderImageControl("question_image_url", "صورة السؤال")}
 
             <div className="space-y-2">
-              <Label className="text-sm font-bold text-slate-700">شرح الخطأ</Label>
+              <Label className="text-sm font-bold text-slate-700">شرح الخطأ أو تلميح تعليمي</Label>
               <Textarea
                 placeholder="اكتب سبب الخطأ أو تلميح التصحيح..."
                 value={newQuestion.answer_explanation}
                 onChange={(e) => setNewQuestion({ ...newQuestion, answer_explanation: e.target.value })}
-                className="min-h-24"
+                className="min-h-20"
               />
             </div>
 
@@ -350,17 +483,18 @@ export default function NafisSpeed() {
                       <button
                         type="button"
                         onClick={() => setNewQuestion({ ...newQuestion, correct_choice_index: idx })}
-                        className={`w-8 h-8 rounded-full flex shrink-0 items-center justify-center ${
-                          isCorrect ? "bg-emerald-500 text-white" : "bg-white border text-slate-300"
+                        className={`w-8 h-8 rounded-full flex shrink-0 items-center justify-center transition-all ${
+                          isCorrect ? "bg-emerald-500 text-white shadow-md shadow-emerald-500/30" : "bg-white border text-slate-300 hover:text-slate-500"
                         }`}
+                        title="انقر لتحديد هذه الإجابة كصحيحة"
                       >
                         <CheckCircle2 className="w-5 h-5" />
                       </button>
                       <Input
-                        placeholder={`الخيار ${idx}`}
+                        placeholder={`الخيار ${idx} ${isCorrect ? "(الإجابة الصحيحة)" : ""}`}
                         value={newQuestion[choiceKey] as string}
                         onChange={(e) => setNewQuestion({ ...newQuestion, [choiceKey]: e.target.value })}
-                        className={isCorrect ? "border-green-500" : ""}
+                        className={isCorrect ? "border-emerald-500 font-bold" : ""}
                       />
                     </div>
                     {renderImageControl(imageKey, `صورة الخيار ${idx}`)}
@@ -369,73 +503,140 @@ export default function NafisSpeed() {
               })}
             </div>
 
-            <div className="flex justify-end">
-              <Button type="submit" disabled={isSubmitting} className="btn-primary-gradient gap-2">
+            <div className="flex justify-end pt-2">
+              <Button type="submit" disabled={isSubmitting} className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold h-11 px-6 shadow-md shadow-amber-500/20 gap-2">
                 {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-                إضافة السؤال
+                إضافة السؤال الآن
               </Button>
             </div>
           </form>
         </CardContent>
       </Card>
 
+      {/* Filter and Questions List Card */}
       <Card className="card-elevated">
-        <CardHeader>
-          <CardTitle>قائمة الأسئلة</CardTitle>
+        <CardHeader className="border-b border-slate-100 pb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <CardTitle className="text-xl font-black text-slate-800">
+                أسئلة تحدي السرعة ({filteredQuestions.length} من {questions.length})
+              </CardTitle>
+              <p className="text-xs text-slate-500 mt-1">تصفية وتصنيف الأسئلة حسب المجال العلمي</p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3">
+              {/* Domain Filter Dropdown */}
+              <div className="w-48">
+                <Select value={filterDomain} onValueChange={setFilterDomain}>
+                  <SelectTrigger className="w-full bg-white font-bold text-xs h-10 border-slate-200">
+                    <SelectValue placeholder="فلترة حسب المجال" />
+                  </SelectTrigger>
+                  <SelectContent dir="rtl">
+                    <SelectItem value="all">جميع المجالات ({questions.length})</SelectItem>
+                    {domains.map((d) => {
+                      const count = questions.filter((q) => q.domain_id === d.id).length;
+                      return (
+                        <SelectItem key={d.id} value={d.id}>
+                          {d.name} ({count})
+                        </SelectItem>
+                      );
+                    })}
+                    <SelectItem value="unassigned">
+                      غير مصنف ({questions.filter((q) => !q.domain_id).length})
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Search Bar */}
+              <div className="relative w-56">
+                <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <Input
+                  placeholder="بحث في الأسئلة..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pr-9 h-10 text-xs"
+                />
+              </div>
+            </div>
+          </div>
         </CardHeader>
         <CardContent className="p-0">
           {isLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            <div className="flex items-center justify-center py-16">
+              <Loader2 className="w-8 h-8 animate-spin text-amber-500" />
             </div>
-          ) : questions.length === 0 ? (
-            <div className="text-center py-12">
-              <Timer className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-              <p className="text-muted-foreground text-lg">لا توجد أسئلة</p>
+          ) : filteredQuestions.length === 0 ? (
+            <div className="text-center py-16">
+              <Timer className="w-16 h-16 text-slate-200 mx-auto mb-3" />
+              <p className="text-slate-500 font-bold">لا توجد أسئلة تطابق الفلتر الحالي</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead>السؤال</TableHead>
-                    <TableHead>الإجابة الصحيحة</TableHead>
-                    <TableHead className="w-24">الحالة</TableHead>
-                    <TableHead className="w-24">الإجراءات</TableHead>
+                  <TableRow className="bg-slate-50">
+                    <TableHead className="w-10 text-center font-bold">#</TableHead>
+                    <TableHead className="font-bold">السؤال</TableHead>
+                    <TableHead className="w-48 font-bold">المجال العلمي</TableHead>
+                    <TableHead className="font-bold">الإجابة الصحيحة</TableHead>
+                    <TableHead className="w-24 text-center font-bold">الحالة</TableHead>
+                    <TableHead className="w-20 text-center font-bold">حذف</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {questions.map((q) => {
+                  {filteredQuestions.map((q, idx) => {
                     const choices = [q.choice1, q.choice2, q.choice3, q.choice4];
                     const correctIndex = q.correct_choice_index > 0 ? q.correct_choice_index - 1 : 0;
                     const correctChoice = choices[correctIndex] || q.choice1;
 
                     return (
-                      <TableRow key={q.id}>
+                      <TableRow key={q.id} className="hover:bg-slate-50/80 transition-colors">
+                        <TableCell className="text-center font-bold text-xs text-slate-400">
+                          {idx + 1}
+                        </TableCell>
                         <TableCell className="max-w-xs">
                           <div className="flex items-center gap-2">
                             {q.question_image_url && (
-                              <img src={q.question_image_url} alt="" className="h-9 w-9 rounded object-cover bg-slate-50" />
+                              <img src={q.question_image_url} alt="" className="h-9 w-9 rounded-lg object-cover bg-slate-100 border shrink-0" />
                             )}
-                            <span className="truncate">{q.question_text}</span>
+                            <span className="font-medium text-slate-800 text-sm line-clamp-2">{q.question_text}</span>
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                          <Select
+                            value={q.domain_id || "none"}
+                            onValueChange={(val) => handleUpdateDomain(q.id, val)}
+                          >
+                            <SelectTrigger className="h-8 text-xs font-bold bg-white border-slate-200 shadow-xs">
+                              <SelectValue placeholder="اختر المجال" />
+                            </SelectTrigger>
+                            <SelectContent dir="rtl">
+                              <SelectItem value="none">⚠️ غير مصنف</SelectItem>
+                              {domains.map((d) => (
+                                <SelectItem key={d.id} value={d.id}>
+                                  {d.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 font-bold text-xs">
                             {correctChoice}
                           </Badge>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="text-center">
                           <Badge
                             variant={q.is_active ? "default" : "secondary"}
-                            className="cursor-pointer"
+                            className="cursor-pointer select-none"
                             onClick={() => toggleActive(q.id, q.is_active)}
                           >
-                            {q.is_active ? "نشط" : "غير نشط"}
+                            {q.is_active ? "نشط" : "مخفي"}
                           </Badge>
                         </TableCell>
-                        <TableCell>
-                          <Button variant="ghost" size="icon" onClick={() => confirmDelete(q.id)}>
+                        <TableCell className="text-center">
+                          <Button variant="ghost" size="icon" onClick={() => confirmDelete(q.id)} className="hover:bg-red-50 hover:text-red-600">
                             <Trash2 className="w-4 h-4 text-red-500" />
                           </Button>
                         </TableCell>
@@ -450,15 +651,15 @@ export default function NafisSpeed() {
       </Card>
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent dir="rtl">
           <AlertDialogHeader>
             <AlertDialogTitle>تأكيد الحذف</AlertDialogTitle>
-            <AlertDialogDescription>هل أنت متأكد من حذف هذا السؤال؟</AlertDialogDescription>
+            <AlertDialogDescription>هل أنت متأكد من حذف هذا السؤال نهائياً؟</AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
+          <AlertDialogFooter className="gap-2">
             <AlertDialogCancel onClick={() => setItemToDelete(null)}>إلغاء</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-red-500 hover:bg-red-600">
-              حذف
+            <AlertDialogAction onClick={handleDelete} className="bg-red-500 hover:bg-red-600 font-bold">
+              حذف السؤال
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

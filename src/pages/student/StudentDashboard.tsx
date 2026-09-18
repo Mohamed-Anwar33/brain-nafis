@@ -612,9 +612,9 @@ export default function StudentDashboard() {
       throw questionsError;
     }
 
-    const orderedQuestions = ((allQuestionsData || []) as DashboardQuestionRow[]).slice(0, 10);
+    const availableQuestions = (allQuestionsData || []) as DashboardQuestionRow[];
 
-    if (!orderedQuestions || orderedQuestions.length === 0) {
+    if (!availableQuestions || availableQuestions.length === 0) {
       if (context.domainName) {
         toast.error(`لا توجد أسئلة مخصصة لتخصص "${context.domainName}" حالياً، يُرجى تصنيف الأسئلة من لوحة التحكم`);
       } else {
@@ -622,6 +622,11 @@ export default function StudentDashboard() {
       }
       return;
     }
+
+    const TARGET_QUESTIONS = 40;
+    const TOTAL_STAGES = 4;
+    const orderedQuestions = availableQuestions.slice(0, TARGET_QUESTIONS);
+    const questionsPerStage = Math.max(1, Math.ceil(orderedQuestions.length / TOTAL_STAGES));
 
     const { data: attempt, error: attemptError } = await supabase
       .from("attempts")
@@ -647,21 +652,24 @@ export default function StudentDashboard() {
       context,
     );
 
-    const examQuestions = orderedQuestions.map((question, index: number) => ({
-      id: question.id,
-      text: question.text,
-      image_url: question.image_url,
-      wrong_reason: question.wrong_reason,
-      explanation_url: question.explanation_url,
-      stage_number: question.stage_number,
-      order_index: index,
-      choices: (question.choices || []).map((choice) => ({
-        id: choice.id,
-        text: choice.text,
-        image_url: choice.image_url,
-        is_correct: choice.is_correct,
-      })),
-    }));
+    const examQuestions = orderedQuestions.map((question, index: number) => {
+      const stageNumber = Math.min(TOTAL_STAGES, Math.floor(index / questionsPerStage) + 1);
+      return {
+        id: question.id,
+        text: question.text,
+        image_url: question.image_url,
+        wrong_reason: question.wrong_reason,
+        explanation_url: question.explanation_url,
+        stage_number: stageNumber,
+        order_index: index,
+        choices: (question.choices || []).map((choice) => ({
+          id: choice.id,
+          text: choice.text,
+          image_url: choice.image_url,
+          is_correct: choice.is_correct,
+        })),
+      };
+    });
 
     const attemptData = {
       attempt_id: attemptRow.id,

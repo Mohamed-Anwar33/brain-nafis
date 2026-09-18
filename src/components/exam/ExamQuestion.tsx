@@ -12,6 +12,8 @@ interface ExamQuestionProps {
   question: ExamQuestionType;
   currentIndex: number;
   totalQuestions: number;
+  stage?: number;
+  totalStages?: number;
   onAnswer: (choiceId: string) => Promise<boolean>;
   disabled: boolean;
   wrongReason?: string | null;
@@ -21,6 +23,8 @@ export function ExamQuestion({
   question,
   currentIndex,
   totalQuestions,
+  stage,
+  totalStages,
   onAnswer,
   disabled,
   wrongReason,
@@ -99,7 +103,12 @@ export function ExamQuestion({
       <header className="sticky top-0 z-20 bg-white/90 backdrop-blur-md border-b border-slate-200/80 px-4 py-3 shadow-sm">
         <div className="container max-w-4xl mx-auto">
           <div className="flex items-center justify-between gap-3 mb-2.5">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+              {stage && (
+                <span className="text-xs sm:text-sm font-black text-indigo-700 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-200">
+                  المرحلة {stage} {totalStages ? `من ${totalStages}` : ""}
+                </span>
+              )}
               <span className="text-xs sm:text-sm font-black text-slate-700 bg-slate-100 px-3 py-1 rounded-full border border-slate-200">
                 السؤال {currentIndex + 1} من {totalQuestions}
               </span>

@@ -163,3 +163,125 @@ describe("Exam & Central Exam Score and Accuracy Metrics", () => {
     expect(status).toBe("ناجح");
   });
 });
+
+describe("4-Stage Exam Architecture & Certificate Gating", () => {
+  const TOTAL_STAGES = 4;
+  const TARGET_QUESTIONS = 40;
+
+  it("should divide 40 exam questions equally into 4 stages of 10 questions each", () => {
+    const rawQuestions = Array.from({ length: TARGET_QUESTIONS }, (_, i) => ({
+      id: `q-${i + 1}`,
+      text: `سؤال ${i + 1}`,
+    }));
+
+    const questionsPerStage = Math.max(1, Math.ceil(rawQuestions.length / TOTAL_STAGES));
+    expect(questionsPerStage).toBe(10);
+
+    const partitioned = rawQuestions.map((q, index) => ({
+      ...q,
+      stage_number: Math.min(TOTAL_STAGES, Math.floor(index / questionsPerStage) + 1),
+    }));
+
+    // Stage 1: questions 0..9 (10 questions)
+    expect(partitioned.slice(0, 10).every(q => q.stage_number === 1)).toBe(true);
+    // Stage 2: questions 10..19 (10 questions)
+    expect(partitioned.slice(10, 20).every(q => q.stage_number === 2)).toBe(true);
+    // Stage 3: questions 20..29 (10 questions)
+    expect(partitioned.slice(20, 30).every(q => q.stage_number === 3)).toBe(true);
+    // Stage 4: questions 30..39 (10 questions)
+    expect(partitioned.slice(30, 40).every(q => q.stage_number === 4)).toBe(true);
+  });
+
+  it("should trigger stage transitions at questions 10, 20, 30, and complete at 40", () => {
+    const questionsPerStage = 10;
+    const transitionPoints: number[] = [];
+    let completedExam = false;
+
+    for (let currentIndex = 0; currentIndex < TARGET_QUESTIONS; currentIndex++) {
+      const nextIndex = currentIndex + 1;
+      const currentStage = Math.min(TOTAL_STAGES, Math.floor(currentIndex / questionsPerStage) + 1);
+
+      if (currentIndex < TARGET_QUESTIONS - 1) {
+        if (nextIndex % questionsPerStage === 0 && currentStage < TOTAL_STAGES) {
+          transitionPoints.push(nextIndex);
+        }
+      } else {
+        completedExam = true;
+      }
+    }
+
+    // Must transition exactly at 10, 20, 30
+    expect(transitionPoints).toEqual([10, 20, 30]);
+    // Must complete when question 40 is solved
+    expect(completedExam).toBe(true);
+  });
+
+  it("should ONLY allow certificate display after completing all 4 stages", () => {
+    const checkCertificateEligibility = (stagesCompleted: number, totalStages: number = 4) => {
+      return stagesCompleted >= totalStages;
+    };
+
+    // Stage 1 early exit: NO certificate
+    expect(checkCertificateEligibility(1)).toBe(false);
+    // Stage 2 early exit: NO certificate
+    expect(checkCertificateEligibility(2)).toBe(false);
+    // Stage 3 early exit: NO certificate
+    expect(checkCertificateEligibility(3)).toBe(false);
+    // All 4 stages completed: Certificate ALLOWED!
+    expect(checkCertificateEligibility(4)).toBe(true);
+    // Overachieved: Certificate ALLOWED
+    expect(checkCertificateEligibility(5)).toBe(true);
+  });
+
+  it("should calculate certificate score and percentage accurately with zero margin of error", () => {
+    const calculateCertificateStats = (
+      stageScores: { correct: number; total: number }[]
+    ) => {
+      const totalCorrect = stageScores.reduce((acc, s) => acc + s.correct, 0);
+      const totalQuestions = stageScores.reduce((acc, s) => acc + s.total, 0);
+      const percentage = totalQuestions > 0 ? Math.round((totalCorrect / totalQuestions) * 100) : 0;
+      const wrongCount = Math.max(0, totalQuestions - totalCorrect);
+      return { totalCorrect, totalQuestions, percentage, wrongCount };
+    };
+
+    // Case 1: Perfect score (10/10 in all 4 stages = 40/40)
+    const perfectExam = [
+      { correct: 10, total: 10 },
+      { correct: 10, total: 10 },
+      { correct: 10, total: 10 },
+      { correct: 10, total: 10 },
+    ];
+    const perfectResult = calculateCertificateStats(perfectExam);
+    expect(perfectResult.totalCorrect).toBe(40);
+    expect(perfectResult.totalQuestions).toBe(40);
+    expect(perfectResult.percentage).toBe(100);
+    expect(perfectResult.wrongCount).toBe(0);
+
+    // Case 2: Realistic scenario (8, 9, 7, 10 = 34/40)
+    const realisticExam = [
+      { correct: 8, total: 10 },
+      { correct: 9, total: 10 },
+      { correct: 7, total: 10 },
+      { correct: 10, total: 10 },
+    ];
+    const realisticResult = calculateCertificateStats(realisticExam);
+    expect(realisticResult.totalCorrect).toBe(34);
+    expect(realisticResult.totalQuestions).toBe(40);
+    expect(realisticResult.percentage).toBe(85); // 34/40 = 85%
+    expect(realisticResult.wrongCount).toBe(6);
+
+    // Case 3: Zero score (0/10 in all 4 stages = 0/40)
+    const zeroExam = [
+      { correct: 0, total: 10 },
+      { correct: 0, total: 10 },
+      { correct: 0, total: 10 },
+      { correct: 0, total: 10 },
+    ];
+    const zeroResult = calculateCertificateStats(zeroExam);
+    expect(zeroResult.totalCorrect).toBe(0);
+    expect(zeroResult.totalQuestions).toBe(40);
+    expect(zeroResult.percentage).toBe(0);
+    expect(zeroResult.wrongCount).toBe(40);
+  });
+});
+

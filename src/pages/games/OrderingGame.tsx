@@ -541,10 +541,10 @@ export default function OrderingGame() {
                     {/* Certificate Button */}
                     <Button
                         onClick={() => setShowCertificateModal(true)}
-                        className="w-full h-14 text-lg sm:text-xl font-black rounded-2xl bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-amber-500/20 text-slate-950"
+                        className="w-full min-h-[3.5rem] h-auto py-3 px-4 rounded-2xl bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 hover:from-amber-600 hover:to-yellow-700 text-slate-950 shadow-xl shadow-amber-500/25 font-black text-base sm:text-lg flex items-center justify-center gap-2 border-2 border-amber-300 text-center leading-snug whitespace-normal transform hover:scale-[1.01] active:scale-95 transition-all"
                     >
-                        <Award className="w-6 h-6 ml-3" />
-                        🎓 عرض وتحميل شهادة الشكر والتقدير
+                        <Award className="w-6 h-6 ml-2 shrink-0 text-slate-950" />
+                        <span>عرض وتحميل شهادة الشكر والتقدير</span>
                     </Button>
 
                     <div className="flex flex-col gap-3">

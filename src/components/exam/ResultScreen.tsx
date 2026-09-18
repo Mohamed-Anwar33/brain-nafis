@@ -312,13 +312,52 @@ export function ResultScreen({ result }: ResultScreenProps) {
 
             {/* Actions */}
             <div className="space-y-3 pt-2">
-              <Button
-                onClick={() => setShowCertificateModal(true)}
-                className="w-full h-14 rounded-2xl bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 hover:from-amber-600 hover:to-yellow-700 text-slate-950 shadow-xl shadow-amber-500/25 font-black text-base sm:text-lg transform hover:scale-[1.01] active:scale-95 transition-all"
-              >
-                <Award className="w-6 h-6 ml-2" />
-                🎓 عرض وتحميل شهادة الشكر والتقدير
-              </Button>
+              {(() => {
+                const totalStages = result.total_stages ?? 4;
+                const stagesCompleted = result.stages_completed ?? 0;
+                const isEligibleForCertificate = stagesCompleted >= totalStages;
+
+                if (isEligibleForCertificate) {
+                  return (
+                    <Button
+                      onClick={() => setShowCertificateModal(true)}
+                      className="w-full min-h-[3.5rem] h-auto py-3 px-4 rounded-2xl bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 hover:from-amber-600 hover:to-yellow-700 text-slate-950 shadow-xl shadow-amber-500/25 font-black text-base sm:text-lg flex items-center justify-center gap-2 border-2 border-amber-300 text-center leading-snug whitespace-normal transform hover:scale-[1.01] active:scale-95 transition-all"
+                    >
+                      <Award className="w-6 h-6 ml-2 shrink-0 text-slate-950" />
+                      <span>عرض وتحميل شهادة الشكر والتقدير</span>
+                    </Button>
+                  );
+                }
+
+                return (
+                  <div className="bg-gradient-to-br from-amber-50 via-orange-50 to-amber-50 border-2 border-amber-200/80 rounded-2xl p-5 text-center space-y-2.5 shadow-sm">
+                    <div className="flex items-center justify-center gap-2 text-amber-900 font-black text-base sm:text-lg">
+                      <ShieldCheck className="w-6 h-6 text-amber-600 animate-pulse" />
+                      <span>شهادة التقدير تتطلب اجتياز جميع المراحل الأربع (4)</span>
+                    </div>
+                    <p className="text-xs sm:text-sm text-amber-800 font-bold leading-relaxed max-w-md mx-auto">
+                      لقد اجتزت {stagesCompleted} من أصل {totalStages} مراحل. للحصول على شهادة الشكر والتقدير المعتمدة، يجب إكمال واجتياز جميع المراحل الأربع كاملة.
+                    </p>
+                    <div className="flex items-center justify-center gap-1.5 pt-1">
+                      {Array.from({ length: totalStages }).map((_, idx) => {
+                        const isDone = idx < stagesCompleted;
+                        return (
+                          <span
+                            key={idx}
+                            className={`text-xs font-black px-3 py-1 rounded-full border ${
+                              isDone
+                                ? "bg-emerald-100 text-emerald-800 border-emerald-300"
+                                : "bg-slate-100 text-slate-400 border-slate-200"
+                            }`}
+                          >
+                            المرحلة {idx + 1} {isDone ? "✓" : "🔒"}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Button

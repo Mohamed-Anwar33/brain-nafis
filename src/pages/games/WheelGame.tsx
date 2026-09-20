@@ -4,7 +4,21 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ArrowRight, RotateCw, Trophy, Sparkles, Target, HelpCircle, CheckCircle, XCircle, TrendingUp, Clock, Award } from "lucide-react";
+import {
+  ArrowRight,
+  RotateCw,
+  Trophy,
+  Sparkles,
+  Target,
+  HelpCircle,
+  CheckCircle,
+  XCircle,
+  TrendingUp,
+  Clock,
+  Award,
+  Video,
+  PlayCircle,
+} from "lucide-react";
 import { toast } from "sonner";
 import confetti from "canvas-confetti";
 import { audioManager } from "@/lib/audio";
@@ -15,6 +29,7 @@ import {
 } from "@/lib/selection-context";
 import { applySelectionFilters, getScopedPayload } from "@/lib/selection-scope";
 import { CertificateModal } from "@/components/exam/CertificateModal";
+import { ExplanationModal } from "@/components/exam/ExplanationModal";
 
 interface WheelSection {
   id: string;
@@ -34,20 +49,24 @@ interface WheelQuestion {
     id: string;
     text: string;
     is_correct: boolean;
+    image_url?: string | null;
   }[];
   points: number;
   section_id: string;
+  wrong_reason?: string | null;
+  explanation_url?: string | null;
 }
 
 export default function WheelGame() {
   const navigate = useNavigate();
   const selectionContext = useMemo(
-    () => getStoredSelectionContext() || ensureStoredSelectionContext("central"),
+    () => getStoredSelectionContext() || ensureStoredSelectionContext("nafis"),
     []
   );
   const [loading, setLoading] = useState(true);
   const [sections, setSections] = useState<WheelSection[]>([]);
   const [questions, setQuestions] = useState<WheelQuestion[]>([]);
+  const [showExplanationModal, setShowExplanationModal] = useState(false);
   
   // Smart Wheel System
   const [usedSections, setUsedSections] = useState<string[]>([]); // Track used section IDs
@@ -104,8 +123,8 @@ export default function WheelGame() {
     setLoading(true);
     try {
       console.log("[WheelGame] selectionContext:", JSON.stringify(selectionContext, null, 2));
-      if (!selectionContext || selectionContext.trackType !== "central") {
-        console.log("[WheelGame] No selectionContext or not central, redirecting");
+      if (!selectionContext) {
+        console.log("[WheelGame] No selectionContext, redirecting");
         navigate("/student/dashboard");
         return;
       }
@@ -132,12 +151,15 @@ export default function WheelGame() {
       let sectionsQuery = supabase
         .from("wheel_sections")
         .select("*")
-        .eq("is_active", true)
-        .eq("track_type", selectionContext.trackType)
-        .eq("grade_subject_id", selectionContext.gradeSubjectId);
+        .eq("is_active", true);
 
-      // Apply domain filter so Physics shows Physics questions, Chemistry shows Chemistry, etc.
-      if (selectionContext.trackType === "central" && selectionContext.domainId) {
+      if (selectionContext.trackType) {
+        sectionsQuery = sectionsQuery.or(`track_type.eq.${selectionContext.trackType},track_type.is.null`);
+      }
+      if (selectionContext.gradeSubjectId) {
+        sectionsQuery = sectionsQuery.eq("grade_subject_id", selectionContext.gradeSubjectId);
+      }
+      if (selectionContext.domainId && selectionContext.domainId !== "all") {
         sectionsQuery = sectionsQuery.eq("domain_id", selectionContext.domainId);
       }
 
@@ -146,9 +168,11 @@ export default function WheelGame() {
 
       if (sectionsError) throw sectionsError;
 
+      const fallbackUrl = selectionContext.trackType === "nafis" ? "/student/games" : "/central-exam/games";
+
       if (!sectionsData || sectionsData.length === 0) {
         toast.error("لا توجد أقسام مفعلة حاليًا");
-        navigate("/central-exam/games");
+        navigate(fallbackUrl);
         return;
       }
 
@@ -160,12 +184,15 @@ export default function WheelGame() {
         .from("wheel_section_questions")
         .select("*")
         .eq("is_active", true)
-        .eq("track_type", selectionContext.trackType)
-        .eq("grade_subject_id", selectionContext.gradeSubjectId)
         .in("section_id", sectionIds);
 
-      // Apply domain filter for questions as well
-      if (selectionContext.trackType === "central" && selectionContext.domainId) {
+      if (selectionContext.trackType) {
+        questionsQuery = questionsQuery.or(`track_type.eq.${selectionContext.trackType},track_type.is.null`);
+      }
+      if (selectionContext.gradeSubjectId) {
+        questionsQuery = questionsQuery.eq("grade_subject_id", selectionContext.gradeSubjectId);
+      }
+      if (selectionContext.domainId && selectionContext.domainId !== "all") {
         questionsQuery = questionsQuery.eq("domain_id", selectionContext.domainId);
       }
 
@@ -176,7 +203,7 @@ export default function WheelGame() {
       const allQuestions = (questionsData || []) as unknown as WheelQuestion[];
       if (!allQuestions.length) {
         toast.error("لا توجد أسئلة مفعلة حاليًا");
-        navigate("/central-exam/games");
+        navigate(fallbackUrl);
         return;
       }
 
@@ -1057,21 +1084,50 @@ export default function WheelGame() {
                       key={choice.id || idx}
                       onClick={() => handleAnswer(choice.id || `${idx}`)}
                       disabled={isCorrectAnswer && isAnswered} // Only disable after correct answer
-                      className={`p-5 rounded-xl border-2 text-lg font-semibold transition-all duration-200 text-right flex items-center justify-between ${choiceClass}`}
+                      className={`p-4 md:p-5 rounded-xl border-2 text-base md:text-lg font-semibold transition-all duration-200 text-right flex items-center justify-between gap-3 ${choiceClass}`}
                     >
-                      <span>{choice.text}</span>
-                      {icon && <span className="text-2xl">{icon}</span>}
+                      <div className="flex items-center gap-3">
+                        {choice.image_url && (
+                          <img
+                            src={choice.image_url}
+                            alt=""
+                            className="w-12 h-12 md:w-16 md:h-16 object-cover rounded-lg border bg-white shrink-0"
+                          />
+                        )}
+                        <span>{choice.text}</span>
+                      </div>
+                      {icon && <span className="text-2xl shrink-0">{icon}</span>}
                     </button>
                   );
                 })}
               </div>
               
-              {/* Retry Hint - show when wrong */}
+              {/* Retry Hint & Explanation - show when wrong */}
               {!isCorrectAnswer && selectedChoice && !isAnswered && (
-                <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-center">
-                  <div className="text-amber-700 text-sm">
+                <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-xl space-y-2 text-center">
+                  <div className="text-amber-800 font-bold text-sm sm:text-base">
                     ❌ إجابة خاطئة! حاول مرة أخرى
                   </div>
+                  {currentQuestion?.wrong_reason && (
+                    <p className="text-xs sm:text-sm text-amber-950 font-medium leading-relaxed bg-white/80 p-2.5 rounded-lg border border-amber-200/80 text-right">
+                      <span className="font-bold ml-1 text-amber-900">💡 توضيح الإجابة الصحيحة:</span>
+                      {currentQuestion.wrong_reason}
+                    </p>
+                  )}
+                  {(currentQuestion?.explanation_url || (currentQuestion?.wrong_reason && currentQuestion.wrong_reason.includes("http"))) && (
+                    <div className="pt-1">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowExplanationModal(true)}
+                        className="gap-1.5 text-xs font-bold text-amber-900 bg-white hover:bg-amber-100 border-amber-300 shadow-xs h-9 px-3.5"
+                      >
+                        <Video className="w-4 h-4 text-rose-500" />
+                        <span>🎥 شاهد فيديو أو درس الشرح</span>
+                      </Button>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -1190,6 +1246,16 @@ export default function WheelGame() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Explanation Modal */}
+      <ExplanationModal
+        isOpen={showExplanationModal}
+        onClose={() => setShowExplanationModal(false)}
+        questionText={currentQuestion?.text || ""}
+        wrongReason={currentQuestion?.wrong_reason}
+        explanationUrl={currentQuestion?.explanation_url}
+      />
     </div>
   );
 }
+

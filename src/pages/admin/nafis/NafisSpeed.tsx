@@ -15,7 +15,22 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { CheckCircle2, Image as ImageIcon, Loader2, Plus, Search, Sparkles, Timer, Trash2, X, Tag } from "lucide-react";
+import {
+  CheckCircle2,
+  Image as ImageIcon,
+  Loader2,
+  Plus,
+  Search,
+  Sparkles,
+  Timer,
+  Trash2,
+  X,
+  Tag,
+  Pencil,
+  ExternalLink,
+  Video,
+  HelpCircle,
+} from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,6 +41,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { useAcademicCatalog } from "@/hooks/use-academic-catalog";
 
 type ImageField =
@@ -48,6 +70,7 @@ interface SpeedQuestion {
   choice4: string;
   choice4_image_url?: string | null;
   answer_explanation?: string | null;
+  explanation_url?: string | null;
   correct_choice_index: number;
   is_active: boolean;
   domain_id?: string | null;
@@ -66,6 +89,7 @@ const emptyQuestionForm = {
   choice4: "",
   choice4_image_url: "",
   answer_explanation: "",
+  explanation_url: "",
   correct_choice_index: 1,
 };
 
@@ -105,6 +129,13 @@ export default function NafisSpeed() {
   const [searchQuery, setSearchQuery] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const uploadTargetRef = useRef<ImageField | null>(null);
+
+  // Edit Question Modal State
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editingQuestion, setEditingQuestion] = useState<SpeedQuestion | null>(null);
+  const [editForm, setEditForm] = useState(emptyQuestionForm);
+  const [editDomainId, setEditDomainId] = useState<string>("");
+  const [isUpdating, setIsUpdating] = useState(false);
 
   useEffect(() => {
     fetchQuestions();
@@ -249,7 +280,7 @@ export default function NafisSpeed() {
       const defaultGradeSubjectId =
         catalog?.gradeSubjects?.[0]?.id || "d5d10da4-4861-456d-a7a4-0b124e9a16d1";
 
-      const { error } = await supabase.from("speed_challenge_questions").insert({
+      const insertPayload: Record<string, any> = {
         question_text: newQuestion.question_text.trim(),
         question_image_url: newQuestion.question_image_url || null,
         choice1: newQuestion.choice1.trim(),
@@ -261,13 +292,29 @@ export default function NafisSpeed() {
         choice4: newQuestion.choice4.trim() || "",
         choice4_image_url: newQuestion.choice4_image_url || null,
         answer_explanation: newQuestion.answer_explanation.trim() || null,
+        explanation_url: newQuestion.explanation_url.trim() || null,
         correct_choice_index: newQuestion.correct_choice_index,
         is_active: true,
         track_type: "nafis",
         stage: "default",
         grade_subject_id: defaultGradeSubjectId,
         domain_id: selectedDomainId && selectedDomainId !== "none" ? selectedDomainId : null,
-      });
+      };
+
+      let { error } = await supabase.from("speed_challenge_questions").insert(insertPayload);
+
+      // Fallback if explanation_url column does not exist yet on remote
+      if (error && (error.code === "42703" || error.message?.includes("explanation_url"))) {
+        const fallbackExplanation = newQuestion.explanation_url.trim()
+          ? (newQuestion.answer_explanation.trim()
+              ? `${newQuestion.answer_explanation.trim()}\n${newQuestion.explanation_url.trim()}`
+              : newQuestion.explanation_url.trim())
+          : newQuestion.answer_explanation.trim() || null;
+        delete insertPayload.explanation_url;
+        insertPayload.answer_explanation = fallbackExplanation;
+        const retry = await supabase.from("speed_challenge_questions").insert(insertPayload);
+        error = retry.error;
+      }
 
       if (error) throw error;
       toast.success("تمت إضافة السؤال بنجاح");
@@ -278,6 +325,100 @@ export default function NafisSpeed() {
       toast.error(err?.message || "فشل إضافة السؤال");
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleOpenEdit = (q: SpeedQuestion) => {
+    setEditingQuestion(q);
+    setEditForm({
+      question_text: q.question_text || "",
+      question_image_url: q.question_image_url || "",
+      choice1: q.choice1 || "",
+      choice1_image_url: q.choice1_image_url || "",
+      choice2: q.choice2 || "",
+      choice2_image_url: q.choice2_image_url || "",
+      choice3: q.choice3 || "",
+      choice3_image_url: q.choice3_image_url || "",
+      choice4: q.choice4 || "",
+      choice4_image_url: q.choice4_image_url || "",
+      answer_explanation: q.answer_explanation || "",
+      explanation_url: q.explanation_url || "",
+      correct_choice_index: q.correct_choice_index || 1,
+    });
+    setEditDomainId(q.domain_id || "none");
+    setEditModalOpen(true);
+  };
+
+  const handleUpdateQuestion = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingQuestion) return;
+
+    if (!editForm.question_text.trim()) {
+      toast.error("يجب كتابة نص السؤال");
+      return;
+    }
+
+    const filledChoices = [
+      editForm.choice1,
+      editForm.choice2,
+      editForm.choice3,
+      editForm.choice4,
+    ].filter((c) => c.trim() !== "");
+
+    if (filledChoices.length < 2) {
+      toast.error("يجب ملء السؤال وخيارين على الأقل");
+      return;
+    }
+
+    setIsUpdating(true);
+    try {
+      const updatePayload: Record<string, any> = {
+        question_text: editForm.question_text.trim(),
+        question_image_url: editForm.question_image_url || null,
+        choice1: editForm.choice1.trim(),
+        choice1_image_url: editForm.choice1_image_url || null,
+        choice2: editForm.choice2.trim(),
+        choice2_image_url: editForm.choice2_image_url || null,
+        choice3: editForm.choice3.trim() || "",
+        choice3_image_url: editForm.choice3_image_url || null,
+        choice4: editForm.choice4.trim() || "",
+        choice4_image_url: editForm.choice4_image_url || null,
+        answer_explanation: editForm.answer_explanation.trim() || null,
+        explanation_url: editForm.explanation_url.trim() || null,
+        correct_choice_index: editForm.correct_choice_index,
+        domain_id: editDomainId && editDomainId !== "none" ? editDomainId : null,
+      };
+
+      let { error } = await supabase
+        .from("speed_challenge_questions")
+        .update(updatePayload)
+        .eq("id", editingQuestion.id);
+
+      // Fallback if explanation_url column does not exist yet on remote
+      if (error && (error.code === "42703" || error.message?.includes("explanation_url"))) {
+        const fallbackExplanation = editForm.explanation_url.trim()
+          ? (editForm.answer_explanation.trim()
+              ? `${editForm.answer_explanation.trim()}\n${editForm.explanation_url.trim()}`
+              : editForm.explanation_url.trim())
+          : editForm.answer_explanation.trim() || null;
+        delete updatePayload.explanation_url;
+        updatePayload.answer_explanation = fallbackExplanation;
+        const retry = await supabase
+          .from("speed_challenge_questions")
+          .update(updatePayload)
+          .eq("id", editingQuestion.id);
+        error = retry.error;
+      }
+
+      if (error) throw error;
+      toast.success("تم تحديث السؤال بنجاح");
+      setEditModalOpen(false);
+      fetchQuestions();
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err?.message || "فشل تحديث السؤال");
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -466,6 +607,34 @@ export default function NafisSpeed() {
               />
             </div>
 
+            <div className="space-y-2">
+              <Label className="text-sm font-bold text-slate-700 flex items-center gap-1.5">
+                <Video className="w-4 h-4 text-amber-600" />
+                <span>رابط شرح السؤال (المنصة التعليمية / يوتيوب / فيديو)</span>
+              </Label>
+              <div className="flex gap-2">
+                <Input
+                  value={newQuestion.explanation_url}
+                  onChange={(e) => setNewQuestion({ ...newQuestion, explanation_url: e.target.value })}
+                  placeholder="https://www.youtube.com/watch?v=... أو رابط المنصة التعليمية أو فيديو"
+                  dir="ltr"
+                  className="text-left font-mono text-xs flex-1 h-10"
+                />
+                {newQuestion.explanation_url && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => window.open(newQuestion.explanation_url, "_blank")}
+                    className="gap-1.5 text-xs font-bold text-amber-700 hover:text-amber-800 shrink-0 h-10 px-3 border-amber-300"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    <span>اختبار الرابط</span>
+                  </Button>
+                )}
+              </div>
+            </div>
+
             <div className="grid md:grid-cols-2 gap-3">
               {[1, 2, 3, 4].map((idx) => {
                 const choiceKey = `choice${idx}` as keyof typeof newQuestion;
@@ -581,7 +750,7 @@ export default function NafisSpeed() {
                     <TableHead className="w-48 font-bold">المجال العلمي</TableHead>
                     <TableHead className="font-bold">الإجابة الصحيحة</TableHead>
                     <TableHead className="w-24 text-center font-bold">الحالة</TableHead>
-                    <TableHead className="w-20 text-center font-bold">حذف</TableHead>
+                    <TableHead className="w-24 text-center font-bold">الإجراءات</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -596,11 +765,35 @@ export default function NafisSpeed() {
                           {idx + 1}
                         </TableCell>
                         <TableCell className="max-w-xs">
-                          <div className="flex items-center gap-2">
-                            {q.question_image_url && (
-                              <img src={q.question_image_url} alt="" className="h-9 w-9 rounded-lg object-cover bg-slate-100 border shrink-0" />
+                          <div className="space-y-1.5">
+                            <div className="flex items-center gap-2">
+                              {q.question_image_url && (
+                                <img src={q.question_image_url} alt="" className="h-9 w-9 rounded-lg object-cover bg-slate-100 border shrink-0" />
+                              )}
+                              <span className="font-medium text-slate-800 text-sm line-clamp-2">{q.question_text}</span>
+                            </div>
+                            {(q.answer_explanation || q.explanation_url) && (
+                              <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+                                {q.answer_explanation && (
+                                  <span className="inline-flex items-center gap-1 text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
+                                    <HelpCircle className="w-3 h-3 text-amber-600" />
+                                    <span className="truncate max-w-[180px]">{q.answer_explanation}</span>
+                                  </span>
+                                )}
+                                {q.explanation_url && (
+                                  <a
+                                    href={q.explanation_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1 text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-1.5 py-0.5 rounded border border-indigo-200 font-bold"
+                                  >
+                                    <Video className="w-3 h-3 text-indigo-600" />
+                                    <span>فيديو شرح</span>
+                                    <ExternalLink className="w-2.5 h-2.5" />
+                                  </a>
+                                )}
+                              </div>
                             )}
-                            <span className="font-medium text-slate-800 text-sm line-clamp-2">{q.question_text}</span>
                           </div>
                         </TableCell>
                         <TableCell>
@@ -636,9 +829,26 @@ export default function NafisSpeed() {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-center">
-                          <Button variant="ghost" size="icon" onClick={() => confirmDelete(q.id)} className="hover:bg-red-50 hover:text-red-600">
-                            <Trash2 className="w-4 h-4 text-red-500" />
-                          </Button>
+                          <div className="flex items-center justify-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleOpenEdit(q)}
+                              className="h-8 w-8 hover:bg-amber-50 hover:text-amber-600 text-slate-500"
+                              title="تعديل السؤال"
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => confirmDelete(q.id)}
+                              className="h-8 w-8 hover:bg-red-50 hover:text-red-600 text-red-500"
+                              title="حذف السؤال"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     );
@@ -649,6 +859,137 @@ export default function NafisSpeed() {
           )}
         </CardContent>
       </Card>
+
+      {/* Edit Question Dialog */}
+      <Dialog open={editModalOpen} onOpenChange={setEditModalOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-black text-slate-800 flex items-center gap-2">
+              <Pencil className="w-5 h-5 text-amber-500" />
+              <span>تعديل سؤال تحدي السرعة</span>
+            </DialogTitle>
+          </DialogHeader>
+
+          <form onSubmit={handleUpdateQuestion} className="space-y-4 pt-2">
+            <div className="space-y-2 bg-amber-50/60 p-3.5 rounded-xl border border-amber-200/80">
+              <Label className="text-xs font-bold text-slate-800">المجال العلمي</Label>
+              <Select value={editDomainId} onValueChange={setEditDomainId}>
+                <SelectTrigger className="w-full bg-white border-amber-200 font-bold h-9 text-xs">
+                  <SelectValue placeholder="-- اختر المجال العلمي --" />
+                </SelectTrigger>
+                <SelectContent dir="rtl">
+                  <SelectItem value="none">بدون مجال محدد (عام)</SelectItem>
+                  {domains.map((domain) => (
+                    <SelectItem key={domain.id} value={domain.id}>
+                      {domain.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-sm font-bold text-slate-700">نص السؤال</Label>
+              <Input
+                value={editForm.question_text}
+                onChange={(e) => setEditForm({ ...editForm, question_text: e.target.value })}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-sm font-bold text-slate-700">شرح الخطأ أو تلميح تعليمي</Label>
+              <Textarea
+                value={editForm.answer_explanation}
+                onChange={(e) => setEditForm({ ...editForm, answer_explanation: e.target.value })}
+                className="min-h-16"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-sm font-bold text-slate-700 flex items-center gap-1.5">
+                <Video className="w-4 h-4 text-amber-600" />
+                <span>رابط شرح السؤال (المنصة التعليمية / يوتيوب / فيديو)</span>
+              </Label>
+              <div className="flex gap-2">
+                <Input
+                  value={editForm.explanation_url}
+                  onChange={(e) => setEditForm({ ...editForm, explanation_url: e.target.value })}
+                  placeholder="https://www.youtube.com/watch?v=... أو رابط المنصة التعليمية أو فيديو"
+                  dir="ltr"
+                  className="text-left font-mono text-xs flex-1 h-10"
+                />
+                {editForm.explanation_url && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => window.open(editForm.explanation_url, "_blank")}
+                    className="gap-1.5 text-xs font-bold text-amber-700 hover:text-amber-800 shrink-0 h-10 px-3 border-amber-300"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    <span>اختبار الرابط</span>
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-3 pt-2 border-t">
+              {[1, 2, 3, 4].map((idx) => {
+                const choiceKey = `choice${idx}` as keyof typeof editForm;
+                const isCorrect = editForm.correct_choice_index === idx;
+
+                return (
+                  <div
+                    key={choiceKey}
+                    className={`space-y-2 rounded-xl border p-3 ${
+                      isCorrect ? "border-emerald-200 bg-emerald-50" : "border-slate-100 bg-slate-50"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setEditForm({ ...editForm, correct_choice_index: idx })}
+                        className={`w-7 h-7 rounded-full flex shrink-0 items-center justify-center transition-all ${
+                          isCorrect ? "bg-emerald-500 text-white shadow-md shadow-emerald-500/30" : "bg-white border text-slate-300 hover:text-slate-500"
+                        }`}
+                        title="انقر لتحديد هذه الإجابة كصحيحة"
+                      >
+                        <CheckCircle2 className="w-4 h-4" />
+                      </button>
+                      <Input
+                        placeholder={`الخيار ${idx} ${isCorrect ? "(الإجابة الصحيحة)" : ""}`}
+                        value={editForm[choiceKey] as string}
+                        onChange={(e) => setEditForm({ ...editForm, [choiceKey]: e.target.value })}
+                        className={isCorrect ? "border-emerald-500 font-bold" : ""}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <DialogFooter className="gap-2 pt-3 sm:justify-start">
+              <Button
+                type="submit"
+                disabled={isUpdating}
+                className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold h-11 px-6 rounded-xl"
+              >
+                {isUpdating ? <Loader2 className="w-4 h-4 animate-spin ml-2" /> : null}
+                حفظ التعديلات
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setEditModalOpen(false)}
+                className="h-11 rounded-xl font-bold"
+              >
+                إلغاء
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent dir="rtl">

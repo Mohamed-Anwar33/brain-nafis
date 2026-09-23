@@ -122,97 +122,113 @@ export default function WheelGame() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      console.log("[WheelGame] selectionContext:", JSON.stringify(selectionContext, null, 2));
-      if (!selectionContext) {
-        console.log("[WheelGame] No selectionContext, redirecting");
-        navigate("/student/dashboard");
-        return;
+      const activeContext = selectionContext || ensureStoredSelectionContext("nafis");
+
+      // Get student profile or fallback from storage
+      const storedName =
+        localStorage.getItem("student_name") ||
+        sessionStorage.getItem("student_name") ||
+        "طالب متميز";
+      setStudentName(storedName);
+
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          const { data: profile } = await supabase
+            .from("student_profiles")
+            .select("full_name")
+            .eq("id", session.user.id)
+            .single();
+          if (profile?.full_name) {
+            setStudentName(profile.full_name);
+          }
+        }
+      } catch (e) {
+        console.warn("Session check ignored, continuing as student:", storedName);
       }
 
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        toast.error("يجب تسجيل الدخول أولاً");
-        navigate("/");
-        return;
+      // Fetch sections intelligently
+      let sectionsData: WheelSection[] = [];
+
+      // 1. Try matching by domain if domainId is specified
+      if (activeContext.domainId && activeContext.domainId !== "all") {
+        const domRes = await supabase
+          .from("wheel_sections")
+          .select("*")
+          .eq("is_active", true)
+          .eq("domain_id", activeContext.domainId)
+          .order("order_index", { ascending: true });
+
+        if (domRes.data && domRes.data.length > 0) {
+          sectionsData = domRes.data as unknown as WheelSection[];
+        }
       }
 
-      // Get student profile
-      const { data: profile } = await supabase
-        .from("student_profiles")
-        .select("full_name")
-        .eq("id", session.user.id)
-        .single();
-      
-      if (profile?.full_name) {
-        setStudentName(profile.full_name);
+      // 2. Fallback: try matching by track or gradeSubject
+      if (sectionsData.length === 0) {
+        let trackQuery = supabase
+          .from("wheel_sections")
+          .select("*")
+          .eq("is_active", true);
+
+        if (activeContext.trackType) {
+          trackQuery = trackQuery.or(`track_type.eq.${activeContext.trackType},track_type.is.null`);
+        }
+        const trackRes = await trackQuery.order("order_index", { ascending: true });
+        if (trackRes.data && trackRes.data.length > 0) {
+          sectionsData = trackRes.data as unknown as WheelSection[];
+        }
       }
 
-      // Fetch sections - filter by domain so each subject shows its own questions
-      let sectionsQuery = supabase
-        .from("wheel_sections")
-        .select("*")
-        .eq("is_active", true);
-
-      if (selectionContext.trackType) {
-        sectionsQuery = sectionsQuery.or(`track_type.eq.${selectionContext.trackType},track_type.is.null`);
-      }
-      if (selectionContext.gradeSubjectId) {
-        sectionsQuery = sectionsQuery.eq("grade_subject_id", selectionContext.gradeSubjectId);
-      }
-      if (selectionContext.domainId && selectionContext.domainId !== "all") {
-        sectionsQuery = sectionsQuery.eq("domain_id", selectionContext.domainId);
+      // 3. Fallback: ANY active sections in the database
+      if (sectionsData.length === 0) {
+        const anyRes = await supabase
+          .from("wheel_sections")
+          .select("*")
+          .eq("is_active", true)
+          .order("order_index", { ascending: true });
+        if (anyRes.data && anyRes.data.length > 0) {
+          sectionsData = anyRes.data as unknown as WheelSection[];
+        }
       }
 
-      const { data: sectionsData, error: sectionsError } = await sectionsQuery
-        .order("order_index", { ascending: true });
-
-      if (sectionsError) throw sectionsError;
-
-      const fallbackUrl = selectionContext.trackType === "nafis" ? "/student/games" : "/central-exam/games";
-
-      if (!sectionsData || sectionsData.length === 0) {
-        toast.error("لا توجد أقسام مفعلة حاليًا");
-        navigate(fallbackUrl);
-        return;
+      // 4. Ultimate fallback: sample sections if database has none
+      if (sectionsData.length === 0) {
+        sectionsData = generateSampleSections();
       }
 
-      setSections(sectionsData as unknown as WheelSection[]);
+      setSections(sectionsData);
 
-      // Fetch questions for all active sections
-      const sectionIds = (sectionsData as any[]).map((s) => s.id);
-      let questionsQuery = supabase
-        .from("wheel_section_questions")
-        .select("*")
-        .eq("is_active", true)
-        .in("section_id", sectionIds);
+      // Fetch questions for active sections
+      const sectionIds = sectionsData.map((s) => s.id);
+      let allQuestions: WheelQuestion[] = [];
 
-      if (selectionContext.trackType) {
-        questionsQuery = questionsQuery.or(`track_type.eq.${selectionContext.trackType},track_type.is.null`);
-      }
-      if (selectionContext.gradeSubjectId) {
-        questionsQuery = questionsQuery.eq("grade_subject_id", selectionContext.gradeSubjectId);
-      }
-      if (selectionContext.domainId && selectionContext.domainId !== "all") {
-        questionsQuery = questionsQuery.eq("domain_id", selectionContext.domainId);
+      if (sectionIds.length > 0) {
+        const { data: questionsData } = await supabase
+          .from("wheel_section_questions")
+          .select("*")
+          .eq("is_active", true)
+          .in("section_id", sectionIds);
+
+        if (questionsData && questionsData.length > 0) {
+          allQuestions = questionsData as unknown as WheelQuestion[];
+        }
       }
 
-      const { data: questionsData, error: questionsError } = await questionsQuery;
-
-      if (questionsError) throw questionsError;
-
-      const allQuestions = (questionsData || []) as unknown as WheelQuestion[];
-      if (!allQuestions.length) {
-        toast.error("لا توجد أسئلة مفعلة حاليًا");
-        navigate(fallbackUrl);
-        return;
+      // If no questions in DB for these sections, use sample questions
+      if (allQuestions.length === 0) {
+        allQuestions = generateSampleQuestions();
       }
 
-      setQuestions(allQuestions as unknown as WheelQuestion[]);
+      setQuestions(allQuestions);
       setTotalQuestions(allQuestions.length);
     } catch (error) {
-      console.error("Error fetching data:", error);
-      toast.error("فشل تحميل بيانات لعبة العجلة");
-      navigate("/central-exam/games");
+      console.error("Error fetching data, using sample wheel fallback:", error);
+      const fallbackSections = generateSampleSections();
+      const fallbackQuestions = generateSampleQuestions();
+      setSections(fallbackSections);
+      setQuestions(fallbackQuestions);
+      setTotalQuestions(fallbackQuestions.length);
     } finally {
       setLoading(false);
     }
@@ -713,11 +729,20 @@ export default function WheelGame() {
       <div className="bg-white border-b py-3 px-6 shadow-sm sticky top-0 z-20">
         <div className="max-w-5xl mx-auto">
           <div className="flex items-center justify-between gap-2 mb-2">
-            <Button variant="ghost" size="sm" asChild className="rounded-full px-2 md:px-4">
-              <Link to="/central-exam/games">
-                <ArrowRight className="w-5 h-5 md:ml-1" />
-                <span className="hidden md:inline">العودة</span>
-              </Link>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                if (window.history.length > 1) {
+                  navigate(-1);
+                } else {
+                  navigate(selectionContext?.trackType === "central" ? "/central-exam/games" : "/student/games");
+                }
+              }}
+              className="rounded-full px-2 md:px-4 cursor-pointer"
+            >
+              <ArrowRight className="w-5 h-5 md:ml-1" />
+              <span className="hidden md:inline">العودة</span>
             </Button>
             
             <div className="flex items-center gap-2">

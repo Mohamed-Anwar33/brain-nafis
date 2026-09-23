@@ -39,6 +39,8 @@ import {
   Award,
   Menu,
   ChevronDown,
+  Puzzle,
+  Timer,
 } from "lucide-react";
 import { toast } from "sonner";
 import { SaudiLoader } from "@/components/ui/SaudiLoader";
@@ -250,7 +252,7 @@ export default function StudentDashboard() {
     null,
   );
   const [isActionLoading, setIsActionLoading] = useState(false);
-  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
+  const [step, setStep] = useState<1 | 2 | 3>(1);
 
   useEffect(() => {
     const existingContext = getStoredSelectionContext();
@@ -406,12 +408,9 @@ export default function StudentDashboard() {
   };
 
   const handleBack = () => {
-    if (step === 4) {
-      setStep(3);
-      setExperienceType(null);
-    } else if (step === 3) {
+    if (step === 3) {
       setStep(2);
-      setSelection((curr) => ({ ...curr, domainId: "" }));
+      setExperienceType(null);
     } else if (step === 2) {
       setStep(1);
       setExperienceType(null);
@@ -419,7 +418,7 @@ export default function StudentDashboard() {
     }
   };
 
-  const handleStartMatchingDirectly = () => {
+  const handleLaunchGame = (gamePath: string) => {
     audioManager.playPowerUp();
     const resolvedGrade = selectedGrade || grades[0];
     const resolvedSubject = selectedSubject || availableSubjects[0];
@@ -440,11 +439,11 @@ export default function StudentDashboard() {
       subjectId: resolvedSubject?.id || "a79e5e49-5a5e-4ccd-9ac8-c5e9c37c788b",
       subjectName: resolvedSubject?.name || "علوم",
       gradeSubjectId: resolvedGsId,
-      domainId: null,
-      domainName: null,
+      domainId: selectedDomain?.id || null,
+      domainName: selectedDomain?.name || null,
     };
     saveSelectionContext(context);
-    navigate("/games/matching");
+    navigate(gamePath);
   };
 
   const handleExperienceChange = async (type: ExperienceType) => {
@@ -478,8 +477,8 @@ export default function StudentDashboard() {
 
   const handleDomainSelection = async (domainId: string) => {
     handleDomainChange(domainId);
-    // Both Nafis and Central move to step 4 to choose Challenge Mode (Quiz vs Games)
-    setStep(4);
+    // Both Nafis and Central move to step 3 to choose Challenge Mode (Quiz vs Games)
+    setStep(3);
   };
 
   const buildSelectionContextExtended = (track: TrackType, exp: ExperienceType): SelectionContext | null => {
@@ -881,9 +880,9 @@ export default function StudentDashboard() {
         <div className="flex-1 max-w-6xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8">
           {/* Main Stage Content */}
           <main className="space-y-6 sm:space-y-8">
-          {/* Gamified Quest Adventure Stepper */}
+          {/* Gamified Quest Adventure Stepper - 3 Steps */}
           <div className="flex items-center justify-center mb-8 sm:mb-12 select-none px-2">
-            <div className="relative flex items-center gap-1.5 sm:gap-3 p-2 sm:p-2.5 rounded-[2rem] bg-white/90 backdrop-blur-2xl border-2 border-indigo-100/90 shadow-xl shadow-indigo-500/5 max-w-3xl w-full justify-between sm:justify-center overflow-x-auto">
+            <div className="relative flex items-center gap-2 sm:gap-4 p-2 sm:p-2.5 rounded-[2rem] bg-white/90 backdrop-blur-2xl border-2 border-indigo-100/90 shadow-xl shadow-indigo-500/5 max-w-2xl w-full justify-between sm:justify-center overflow-x-auto">
               {/* Step 1: Educational Track */}
               <button
                 type="button"
@@ -893,7 +892,7 @@ export default function StudentDashboard() {
                     setStep(1);
                   }
                 }}
-                className={`relative flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2 rounded-2xl text-xs sm:text-sm font-black transition-all duration-300 ${
+                className={`relative flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2 rounded-2xl text-xs sm:text-sm font-black transition-all duration-300 ${
                   step === 1
                     ? "bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-800 text-white shadow-lg shadow-indigo-600/30 scale-105 ring-4 ring-indigo-100"
                     : step > 1
@@ -910,16 +909,15 @@ export default function StudentDashboard() {
                 }`}>
                   {step > 1 ? <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : "1"}
                 </span>
-                <span className="hidden sm:inline">المسار التعليمي</span>
-                <span className="sm:hidden">المسار</span>
+                <span>المسار التعليمي</span>
               </button>
 
               {/* Connecting Bar 1 */}
-              <div className={`h-1 flex-1 max-w-[1.5rem] sm:max-w-[2.5rem] rounded-full transition-all duration-700 ${
-                step >= 2 ? "bg-gradient-to-r from-emerald-500 to-indigo-600" : "bg-slate-200"
+              <div className={`h-1 flex-1 max-w-[2rem] sm:max-w-[3rem] rounded-full transition-all duration-700 ${
+                step >= 2 ? "bg-gradient-to-r from-emerald-500 to-amber-500" : "bg-slate-200"
               }`} />
 
-              {/* Step 2: Gateway Choice (المجالات vs المطابقة) */}
+              {/* Step 2: Scientific Domain */}
               <button
                 type="button"
                 disabled={step < 2}
@@ -929,9 +927,9 @@ export default function StudentDashboard() {
                     setStep(2);
                   }
                 }}
-                className={`relative flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2 rounded-2xl text-xs sm:text-sm font-black transition-all duration-300 ${
+                className={`relative flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2 rounded-2xl text-xs sm:text-sm font-black transition-all duration-300 ${
                   step === 2
-                    ? "bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white shadow-lg shadow-indigo-500/30 scale-105 ring-4 ring-indigo-100"
+                    ? "bg-gradient-to-r from-amber-500 via-orange-500 to-rose-600 text-white shadow-lg shadow-amber-500/30 scale-105 ring-4 ring-amber-100"
                     : step > 2
                     ? "bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100"
                     : "text-slate-400 opacity-60 cursor-not-allowed"
@@ -946,66 +944,28 @@ export default function StudentDashboard() {
                 }`}>
                   {step > 2 ? <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : "2"}
                 </span>
-                <span className="hidden sm:inline">بوابة الانطلاق</span>
-                <span className="sm:hidden">البوابة</span>
+                <span>المجال العلمي</span>
               </button>
 
               {/* Connecting Bar 2 */}
-              <div className={`h-1 flex-1 max-w-[1.5rem] sm:max-w-[2.5rem] rounded-full transition-all duration-700 ${
-                step >= 3 ? "bg-gradient-to-r from-purple-500 to-amber-500" : "bg-slate-200"
+              <div className={`h-1 flex-1 max-w-[2rem] sm:max-w-[3rem] rounded-full transition-all duration-700 ${
+                step >= 3 ? "bg-gradient-to-r from-amber-500 to-purple-600" : "bg-slate-200"
               }`} />
 
-              {/* Step 3: Scientific Domain */}
-              <button
-                type="button"
-                disabled={step < 3}
-                onClick={() => {
-                  if (step > 3) {
-                    audioManager.playClick();
-                    setStep(3);
-                  }
-                }}
-                className={`relative flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2 rounded-2xl text-xs sm:text-sm font-black transition-all duration-300 ${
-                  step === 3
-                    ? "bg-gradient-to-r from-amber-500 via-orange-500 to-rose-600 text-white shadow-lg shadow-amber-500/30 scale-105 ring-4 ring-amber-100"
-                    : step > 3
-                    ? "bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100"
-                    : "text-slate-400 opacity-60 cursor-not-allowed"
-                }`}
-              >
-                <span className={`w-5 h-5 sm:w-6 sm:h-6 rounded-xl flex items-center justify-center text-xs font-black shadow-2xs ${
-                  step === 3
-                    ? "bg-white/25 text-white"
-                    : step > 3
-                    ? "bg-emerald-500 text-white"
-                    : "bg-slate-200 text-slate-500"
-                }`}>
-                  {step > 3 ? <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : "3"}
-                </span>
-                <span className="hidden sm:inline">المجال العلمي</span>
-                <span className="sm:hidden">المجال</span>
-              </button>
-
-              {/* Connecting Bar 3 */}
-              <div className={`h-1 flex-1 max-w-[1.5rem] sm:max-w-[2.5rem] rounded-full transition-all duration-700 ${
-                step >= 4 ? "bg-gradient-to-r from-orange-500 to-purple-600" : "bg-slate-200"
-              }`} />
-
-              {/* Step 4: Challenge Mode */}
+              {/* Step 3: Challenge Mode */}
               <div
-                className={`relative flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2 rounded-2xl text-xs sm:text-sm font-black transition-all duration-300 ${
-                  step === 4
+                className={`relative flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2 rounded-2xl text-xs sm:text-sm font-black transition-all duration-300 ${
+                  step === 3
                     ? "bg-gradient-to-r from-purple-600 via-indigo-600 to-pink-600 text-white shadow-lg shadow-purple-600/30 scale-105 ring-4 ring-purple-100"
                     : "text-slate-400 opacity-60"
                 }`}
               >
                 <span className={`w-5 h-5 sm:w-6 sm:h-6 rounded-xl flex items-center justify-center text-xs font-black shadow-2xs ${
-                  step === 4 ? "bg-white/25 text-white" : "bg-slate-200 text-slate-500"
+                  step === 3 ? "bg-white/25 text-white" : "bg-slate-200 text-slate-500"
                 }`}>
-                  4
+                  3
                 </span>
-                <span className="hidden sm:inline">نوع التحدي</span>
-                <span className="sm:hidden">التحدي</span>
+                <span>نوع التحدي</span>
               </div>
             </div>
           </div>
@@ -1201,189 +1161,8 @@ export default function StudentDashboard() {
             </div>
           )}
 
-          {/* Step 2: Gateway Choice Screen (المجالات العلمية vs لعبة المطابقة) */}
+          {/* Step 2: Specializations / Domains (for BOTH Nafis and Central) */}
           {step === 2 && (
-            <div className="space-y-8 sm:space-y-12 animate-in fade-in slide-in-from-bottom-6 duration-500 relative">
-              {/* Header */}
-              <div className="text-center space-y-4 max-w-3xl mx-auto pt-2">
-                <div className="inline-flex items-center gap-2.5 px-4 sm:px-5 py-2 rounded-full bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 border border-indigo-200/90 text-indigo-800 text-xs sm:text-sm font-black shadow-sm">
-                  <Sparkles className="w-4 h-4 text-amber-500 animate-pulse" />
-                  <span>
-                    {selection.trackType === "nafis"
-                      ? "مسار بنك اختبارات نافس الوطني 🇸🇦"
-                      : "مسار بنك الاختبار المركزي 🎯"}
-                  </span>
-                  <span className="text-indigo-300">|</span>
-                  <span className="text-emerald-600 font-extrabold">بوابة الانطلاق الذكي 🚀</span>
-                </div>
-
-                <h2 className="text-3xl sm:text-5xl lg:text-6xl font-black text-slate-900 tracking-tight">
-                  اختر <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-700 via-purple-600 to-pink-600">وجهتك التعليمية</span>
-                </h2>
-
-                <p className="text-sm sm:text-base font-bold text-slate-600 max-w-xl mx-auto leading-relaxed bg-white/80 backdrop-blur-md p-3.5 rounded-2xl border border-slate-200/80 shadow-xs">
-                  يا بطلنا المتميز! اختر هل ترغب في استعراض التخصصات والمجالات العلمية لخوض الاختبارات والألعاب، أم التوجه مباشرة لتحدي لعبة المطابقة؟
-                </p>
-              </div>
-
-              {/* The Two Grand Choice Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 max-w-5xl mx-auto pt-2">
-                {/* Option 1: Scientific Domains (التخصصات والمجالات العلمية) */}
-                <button
-                  type="button"
-                  onMouseEnter={() => audioManager.playClick()}
-                  onClick={() => {
-                    audioManager.playPowerUp();
-                    setStep(3);
-                  }}
-                  className="group relative text-right p-8 sm:p-10 rounded-[2.5rem] bg-gradient-to-b from-white via-indigo-50/40 to-white border-2 border-indigo-200/90 hover:border-indigo-500 shadow-xl shadow-indigo-500/5 hover:shadow-[0_28px_80px_rgba(99,102,241,0.24)] transition-all duration-500 hover:-translate-y-2.5 active:scale-[0.99] flex flex-col justify-between overflow-hidden cursor-pointer"
-                >
-                  <div className="absolute -top-24 -left-24 w-72 h-72 bg-indigo-500/15 rounded-full blur-3xl group-hover:scale-150 group-hover:bg-indigo-500/25 transition-all duration-700 pointer-events-none" />
-                  <div className="absolute -bottom-24 -right-24 w-72 h-72 bg-purple-400/10 rounded-full blur-3xl group-hover:scale-125 transition-all duration-700 pointer-events-none" />
-                  <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/40 to-transparent pointer-events-none skew-x-12" />
-
-                  <div className="relative space-y-6">
-                    <div className="flex items-center justify-between gap-4">
-                      <div className="relative">
-                        <div className="absolute -inset-2 rounded-3xl bg-gradient-to-r from-indigo-500 to-purple-600 opacity-30 blur-md group-hover:opacity-60 transition-opacity" />
-                        <div className="relative h-18 w-18 sm:h-22 sm:w-22 rounded-3xl bg-gradient-to-tr from-indigo-600 to-purple-600 text-white flex items-center justify-center shadow-xl shadow-indigo-500/30 group-hover:scale-110 group-hover:-rotate-3 transition-transform duration-500 ring-4 ring-indigo-100 group-hover:ring-indigo-300">
-                          <Target className="h-9 w-9 sm:h-11 sm:w-11" />
-                        </div>
-                      </div>
-
-                      <div className="flex flex-col items-end gap-1.5">
-                        <span className="flex items-center gap-2 text-xs font-black text-indigo-800 bg-indigo-100/90 border border-indigo-300/80 px-3.5 py-1.5 rounded-full shadow-2xs">
-                          <span className="w-2 h-2 rounded-full bg-indigo-500 animate-ping" />
-                          <span>المجالات التخصصية 📚</span>
-                        </span>
-                        <span className="text-[11px] font-bold text-slate-500 bg-slate-100/80 px-2.5 py-0.5 rounded-full border border-slate-200">
-                          الأحياء • الكيمياء • الفيزياء
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <h3 className="text-2xl sm:text-3xl font-black text-slate-900 group-hover:text-indigo-700 transition-colors">
-                        المجالات (اختر التخصص العلمي)
-                      </h3>
-                      <p className="text-sm sm:text-base text-slate-600 leading-relaxed font-bold">
-                        استكشف المجالات والتخصصات العلمية: الأحياء أولاً، الكيمياء، الفيزياء، وغيرها، لتحديد مجال التحدي والاختبار.
-                      </p>
-                    </div>
-
-                    <div className="flex flex-wrap gap-2 pt-1">
-                      <span className="px-3 py-1.5 rounded-xl bg-emerald-50 group-hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-black transition-colors shadow-2xs">
-                        🧬 أحياء
-                      </span>
-                      <span className="px-3 py-1.5 rounded-xl bg-purple-50 group-hover:bg-purple-100 text-purple-800 border border-purple-200 text-xs font-black transition-colors shadow-2xs">
-                        🧪 كيمياء
-                      </span>
-                      <span className="px-3 py-1.5 rounded-xl bg-blue-50 group-hover:bg-blue-100 text-blue-800 border border-blue-200 text-xs font-black transition-colors shadow-2xs">
-                        ⚛️ فيزياء
-                      </span>
-                      <span className="px-3 py-1.5 rounded-xl bg-amber-50 group-hover:bg-amber-100 text-amber-800 border border-amber-200 text-xs font-black transition-colors shadow-2xs">
-                        ⚡ كهرباء ومغناطيسية
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="relative mt-8 pt-5 border-t border-indigo-100/90 flex items-center justify-between">
-                    <span className="flex items-center gap-1.5 text-xs font-black text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-200">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-indigo-600" />
-                      <span>اختبارات وتحديات مقننة</span>
-                    </span>
-                    <div className="flex items-center gap-2.5 px-5 py-3 rounded-2xl bg-indigo-600 group-hover:bg-indigo-700 text-white font-black text-sm sm:text-base border-b-4 border-indigo-800 active:border-b-0 active:translate-y-1 shadow-md shadow-indigo-600/30 group-hover:shadow-lg group-hover:shadow-indigo-600/40 transition-all">
-                      <span>استعراض المجالات</span>
-                      <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1.5 transition-transform duration-300" />
-                    </div>
-                  </div>
-                </button>
-
-                {/* Option 2: Matching Game (لعبة المطابقة) */}
-                <button
-                  type="button"
-                  onMouseEnter={() => audioManager.playClick()}
-                  onClick={handleStartMatchingDirectly}
-                  className="group relative text-right p-8 sm:p-10 rounded-[2.5rem] bg-gradient-to-b from-white via-rose-50/40 to-white border-2 border-rose-200/90 hover:border-rose-500 shadow-xl shadow-rose-500/5 hover:shadow-[0_28px_80px_rgba(244,63,94,0.24)] transition-all duration-500 hover:-translate-y-2.5 active:scale-[0.99] flex flex-col justify-between overflow-hidden cursor-pointer"
-                >
-                  <div className="absolute -top-24 -left-24 w-72 h-72 bg-rose-500/15 rounded-full blur-3xl group-hover:scale-150 group-hover:bg-rose-500/25 transition-all duration-700 pointer-events-none" />
-                  <div className="absolute -bottom-24 -right-24 w-72 h-72 bg-pink-400/10 rounded-full blur-3xl group-hover:scale-125 transition-all duration-700 pointer-events-none" />
-                  <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/40 to-transparent pointer-events-none skew-x-12" />
-
-                  <div className="relative space-y-6">
-                    <div className="flex items-center justify-between gap-4">
-                      <div className="relative">
-                        <div className="absolute -inset-2 rounded-3xl bg-gradient-to-r from-rose-500 to-pink-600 opacity-30 blur-md group-hover:opacity-60 transition-opacity" />
-                        <div className="relative h-18 w-18 sm:h-22 sm:w-22 rounded-3xl bg-gradient-to-tr from-rose-500 to-pink-600 text-white flex items-center justify-center shadow-xl shadow-rose-500/30 group-hover:scale-110 group-hover:rotate-3 transition-transform duration-500 ring-4 ring-rose-100 group-hover:ring-rose-300">
-                          <Gamepad2 className="h-9 w-9 sm:h-11 sm:w-11" />
-                        </div>
-                      </div>
-
-                      <div className="flex flex-col items-end gap-1.5">
-                        <span className="flex items-center gap-2 text-xs font-black text-rose-800 bg-rose-100/90 border border-rose-300/80 px-3.5 py-1.5 rounded-full shadow-2xs">
-                          <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />
-                          <span>تحدي تفاعلي شيق 🧩</span>
-                        </span>
-                        <span className="text-[11px] font-bold text-slate-500 bg-slate-100/80 px-2.5 py-0.5 rounded-full border border-slate-200">
-                          مصطلحات وصور متناظرة
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <h3 className="text-2xl sm:text-3xl font-black text-slate-900 group-hover:text-rose-600 transition-colors">
-                        لعبة المطابقة
-                      </h3>
-                      <p className="text-sm sm:text-base text-slate-600 leading-relaxed font-bold">
-                        طابق المفاهيم والمصطلحات العلمية بالصور والأشكال التوضيحية المقابلة في عمودين تفاعليين، واكسب النقاط والأوسمة فوراً.
-                      </p>
-                    </div>
-
-                    <div className="flex flex-wrap gap-2 pt-1">
-                      <span className="px-3 py-1.5 rounded-xl bg-rose-50 group-hover:bg-rose-100 text-rose-800 border border-rose-200 text-xs font-black transition-colors shadow-2xs">
-                        📝 مصطلحات علمية
-                      </span>
-                      <span className="px-3 py-1.5 rounded-xl bg-pink-50 group-hover:bg-pink-100 text-pink-800 border border-pink-200 text-xs font-black transition-colors shadow-2xs">
-                        🖼️ صور وأشكال توضيحية
-                      </span>
-                      <span className="px-3 py-1.5 rounded-xl bg-amber-50 group-hover:bg-amber-100 text-amber-800 border border-amber-200 text-xs font-black transition-colors shadow-2xs">
-                        ⭐ نقاط وشهادة شكر
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="relative mt-8 pt-5 border-t border-rose-100/90 flex items-center justify-between">
-                    <span className="flex items-center gap-1.5 text-xs font-black text-rose-600 bg-rose-50 px-3 py-1 rounded-full border border-rose-200">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-rose-600" />
-                      <span>دخول مباشر للعبة</span>
-                    </span>
-                    <div className="flex items-center gap-2.5 px-5 py-3 rounded-2xl bg-gradient-to-r from-rose-500 to-pink-600 group-hover:from-rose-600 group-hover:to-pink-700 text-white font-black text-sm sm:text-base border-b-4 border-rose-700 active:border-b-0 active:translate-y-1 shadow-md shadow-rose-500/30 group-hover:shadow-lg group-hover:shadow-rose-500/40 transition-all">
-                      <span>ابدأ لعبة المطابقة 🧩</span>
-                      <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1.5 transition-transform duration-300" />
-                    </div>
-                  </div>
-                </button>
-              </div>
-
-              {/* Back to Step 1 */}
-              <div className="flex justify-center pt-4">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    audioManager.playClick();
-                    handleBack();
-                  }}
-                  className="rounded-2xl border-2 border-slate-200/90 bg-white/95 text-slate-700 hover:bg-slate-100 hover:text-indigo-600 hover:border-indigo-300 h-12 px-6 font-black text-sm gap-2.5 shadow-sm hover:shadow-md transition-all hover:scale-105 active:scale-95"
-                >
-                  <ArrowRight className="w-4 h-4" />
-                  <span>العودة لاختيار المسار التعليمي</span>
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {/* Step 3: Specializations / Domains (for BOTH Nafis and Central) */}
-          {step === 3 && (
             <div className="space-y-8 sm:space-y-12 animate-in fade-in slide-in-from-bottom-6 duration-500 relative">
               {/* Domain Step Hero Banner */}
               <div className="text-center space-y-4 max-w-3xl mx-auto pt-2">
@@ -1480,14 +1259,14 @@ export default function StudentDashboard() {
                   className="rounded-2xl border-2 border-slate-200/90 bg-white/95 text-slate-700 hover:bg-slate-100 hover:text-indigo-600 hover:border-indigo-300 h-12 px-6 font-black text-sm gap-2.5 shadow-sm hover:shadow-md transition-all hover:scale-105 active:scale-95"
                 >
                   <ArrowRight className="w-4 h-4" />
-                  <span>العودة لاختيار بوابة الانطلاق</span>
+                  <span>العودة لاختيار المسار التعليمي</span>
                 </Button>
               </div>
             </div>
           )}
 
-          {/* Step 4: Challenge Mode Selection (for BOTH Nafis and Central) */}
-          {step === 4 && (
+          {/* Step 3: Challenge Mode Selection (for BOTH Nafis and Central) */}
+          {step === 3 && (
             <div className="space-y-8 sm:space-y-12 animate-in fade-in slide-in-from-bottom-6 duration-500 relative">
               {/* Floating Ambient Science Badges (Desktop) */}
               <div
@@ -1503,7 +1282,7 @@ export default function StudentDashboard() {
                 style={{ animation: "floatSlowReverse 6.5s ease-in-out infinite" }}
               >
                 <Gamepad2 className="w-4 h-4 text-fuchsia-600" />
-                <span className="text-xs font-black">4 ألعاب ومغامرة الكنز 🗝️</span>
+                <span className="text-xs font-black">ألعاب تطابقية ومغامرة الكنز 🗝️</span>
               </div>
 
               {/* Step Hero Mission Banner & Friendly Mascot Capsule */}
@@ -1530,7 +1309,7 @@ export default function StudentDashboard() {
                     اختر <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-500 via-orange-500 to-rose-600 filter drop-shadow-xs">نوع التحدي</span>
                   </h2>
                   <p className="text-sm sm:text-base font-bold text-slate-600 max-w-xl mx-auto leading-relaxed bg-white/85 backdrop-blur-md p-3.5 rounded-2xl border border-slate-200/90 shadow-xs">
-                    يا بطلنا الذكي! 🌟 اختر طريقتك المفضلة اليوم: هل تفضل الاختبار السريع الخاطف ⚡ أم الانطلاق في ساحة الألعاب والمغامرات التفاعلية 🎮؟
+                    يا بطلنا الذكي! 🌟 في مجال <span className="text-indigo-600 font-black">{selectedDomain?.name || "العلوم"}</span>: اختر طريقتك المفضلة اليوم: هل تفضل الاختبار السريع الخاطف ⚡ أم الألعاب التطابقية والتفاعلية 🎮؟
                   </p>
                 </div>
               </div>
@@ -1577,6 +1356,9 @@ export default function StudentDashboard() {
                           10 أسئلة ذكية
                         </span>
                       </div>
+                      <p className="text-sm font-bold text-slate-500 leading-relaxed">
+                        اختبار سريع وخاطف في أسئلة مجال {selectedDomain?.name || "المادة المختارة"} لقياس مستواك فورياً.
+                      </p>
                     </div>
                   </div>
 
@@ -1630,10 +1412,10 @@ export default function StudentDashboard() {
                       <div className="flex flex-col items-end gap-1.5">
                         <span className="flex items-center gap-2 text-xs font-black text-fuchsia-900 bg-fuchsia-100 border border-fuchsia-300/90 px-3.5 py-1.5 rounded-full shadow-2xs">
                           <span className="w-2 h-2 rounded-full bg-fuchsia-500 animate-ping" />
-                          <span>ساحة الألعاب 🎮</span>
+                          <span>ألعاب تطابقية وتفاعلية 🎮</span>
                         </span>
                         <span className="text-[11px] font-black text-purple-700 bg-purple-100/90 border border-purple-200 px-3 py-1 rounded-full shadow-2xs">
-                          4 ألعاب تفاعلية 🗝️
+                          5 ألعاب تفاعلية ومطابقة 🧩
                         </span>
                       </div>
                     </div>
@@ -1642,12 +1424,15 @@ export default function StudentDashboard() {
                     <div className="space-y-2 text-right">
                       <div className="flex items-center gap-2 flex-wrap">
                         <h3 className="text-2xl sm:text-3xl font-black text-slate-900 group-hover:text-fuchsia-600 transition-colors">
-                          ألعاب تفاعلية
+                          ألعاب تطابقية وتفاعلية
                         </h3>
                         <span className="text-xs font-black text-fuchsia-700 bg-fuchsia-100/80 px-2.5 py-0.5 rounded-lg border border-fuchsia-200">
-                          تلعيب ومغامرة
+                          المطابقة والعجلة والكنز
                         </span>
                       </div>
+                      <p className="text-sm font-bold text-slate-500 leading-relaxed">
+                        ادخل ساحة الألعاب العلمية لمجال {selectedDomain?.name || "المادة المختارة"} واستمتع بلعبة المطابقة وعجلة العلوم وباقي التحديات.
+                      </p>
                     </div>
                   </div>
 
@@ -1655,7 +1440,7 @@ export default function StudentDashboard() {
                   <div className="relative mt-8 pt-5 border-t border-fuchsia-200/80 w-full space-y-3">
                     <div className="w-full py-4 px-6 rounded-2xl font-black text-base sm:text-lg text-white bg-gradient-to-r from-fuchsia-600 via-purple-600 to-pink-600 border-b-4 border-purple-800 active:border-b-0 active:translate-y-1 shadow-lg shadow-fuchsia-500/35 group-hover:shadow-fuchsia-500/55 group-hover:brightness-105 flex items-center justify-center gap-3 transition-all">
                       <Gamepad2 className="w-5 h-5" />
-                      <span>ادخل ساحة الألعاب والمغامرة 🎮</span>
+                      <span>ادخل ساحة الألعاب التفاعلية 🎮</span>
                       <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1.5 transition-transform duration-300" />
                     </div>
 
@@ -1664,10 +1449,92 @@ export default function StudentDashboard() {
                         <span className="w-2 h-2 rounded-full bg-fuchsia-500 animate-pulse" />
                         <span>بوابة الألعاب مفتوحة</span>
                       </span>
-                      <span>4 ألعاب شيقة بانتظارك</span>
+                      <span>5 ألعاب شيقة بانتظارك</span>
                     </div>
                   </div>
                 </button>
+              </div>
+
+              {/* Direct Domain Games Launchpad */}
+              <div className="pt-2 max-w-5xl mx-auto space-y-4">
+                <div className="flex items-center justify-between px-2">
+                  <div className="flex items-center gap-2">
+                    <Puzzle className="w-5 h-5 text-indigo-600" />
+                    <h3 className="text-base sm:text-lg font-black text-slate-900">
+                      أو اختر اللعبة مباشرة في مجال {selectedDomain?.name || "العلوم"}:
+                    </h3>
+                  </div>
+                  <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200 font-black text-xs">
+                    انطلاق فوري 🎯
+                  </Badge>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
+                  {/* Game 1: Matching Game */}
+                  <button
+                    type="button"
+                    onClick={() => handleLaunchGame("/games/matching")}
+                    className="group relative p-4 rounded-2xl bg-white hover:bg-violet-50/70 border-2 border-slate-200/80 hover:border-violet-400 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all text-center flex flex-col items-center gap-2.5 cursor-pointer"
+                  >
+                    <div className="h-12 w-12 rounded-2xl bg-gradient-to-tr from-violet-600 to-purple-500 text-white flex items-center justify-center shadow-md shadow-violet-500/30 group-hover:scale-110 group-hover:rotate-6 transition-transform">
+                      <Puzzle className="w-6 h-6" />
+                    </div>
+                    <span className="font-black text-xs sm:text-sm text-slate-800 group-hover:text-violet-700">لعبة المطابقة</span>
+                    <span className="text-[10px] font-bold text-violet-600 bg-violet-100/70 px-2 py-0.5 rounded-full">مطابقة المفاهيم 🧩</span>
+                  </button>
+
+                  {/* Game 2: Wheel Game */}
+                  <button
+                    type="button"
+                    onClick={() => handleLaunchGame("/games/wheel")}
+                    className="group relative p-4 rounded-2xl bg-white hover:bg-rose-50/70 border-2 border-slate-200/80 hover:border-rose-400 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all text-center flex flex-col items-center gap-2.5 cursor-pointer"
+                  >
+                    <div className="h-12 w-12 rounded-2xl bg-gradient-to-tr from-rose-500 to-pink-500 text-white flex items-center justify-center shadow-md shadow-rose-500/30 group-hover:scale-110 group-hover:rotate-6 transition-transform">
+                      <Sparkles className="w-6 h-6" />
+                    </div>
+                    <span className="font-black text-xs sm:text-sm text-slate-800 group-hover:text-rose-700">عجلة العلوم</span>
+                    <span className="text-[10px] font-bold text-rose-600 bg-rose-100/70 px-2 py-0.5 rounded-full">عجلة العلوم 🎡</span>
+                  </button>
+
+                  {/* Game 3: Speed Challenge */}
+                  <button
+                    type="button"
+                    onClick={() => handleLaunchGame("/games/speed")}
+                    className="group relative p-4 rounded-2xl bg-white hover:bg-amber-50/70 border-2 border-slate-200/80 hover:border-amber-400 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all text-center flex flex-col items-center gap-2.5 cursor-pointer"
+                  >
+                    <div className="h-12 w-12 rounded-2xl bg-gradient-to-tr from-amber-500 to-orange-500 text-white flex items-center justify-center shadow-md shadow-amber-500/30 group-hover:scale-110 group-hover:rotate-6 transition-transform">
+                      <Timer className="w-6 h-6" />
+                    </div>
+                    <span className="font-black text-xs sm:text-sm text-slate-800 group-hover:text-amber-700">تحدي السرعة</span>
+                    <span className="text-[10px] font-bold text-amber-600 bg-amber-100/70 px-2 py-0.5 rounded-full">سرعة وخاطف ⚡</span>
+                  </button>
+
+                  {/* Game 4: Ordering Puzzle */}
+                  <button
+                    type="button"
+                    onClick={() => handleLaunchGame("/games/ordering")}
+                    className="group relative p-4 rounded-2xl bg-white hover:bg-blue-50/70 border-2 border-slate-200/80 hover:border-blue-400 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all text-center flex flex-col items-center gap-2.5 cursor-pointer"
+                  >
+                    <div className="h-12 w-12 rounded-2xl bg-gradient-to-tr from-blue-500 to-cyan-500 text-white flex items-center justify-center shadow-md shadow-blue-500/30 group-hover:scale-110 group-hover:rotate-6 transition-transform">
+                      <Target className="w-6 h-6" />
+                    </div>
+                    <span className="font-black text-xs sm:text-sm text-slate-800 group-hover:text-blue-700">لغز الترتيب</span>
+                    <span className="text-[10px] font-bold text-blue-600 bg-blue-100/70 px-2 py-0.5 rounded-full">ترتيب منطقي 🔄</span>
+                  </button>
+
+                  {/* Game 5: Treasure Adventure */}
+                  <button
+                    type="button"
+                    onClick={() => handleLaunchGame("/games/treasure/active")}
+                    className="group relative p-4 rounded-2xl bg-white hover:bg-emerald-50/70 border-2 border-slate-200/80 hover:border-emerald-400 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all text-center flex flex-col items-center gap-2.5 cursor-pointer col-span-2 sm:col-span-1"
+                  >
+                    <div className="h-12 w-12 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-white flex items-center justify-center shadow-md shadow-emerald-500/30 group-hover:scale-110 group-hover:rotate-6 transition-transform">
+                      <Compass className="w-6 h-6" />
+                    </div>
+                    <span className="font-black text-xs sm:text-sm text-slate-800 group-hover:text-emerald-700">مغامرة الكنز</span>
+                    <span className="text-[10px] font-bold text-emerald-600 bg-emerald-100/70 px-2 py-0.5 rounded-full">فك الأقفال 🗝️</span>
+                  </button>
+                </div>
               </div>
 
               {/* Back Button with Modern Tactile Pill */}
@@ -1681,7 +1548,7 @@ export default function StudentDashboard() {
                   className="rounded-2xl border-2 border-slate-200/90 bg-white/95 text-slate-700 hover:bg-slate-100 hover:text-indigo-600 hover:border-indigo-300 h-12 px-6 font-black text-sm gap-2.5 shadow-sm hover:shadow-md transition-all hover:scale-105 active:scale-95"
                 >
                   <ArrowRight className="w-4 h-4" />
-                  <span>العودة لاختيار التخصص العلمي</span>
+                  <span>العودة لاختيار المجال العلمي</span>
                 </Button>
               </div>
             </div>

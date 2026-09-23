@@ -319,13 +319,46 @@ export function ResultScreen({ result }: ResultScreenProps) {
 
                 if (isEligibleForCertificate) {
                   return (
-                    <Button
-                      onClick={() => setShowCertificateModal(true)}
-                      className="w-full min-h-[3.5rem] h-auto py-3 px-4 rounded-2xl bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 hover:from-amber-600 hover:to-yellow-700 text-slate-950 shadow-xl shadow-amber-500/25 font-black text-base sm:text-lg flex items-center justify-center gap-2 border-2 border-amber-300 text-center leading-snug whitespace-normal transform hover:scale-[1.01] active:scale-95 transition-all"
-                    >
-                      <Award className="w-6 h-6 ml-2 shrink-0 text-slate-950" />
-                      <span>عرض وتحميل شهادة الشكر والتقدير</span>
-                    </Button>
+                    <div className="space-y-3.5">
+                      <Button
+                        onClick={() => setShowCertificateModal(true)}
+                        className="w-full min-h-[3.5rem] h-auto py-3 px-4 rounded-2xl bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 hover:from-amber-600 hover:to-yellow-700 text-slate-950 shadow-xl shadow-amber-500/25 font-black text-base sm:text-lg flex items-center justify-center gap-2 border-2 border-amber-300 text-center leading-snug whitespace-normal transform hover:scale-[1.01] active:scale-95 transition-all"
+                      >
+                        <Award className="w-6 h-6 ml-2 shrink-0 text-slate-950" />
+                        <span>عرض وتحميل شهادة الشكر والتقدير</span>
+                      </Button>
+
+                      {/* Motivational Comment & Continuation Card */}
+                      <div className="rounded-3xl bg-gradient-to-br from-amber-50 via-orange-50/70 to-yellow-50 border-2 border-amber-300/90 p-5 sm:p-6 text-center space-y-3 shadow-lg shadow-amber-500/10 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/95 border border-amber-300 text-amber-900 shadow-xs text-xs sm:text-sm font-black">
+                          <Sparkles className="w-4 h-4 text-amber-500 animate-spin" style={{ animationDuration: "5s" }} />
+                          <span>يلا يا بطل كمل بقية المراحل! 🌟</span>
+                          <Zap className="w-4 h-4 text-amber-500 fill-amber-500" />
+                        </div>
+
+                        <div className="space-y-1">
+                          <h3 className="text-lg sm:text-xl font-black text-slate-900">
+                            أحسنت باجتياز المراحل الأربع وحصولك على الشهادة! 🎓
+                          </h3>
+                          <p className="text-xs sm:text-sm text-slate-600 font-bold leading-relaxed max-w-lg mx-auto">
+                            يلا يا بطل كمل بقية المراحل! واصل التدرب وحل المزيد من الأسئلة في بنك نافس لترسيخ معلوماتك وتحقيق أعلى درجات التميز والتفوق 🚀
+                          </p>
+                        </div>
+
+                        <div className="pt-1 flex flex-col sm:flex-row items-center justify-center gap-3">
+                          <Button
+                            onClick={() => {
+                              audioManager.playPowerUp();
+                              navigate("/student/dashboard");
+                            }}
+                            className="w-full sm:w-auto min-h-[3rem] px-8 rounded-2xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-600 hover:to-orange-600 text-white font-black text-sm sm:text-base shadow-lg shadow-amber-500/30 flex items-center justify-center gap-2.5 transition-all hover:scale-105 active:scale-95 cursor-pointer"
+                          >
+                            <Flame className="w-5 h-5 fill-white" />
+                            <span>يلا يا بطل كمل بقية المراحل 🚀</span>
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
                   );
                 }
 

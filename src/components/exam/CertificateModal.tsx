@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { jsPDF } from "jspdf";
 import html2canvas from "html2canvas";
 import { toast } from "sonner";
-import { Download, Printer, Award, X, FileText } from "lucide-react";
+import { Download, Printer, Award, X, FileText, Sparkles } from "lucide-react";
 
 export interface CertificateModalProps {
   isOpen: boolean;
@@ -706,6 +706,18 @@ export function CertificateModal({
               </div>
             </div>
           )}
+        </div>
+
+        {/* Motivational Note under Certificate */}
+        <div className="mt-3 p-4 rounded-2xl bg-gradient-to-r from-amber-500/15 via-orange-500/20 to-yellow-500/15 border-2 border-amber-400/50 text-center space-y-1.5 no-print shadow-md">
+          <div className="flex items-center justify-center gap-2 text-amber-300 font-black text-sm sm:text-base">
+            <Sparkles className="w-4 h-4 text-amber-400 animate-spin" style={{ animationDuration: "5s" }} />
+            <span>يلا يا بطل كمل بقية المراحل! 🌟</span>
+            <Award className="w-4 h-4 text-amber-400" />
+          </div>
+          <p className="text-xs sm:text-sm text-slate-200 font-bold max-w-lg mx-auto leading-relaxed">
+            مبارك حصولك على هذه الشهادة بعد إتمام 4 مراحل بنجاح! 🎓✨ يلا يا بطل كمل بقية المراحل وتدرب على المزيد من الأسئلة في بنك نافس لمزيد من التفوق والتألق.
+          </p>
         </div>
       </DialogContent>
     </Dialog>

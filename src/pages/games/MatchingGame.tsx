@@ -136,58 +136,70 @@ export default function MatchingGame() {
   const fetchQuestions = async () => {
     setLoading(true);
     try {
-      let { data: allQuestions } = await applySelectionFilters(
-        supabase
-          .from("matching_game_questions")
-          .select("*")
-          .eq("is_active", true),
-        selectionContext,
-      );
+      let questionsList: RawQuestion[] = [];
 
-      // Fallback 1: Query by grade_subject_id regardless of track_type
-      if (!allQuestions || allQuestions.length === 0) {
-        const retry = await supabase
+      // 1. If a domain is selected, STRICTLY query questions for this domain!
+      if (selectionContext?.domainId && selectionContext.domainId !== "all") {
+        // First try: match track + domain
+        const trackDomainRes = await supabase
           .from("matching_game_questions")
           .select("*")
           .eq("is_active", true)
-          .eq("grade_subject_id", selectionContext.gradeSubjectId);
-        if (retry.data && retry.data.length > 0) {
-          allQuestions = retry.data;
+          .eq("domain_id", selectionContext.domainId)
+          .eq("track_type", selectionContext.trackType || "nafis");
+
+        if (trackDomainRes.data && trackDomainRes.data.length > 0) {
+          questionsList = trackDomainRes.data as RawQuestion[];
+        } else {
+          // Second try: match domain across all tracks
+          const domainCrossRes = await supabase
+            .from("matching_game_questions")
+            .select("*")
+            .eq("is_active", true)
+            .eq("domain_id", selectionContext.domainId);
+
+          if (domainCrossRes.data && domainCrossRes.data.length > 0) {
+            questionsList = domainCrossRes.data as RawQuestion[];
+          }
+        }
+
+        // If STILL no questions for this domain, DO NOT fall back to other domains!
+        if (questionsList.length === 0) {
+          const domainName = selectionContext.domainName || "هذا التخصص";
+          toast.error(`لا توجد أسئلة مطابقة مفعلة لمجال "${domainName}" حالياً، يُرجى إضافة أسئلة من لوحة التحكم`);
+          setLoading(false);
+          return;
+        }
+      } else {
+        // 2. No specific domain was selected: query by track / grade_subject
+        let { data: allQuestions } = await applySelectionFilters(
+          supabase
+            .from("matching_game_questions")
+            .select("*")
+            .eq("is_active", true),
+          selectionContext,
+        );
+        if (allQuestions && allQuestions.length > 0) {
+          questionsList = allQuestions as RawQuestion[];
+        } else {
+          const anyRes = await supabase
+            .from("matching_game_questions")
+            .select("*")
+            .eq("is_active", true)
+            .limit(30);
+          if (anyRes.data && anyRes.data.length > 0) {
+            questionsList = anyRes.data as RawQuestion[];
+          }
         }
       }
 
-      // Fallback 2: Query by track_type or active questions in the system
-      if (!allQuestions || allQuestions.length === 0) {
-        const trackFallback = await supabase
-          .from("matching_game_questions")
-          .select("*")
-          .eq("is_active", true)
-          .eq("track_type", selectionContext.trackType || "nafis")
-          .limit(30);
-        if (trackFallback.data && trackFallback.data.length > 0) {
-          allQuestions = trackFallback.data;
-        }
-      }
-
-      // Fallback 3: Any active matching questions
-      if (!allQuestions || allQuestions.length === 0) {
-        const anyRes = await supabase
-          .from("matching_game_questions")
-          .select("*")
-          .eq("is_active", true)
-          .limit(30);
-        if (anyRes.data && anyRes.data.length > 0) {
-          allQuestions = anyRes.data;
-        }
-      }
-
-      if (!allQuestions || allQuestions.length === 0) {
+      if (!questionsList || questionsList.length === 0) {
         toast.error("لا توجد أسئلة مطابقة متاحة حالياً");
         setLoading(false);
         return;
       }
 
-      const scopedQuestions = allQuestions as RawQuestion[];
+      const scopedQuestions = questionsList;
       const constructedBoards: MatchingBoard[] = [];
       const standalonePairs: MatchingPair[] = [];
 

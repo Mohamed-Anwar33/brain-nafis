@@ -28,9 +28,9 @@ import { StudentPortalHub } from "@/components/student/StudentPortalHub";
 
 const games = [
   {
-    title: "لعبة المطابقة",
-    tagline: "ربط وتناظر المفاهيم",
-    description: "تحدي فكري ممتع لربط المفاهيم العلمية المتناظرة من واقع مقررك الدراسي بدقة وتركيز.",
+    title: "لعبة المطابقة العلمية",
+    tagline: "ربط وتناظر المفاهيم التخصصية",
+    description: "طابق المفاهيم والمصطلحات العلمية بالصور والأشكال التوضيحية المقابلة في عمودين تفاعليين بحسب مجالك المختار.",
     icon: Puzzle,
     path: "/games/matching",
     themeGradient: "from-rose-500 via-pink-600 to-rose-700",
@@ -38,6 +38,18 @@ const games = [
     borderHover: "hover:border-rose-400",
     badge: "ذكاء بصري 🧩",
     badgeColor: "bg-rose-50 text-rose-700 border-rose-200",
+  },
+  {
+    title: "عجلة العلوم",
+    tagline: "تدوير العجلة وتحدي الأقسام",
+    description: "أدر عجلة العلوم واختبر معلوماتك ومهاراتك في أقسام التخصص المتنوعة مع احتساب النقاط والأوسمة.",
+    icon: Sparkles,
+    path: "/games/wheel",
+    themeGradient: "from-purple-600 via-indigo-600 to-pink-600",
+    glowColor: "shadow-purple-500/25",
+    borderHover: "hover:border-purple-400",
+    badge: "عجلة العلوم 🎡",
+    badgeColor: "bg-purple-50 text-purple-700 border-purple-200",
   },
   {
     title: "لغز الترتيب",

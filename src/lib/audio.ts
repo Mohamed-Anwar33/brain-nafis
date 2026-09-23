@@ -344,6 +344,10 @@ class ComprehensiveAudioManager {
     this.playCorrect(1);
   }
 
+  public playFanfare() {
+    this.playVictory();
+  }
+
   public isReady(): boolean {
     return this.isInitialized;
   }

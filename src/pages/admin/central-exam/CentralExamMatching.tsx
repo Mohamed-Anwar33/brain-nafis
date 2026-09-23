@@ -83,8 +83,31 @@ export default function CentralExamMatching() {
         (item.right_text?.trim() || item.right_image_url),
     );
 
+const getDomainSortPriority = (name?: string, slug?: string) => {
+  const n = (name || "").toLowerCase();
+  const s = (slug || "").toLowerCase();
+  if (n.includes("أحياء") || n.includes("احياء") || s.includes("bio")) return 1;
+  if (n.includes("كيمياء") || s.includes("chem")) return 2;
+  if (n.includes("فيزياء") || s.includes("phys")) return 3;
+  if (n.includes("كهرباء") || s.includes("elec")) return 4;
+  if (
+    n.includes("أرض") ||
+    n.includes("ارض") ||
+    n.includes("فضاء") ||
+    s.includes("earth") ||
+    s.includes("space")
+  )
+    return 5;
+  if (n.includes("طبيعة") || n.includes("طبيعه") || s.includes("nature")) return 6;
+  return 10;
+};
+
   const gradeSubjects = useMemo(() => catalog?.gradeSubjects || [], [catalog]);
-  const domains = useMemo(() => catalog?.domains || [], [catalog]);
+  const domains = useMemo(() => {
+    return [...(catalog?.domains || [])].sort(
+      (a, b) => getDomainSortPriority(a.name, a.slug) - getDomainSortPriority(b.name, b.slug),
+    );
+  }, [catalog?.domains]);
 
   const getGradeSubjectLabel = (gradeSubjectId?: string | null) => {
     const gradeSubject = gradeSubjects.find((item) => item.id === gradeSubjectId);

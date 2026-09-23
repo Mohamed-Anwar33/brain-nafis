@@ -215,6 +215,24 @@ const getDomainMeta = (slug?: string, name?: string) => {
   };
 };
 
+const getDomainOrder = (name?: string, slug?: string) => {
+  const n = (name || "").toLowerCase();
+  const s = (slug || "").toLowerCase();
+  // 1. Biology (الأحياء) first/top
+  if (n.includes("أحياء") || n.includes("احياء") || s.includes("bio")) return 1;
+  // 2. Chemistry (الكيمياء) second
+  if (n.includes("كيمياء") || s.includes("chem")) return 2;
+  // 3. Physics (الفيزياء) third
+  if (n.includes("فيزياء") || s.includes("phys")) return 3;
+  // 4. Electricity & Magnetism
+  if (n.includes("كهرباء") || s.includes("elec")) return 4;
+  // 5. Earth and Space
+  if (n.includes("أرض") || n.includes("ارض") || n.includes("فضاء") || s.includes("earth") || s.includes("space")) return 5;
+  // 6. Nature of Science
+  if (n.includes("طبيعة") || n.includes("طبيعه") || s.includes("nature")) return 6;
+  return 10;
+};
+
 export default function StudentDashboard() {
   const navigate = useNavigate();
   const { data: catalog, isLoading: isCatalogLoading } = useAcademicCatalog();
@@ -232,7 +250,7 @@ export default function StudentDashboard() {
     null,
   );
   const [isActionLoading, setIsActionLoading] = useState(false);
-  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
 
   useEffect(() => {
     const existingContext = getStoredSelectionContext();
@@ -313,7 +331,7 @@ export default function StudentDashboard() {
     [domains, selection.gradeSubjectId],
   );
 
-  // Apply per-track name overrides and filtering
+  // Apply per-track name overrides, filtering, and sorting (Biology first, Chemistry second, Physics third)
   const displayDomains = useMemo(() => {
     return availableDomains
       .filter((domain) => {
@@ -361,7 +379,8 @@ export default function StudentDashboard() {
           name = "علم الأرض والفضاء والبيئة";
         }
         return { ...domain, name };
-      });
+      })
+      .sort((a, b) => getDomainOrder(a.name, a.slug) - getDomainOrder(b.name, b.slug));
   }, [availableDomains, selection.trackType]);
 
   const selectedGrade = grades.find((grade) => grade.id === selection.gradeId);
@@ -387,14 +406,45 @@ export default function StudentDashboard() {
   };
 
   const handleBack = () => {
-    if (step === 3) {
-      setStep(2);
+    if (step === 4) {
+      setStep(3);
       setExperienceType(null);
+    } else if (step === 3) {
+      setStep(2);
+      setSelection((curr) => ({ ...curr, domainId: "" }));
     } else if (step === 2) {
       setStep(1);
       setExperienceType(null);
       setSelection((curr) => ({ ...curr, domainId: "" }));
     }
+  };
+
+  const handleStartMatchingDirectly = () => {
+    audioManager.playPowerUp();
+    const resolvedGrade = selectedGrade || grades[0];
+    const resolvedSubject = selectedSubject || availableSubjects[0];
+    const resolvedGsId =
+      selection.gradeSubjectId ||
+      gradeSubjects.find(
+        (gs) =>
+          gs.grade_id === (resolvedGrade?.id || selection.gradeId) &&
+          gs.subject_id === (resolvedSubject?.id || selection.subjectId)
+      )?.id ||
+      "d5d10da4-4861-456d-a7a4-0b124e9a16d1";
+
+    const context: SelectionContext = {
+      trackType: selection.trackType,
+      experienceType: "interactive-games",
+      gradeId: resolvedGrade?.id || "8db3f874-aa52-4893-8d04-4eb6ef74f0af",
+      gradeName: resolvedGrade?.name || "ثالث متوسط",
+      subjectId: resolvedSubject?.id || "a79e5e49-5a5e-4ccd-9ac8-c5e9c37c788b",
+      subjectName: resolvedSubject?.name || "علوم",
+      gradeSubjectId: resolvedGsId,
+      domainId: null,
+      domainName: null,
+    };
+    saveSelectionContext(context);
+    navigate("/games/matching");
   };
 
   const handleExperienceChange = async (type: ExperienceType) => {
@@ -428,8 +478,8 @@ export default function StudentDashboard() {
 
   const handleDomainSelection = async (domainId: string) => {
     handleDomainChange(domainId);
-    // Both Nafis and Central move to step 3 to choose Challenge Mode (Quiz vs Games)
-    setStep(3);
+    // Both Nafis and Central move to step 4 to choose Challenge Mode (Quiz vs Games)
+    setStep(4);
   };
 
   const buildSelectionContextExtended = (track: TrackType, exp: ExperienceType): SelectionContext | null => {
@@ -833,7 +883,7 @@ export default function StudentDashboard() {
           <main className="space-y-6 sm:space-y-8">
           {/* Gamified Quest Adventure Stepper */}
           <div className="flex items-center justify-center mb-8 sm:mb-12 select-none px-2">
-            <div className="relative flex items-center gap-2 sm:gap-4 p-2 sm:p-2.5 rounded-[2rem] bg-white/90 backdrop-blur-2xl border-2 border-indigo-100/90 shadow-xl shadow-indigo-500/5 max-w-2xl w-full justify-between sm:justify-center">
+            <div className="relative flex items-center gap-1.5 sm:gap-3 p-2 sm:p-2.5 rounded-[2rem] bg-white/90 backdrop-blur-2xl border-2 border-indigo-100/90 shadow-xl shadow-indigo-500/5 max-w-3xl w-full justify-between sm:justify-center overflow-x-auto">
               {/* Step 1: Educational Track */}
               <button
                 type="button"
@@ -843,41 +893,33 @@ export default function StudentDashboard() {
                     setStep(1);
                   }
                 }}
-                className={`relative flex items-center gap-2 sm:gap-2.5 px-3 sm:px-5 py-2 sm:py-2.5 rounded-2xl text-xs sm:text-sm font-black transition-all duration-300 ${
+                className={`relative flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2 rounded-2xl text-xs sm:text-sm font-black transition-all duration-300 ${
                   step === 1
                     ? "bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-800 text-white shadow-lg shadow-indigo-600/30 scale-105 ring-4 ring-indigo-100"
                     : step > 1
-                    ? "bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100 hover:scale-102"
+                    ? "bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100"
                     : "text-slate-600 hover:bg-slate-100"
                 }`}
               >
-                <span className={`w-6 h-6 rounded-xl flex items-center justify-center text-xs font-black shadow-2xs ${
+                <span className={`w-5 h-5 sm:w-6 sm:h-6 rounded-xl flex items-center justify-center text-xs font-black shadow-2xs ${
                   step === 1
                     ? "bg-white/25 text-white"
                     : step > 1
                     ? "bg-emerald-500 text-white"
                     : "bg-slate-200 text-slate-700"
                 }`}>
-                  {step > 1 ? <CheckCircle2 className="w-4 h-4" /> : "1"}
+                  {step > 1 ? <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : "1"}
                 </span>
                 <span className="hidden sm:inline">المسار التعليمي</span>
                 <span className="sm:hidden">المسار</span>
-                {step === 1 && (
-                  <span className="flex h-2 w-2 relative">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-300" />
-                  </span>
-                )}
               </button>
 
-              {/* Connecting Shimmer Bar 1 */}
-              <div className={`h-1.5 flex-1 max-w-[2.5rem] sm:max-w-[4rem] rounded-full transition-all duration-700 overflow-hidden relative ${
+              {/* Connecting Bar 1 */}
+              <div className={`h-1 flex-1 max-w-[1.5rem] sm:max-w-[2.5rem] rounded-full transition-all duration-700 ${
                 step >= 2 ? "bg-gradient-to-r from-emerald-500 to-indigo-600" : "bg-slate-200"
-              }`}>
-                {step >= 2 && <div className="absolute inset-0 bg-white/40 animate-[shimmerSweep_2s_infinite]" />}
-              </div>
+              }`} />
 
-              {/* Step 2: Challenge Type OR Scientific Domain */}
+              {/* Step 2: Gateway Choice (المجالات vs المطابقة) */}
               <button
                 type="button"
                 disabled={step < 2}
@@ -887,61 +929,83 @@ export default function StudentDashboard() {
                     setStep(2);
                   }
                 }}
-                className={`relative flex items-center gap-2 sm:gap-2.5 px-3 sm:px-5 py-2 sm:py-2.5 rounded-2xl text-xs sm:text-sm font-black transition-all duration-300 ${
+                className={`relative flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2 rounded-2xl text-xs sm:text-sm font-black transition-all duration-300 ${
                   step === 2
-                    ? "bg-gradient-to-r from-amber-500 via-orange-500 to-rose-600 text-white shadow-lg shadow-amber-500/30 scale-105 ring-4 ring-amber-100"
+                    ? "bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white shadow-lg shadow-indigo-500/30 scale-105 ring-4 ring-indigo-100"
                     : step > 2
-                    ? "bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100 hover:scale-102"
+                    ? "bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100"
                     : "text-slate-400 opacity-60 cursor-not-allowed"
                 }`}
               >
-                <span className={`w-6 h-6 rounded-xl flex items-center justify-center text-xs font-black shadow-2xs ${
+                <span className={`w-5 h-5 sm:w-6 sm:h-6 rounded-xl flex items-center justify-center text-xs font-black shadow-2xs ${
                   step === 2
                     ? "bg-white/25 text-white"
                     : step > 2
                     ? "bg-emerald-500 text-white"
                     : "bg-slate-200 text-slate-500"
                 }`}>
-                  {step > 2 ? <CheckCircle2 className="w-4 h-4" /> : "2"}
+                  {step > 2 ? <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : "2"}
+                </span>
+                <span className="hidden sm:inline">بوابة الانطلاق</span>
+                <span className="sm:hidden">البوابة</span>
+              </button>
+
+              {/* Connecting Bar 2 */}
+              <div className={`h-1 flex-1 max-w-[1.5rem] sm:max-w-[2.5rem] rounded-full transition-all duration-700 ${
+                step >= 3 ? "bg-gradient-to-r from-purple-500 to-amber-500" : "bg-slate-200"
+              }`} />
+
+              {/* Step 3: Scientific Domain */}
+              <button
+                type="button"
+                disabled={step < 3}
+                onClick={() => {
+                  if (step > 3) {
+                    audioManager.playClick();
+                    setStep(3);
+                  }
+                }}
+                className={`relative flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2 rounded-2xl text-xs sm:text-sm font-black transition-all duration-300 ${
+                  step === 3
+                    ? "bg-gradient-to-r from-amber-500 via-orange-500 to-rose-600 text-white shadow-lg shadow-amber-500/30 scale-105 ring-4 ring-amber-100"
+                    : step > 3
+                    ? "bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100"
+                    : "text-slate-400 opacity-60 cursor-not-allowed"
+                }`}
+              >
+                <span className={`w-5 h-5 sm:w-6 sm:h-6 rounded-xl flex items-center justify-center text-xs font-black shadow-2xs ${
+                  step === 3
+                    ? "bg-white/25 text-white"
+                    : step > 3
+                    ? "bg-emerald-500 text-white"
+                    : "bg-slate-200 text-slate-500"
+                }`}>
+                  {step > 3 ? <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : "3"}
                 </span>
                 <span className="hidden sm:inline">المجال العلمي</span>
                 <span className="sm:hidden">المجال</span>
-                {step === 2 && (
-                  <span className="flex h-2 w-2 relative">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75" />
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-white" />
-                  </span>
-                )}
               </button>
 
-              {/* Connecting Shimmer Bar 2 */}
-              <div className={`h-1.5 flex-1 max-w-[2.5rem] sm:max-w-[4rem] rounded-full transition-all duration-700 overflow-hidden relative ${
-                step >= 3 ? "bg-gradient-to-r from-orange-500 to-purple-600" : "bg-slate-200"
-              }`}>
-                {step >= 3 && <div className="absolute inset-0 bg-white/40 animate-[shimmerSweep_2s_infinite]" />}
-              </div>
+              {/* Connecting Bar 3 */}
+              <div className={`h-1 flex-1 max-w-[1.5rem] sm:max-w-[2.5rem] rounded-full transition-all duration-700 ${
+                step >= 4 ? "bg-gradient-to-r from-orange-500 to-purple-600" : "bg-slate-200"
+              }`} />
 
-              {/* Step 3: Challenge Mode Selection */}
+              {/* Step 4: Challenge Mode */}
               <div
-                className={`relative flex items-center gap-2 sm:gap-2.5 px-3 sm:px-5 py-2 sm:py-2.5 rounded-2xl text-xs sm:text-sm font-black transition-all duration-300 ${
-                  step === 3
+                className={`relative flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2 rounded-2xl text-xs sm:text-sm font-black transition-all duration-300 ${
+                  step === 4
                     ? "bg-gradient-to-r from-purple-600 via-indigo-600 to-pink-600 text-white shadow-lg shadow-purple-600/30 scale-105 ring-4 ring-purple-100"
                     : "text-slate-400 opacity-60"
                 }`}
               >
-                <span className={`w-6 h-6 rounded-xl flex items-center justify-center text-xs font-black shadow-2xs ${
-                  step === 3 ? "bg-white/25 text-white" : "bg-slate-200 text-slate-500"
+                <span className={`w-5 h-5 sm:w-6 sm:h-6 rounded-xl flex items-center justify-center text-xs font-black shadow-2xs ${
+                  step === 4 ? "bg-white/25 text-white" : "bg-slate-200 text-slate-500"
                 }`}>
-                  3
+                  4
                 </span>
                 <span className="hidden sm:inline">نوع التحدي</span>
                 <span className="sm:hidden">التحدي</span>
-                {step === 3 && (
-                  <span className="flex h-2 w-2 relative">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75" />
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-white" />
-                  </span>
-                )}
               </div>
             </div>
           </div>
@@ -1094,20 +1158,20 @@ export default function StudentDashboard() {
                         الاختبار المركزي
                       </h3>
                       <p className="text-sm sm:text-base text-slate-600 leading-relaxed font-bold">
-                        تحديات علمية مقننة في مجالات دقيقة: الكيمياء، الفيزياء، الأحياء، علوم الأرض والفضاء، الكهرباء والمغناطيسية، وطبيعة العلم لقياس الفهم المعياري.
+                        تحديات علمية مقننة في مجالات دقيقة: الأحياء، الكيمياء، الفيزياء، علوم الأرض والفضاء، الكهرباء والمغناطيسية، وطبيعة العلم لقياس الفهم المعياري.
                       </p>
                     </div>
 
-                    {/* Domain Pills Preview */}
+                    {/* Domain Pills Preview - Ordered: Biology first */}
                     <div className="flex flex-wrap gap-2 pt-1">
+                      <span className="px-3 py-1.5 rounded-xl bg-emerald-50 group-hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-black transition-colors shadow-2xs">
+                        🧬 أحياء
+                      </span>
                       <span className="px-3 py-1.5 rounded-xl bg-purple-50 group-hover:bg-purple-100 text-purple-800 border border-purple-200 text-xs font-black transition-colors shadow-2xs">
                         🧪 كيمياء
                       </span>
                       <span className="px-3 py-1.5 rounded-xl bg-blue-50 group-hover:bg-blue-100 text-blue-800 border border-blue-200 text-xs font-black transition-colors shadow-2xs">
                         ⚛️ فيزياء
-                      </span>
-                      <span className="px-3 py-1.5 rounded-xl bg-emerald-50 group-hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-black transition-colors shadow-2xs">
-                        🧬 أحياء
                       </span>
                       <span className="px-3 py-1.5 rounded-xl bg-amber-50 group-hover:bg-amber-100 text-amber-800 border border-amber-200 text-xs font-black transition-colors shadow-2xs">
                        ⚡ كهرباء ومغناطيسية
@@ -1137,8 +1201,189 @@ export default function StudentDashboard() {
             </div>
           )}
 
-          {/* Step 2: Specializations / Domains (for BOTH Nafis and Central) */}
+          {/* Step 2: Gateway Choice Screen (المجالات العلمية vs لعبة المطابقة) */}
           {step === 2 && (
+            <div className="space-y-8 sm:space-y-12 animate-in fade-in slide-in-from-bottom-6 duration-500 relative">
+              {/* Header */}
+              <div className="text-center space-y-4 max-w-3xl mx-auto pt-2">
+                <div className="inline-flex items-center gap-2.5 px-4 sm:px-5 py-2 rounded-full bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 border border-indigo-200/90 text-indigo-800 text-xs sm:text-sm font-black shadow-sm">
+                  <Sparkles className="w-4 h-4 text-amber-500 animate-pulse" />
+                  <span>
+                    {selection.trackType === "nafis"
+                      ? "مسار بنك اختبارات نافس الوطني 🇸🇦"
+                      : "مسار بنك الاختبار المركزي 🎯"}
+                  </span>
+                  <span className="text-indigo-300">|</span>
+                  <span className="text-emerald-600 font-extrabold">بوابة الانطلاق الذكي 🚀</span>
+                </div>
+
+                <h2 className="text-3xl sm:text-5xl lg:text-6xl font-black text-slate-900 tracking-tight">
+                  اختر <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-700 via-purple-600 to-pink-600">وجهتك التعليمية</span>
+                </h2>
+
+                <p className="text-sm sm:text-base font-bold text-slate-600 max-w-xl mx-auto leading-relaxed bg-white/80 backdrop-blur-md p-3.5 rounded-2xl border border-slate-200/80 shadow-xs">
+                  يا بطلنا المتميز! اختر هل ترغب في استعراض التخصصات والمجالات العلمية لخوض الاختبارات والألعاب، أم التوجه مباشرة لتحدي لعبة المطابقة؟
+                </p>
+              </div>
+
+              {/* The Two Grand Choice Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 max-w-5xl mx-auto pt-2">
+                {/* Option 1: Scientific Domains (التخصصات والمجالات العلمية) */}
+                <button
+                  type="button"
+                  onMouseEnter={() => audioManager.playClick()}
+                  onClick={() => {
+                    audioManager.playPowerUp();
+                    setStep(3);
+                  }}
+                  className="group relative text-right p-8 sm:p-10 rounded-[2.5rem] bg-gradient-to-b from-white via-indigo-50/40 to-white border-2 border-indigo-200/90 hover:border-indigo-500 shadow-xl shadow-indigo-500/5 hover:shadow-[0_28px_80px_rgba(99,102,241,0.24)] transition-all duration-500 hover:-translate-y-2.5 active:scale-[0.99] flex flex-col justify-between overflow-hidden cursor-pointer"
+                >
+                  <div className="absolute -top-24 -left-24 w-72 h-72 bg-indigo-500/15 rounded-full blur-3xl group-hover:scale-150 group-hover:bg-indigo-500/25 transition-all duration-700 pointer-events-none" />
+                  <div className="absolute -bottom-24 -right-24 w-72 h-72 bg-purple-400/10 rounded-full blur-3xl group-hover:scale-125 transition-all duration-700 pointer-events-none" />
+                  <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/40 to-transparent pointer-events-none skew-x-12" />
+
+                  <div className="relative space-y-6">
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="relative">
+                        <div className="absolute -inset-2 rounded-3xl bg-gradient-to-r from-indigo-500 to-purple-600 opacity-30 blur-md group-hover:opacity-60 transition-opacity" />
+                        <div className="relative h-18 w-18 sm:h-22 sm:w-22 rounded-3xl bg-gradient-to-tr from-indigo-600 to-purple-600 text-white flex items-center justify-center shadow-xl shadow-indigo-500/30 group-hover:scale-110 group-hover:-rotate-3 transition-transform duration-500 ring-4 ring-indigo-100 group-hover:ring-indigo-300">
+                          <Target className="h-9 w-9 sm:h-11 sm:w-11" />
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col items-end gap-1.5">
+                        <span className="flex items-center gap-2 text-xs font-black text-indigo-800 bg-indigo-100/90 border border-indigo-300/80 px-3.5 py-1.5 rounded-full shadow-2xs">
+                          <span className="w-2 h-2 rounded-full bg-indigo-500 animate-ping" />
+                          <span>المجالات التخصصية 📚</span>
+                        </span>
+                        <span className="text-[11px] font-bold text-slate-500 bg-slate-100/80 px-2.5 py-0.5 rounded-full border border-slate-200">
+                          الأحياء • الكيمياء • الفيزياء
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <h3 className="text-2xl sm:text-3xl font-black text-slate-900 group-hover:text-indigo-700 transition-colors">
+                        المجالات (اختر التخصص العلمي)
+                      </h3>
+                      <p className="text-sm sm:text-base text-slate-600 leading-relaxed font-bold">
+                        استكشف المجالات والتخصصات العلمية: الأحياء أولاً، الكيمياء، الفيزياء، وغيرها، لتحديد مجال التحدي والاختبار.
+                      </p>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      <span className="px-3 py-1.5 rounded-xl bg-emerald-50 group-hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-black transition-colors shadow-2xs">
+                        🧬 أحياء
+                      </span>
+                      <span className="px-3 py-1.5 rounded-xl bg-purple-50 group-hover:bg-purple-100 text-purple-800 border border-purple-200 text-xs font-black transition-colors shadow-2xs">
+                        🧪 كيمياء
+                      </span>
+                      <span className="px-3 py-1.5 rounded-xl bg-blue-50 group-hover:bg-blue-100 text-blue-800 border border-blue-200 text-xs font-black transition-colors shadow-2xs">
+                        ⚛️ فيزياء
+                      </span>
+                      <span className="px-3 py-1.5 rounded-xl bg-amber-50 group-hover:bg-amber-100 text-amber-800 border border-amber-200 text-xs font-black transition-colors shadow-2xs">
+                        ⚡ كهرباء ومغناطيسية
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="relative mt-8 pt-5 border-t border-indigo-100/90 flex items-center justify-between">
+                    <span className="flex items-center gap-1.5 text-xs font-black text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-200">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-indigo-600" />
+                      <span>اختبارات وتحديات مقننة</span>
+                    </span>
+                    <div className="flex items-center gap-2.5 px-5 py-3 rounded-2xl bg-indigo-600 group-hover:bg-indigo-700 text-white font-black text-sm sm:text-base border-b-4 border-indigo-800 active:border-b-0 active:translate-y-1 shadow-md shadow-indigo-600/30 group-hover:shadow-lg group-hover:shadow-indigo-600/40 transition-all">
+                      <span>استعراض المجالات</span>
+                      <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1.5 transition-transform duration-300" />
+                    </div>
+                  </div>
+                </button>
+
+                {/* Option 2: Matching Game (لعبة المطابقة) */}
+                <button
+                  type="button"
+                  onMouseEnter={() => audioManager.playClick()}
+                  onClick={handleStartMatchingDirectly}
+                  className="group relative text-right p-8 sm:p-10 rounded-[2.5rem] bg-gradient-to-b from-white via-rose-50/40 to-white border-2 border-rose-200/90 hover:border-rose-500 shadow-xl shadow-rose-500/5 hover:shadow-[0_28px_80px_rgba(244,63,94,0.24)] transition-all duration-500 hover:-translate-y-2.5 active:scale-[0.99] flex flex-col justify-between overflow-hidden cursor-pointer"
+                >
+                  <div className="absolute -top-24 -left-24 w-72 h-72 bg-rose-500/15 rounded-full blur-3xl group-hover:scale-150 group-hover:bg-rose-500/25 transition-all duration-700 pointer-events-none" />
+                  <div className="absolute -bottom-24 -right-24 w-72 h-72 bg-pink-400/10 rounded-full blur-3xl group-hover:scale-125 transition-all duration-700 pointer-events-none" />
+                  <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/40 to-transparent pointer-events-none skew-x-12" />
+
+                  <div className="relative space-y-6">
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="relative">
+                        <div className="absolute -inset-2 rounded-3xl bg-gradient-to-r from-rose-500 to-pink-600 opacity-30 blur-md group-hover:opacity-60 transition-opacity" />
+                        <div className="relative h-18 w-18 sm:h-22 sm:w-22 rounded-3xl bg-gradient-to-tr from-rose-500 to-pink-600 text-white flex items-center justify-center shadow-xl shadow-rose-500/30 group-hover:scale-110 group-hover:rotate-3 transition-transform duration-500 ring-4 ring-rose-100 group-hover:ring-rose-300">
+                          <Gamepad2 className="h-9 w-9 sm:h-11 sm:w-11" />
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col items-end gap-1.5">
+                        <span className="flex items-center gap-2 text-xs font-black text-rose-800 bg-rose-100/90 border border-rose-300/80 px-3.5 py-1.5 rounded-full shadow-2xs">
+                          <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />
+                          <span>تحدي تفاعلي شيق 🧩</span>
+                        </span>
+                        <span className="text-[11px] font-bold text-slate-500 bg-slate-100/80 px-2.5 py-0.5 rounded-full border border-slate-200">
+                          مصطلحات وصور متناظرة
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <h3 className="text-2xl sm:text-3xl font-black text-slate-900 group-hover:text-rose-600 transition-colors">
+                        لعبة المطابقة
+                      </h3>
+                      <p className="text-sm sm:text-base text-slate-600 leading-relaxed font-bold">
+                        طابق المفاهيم والمصطلحات العلمية بالصور والأشكال التوضيحية المقابلة في عمودين تفاعليين، واكسب النقاط والأوسمة فوراً.
+                      </p>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      <span className="px-3 py-1.5 rounded-xl bg-rose-50 group-hover:bg-rose-100 text-rose-800 border border-rose-200 text-xs font-black transition-colors shadow-2xs">
+                        📝 مصطلحات علمية
+                      </span>
+                      <span className="px-3 py-1.5 rounded-xl bg-pink-50 group-hover:bg-pink-100 text-pink-800 border border-pink-200 text-xs font-black transition-colors shadow-2xs">
+                        🖼️ صور وأشكال توضيحية
+                      </span>
+                      <span className="px-3 py-1.5 rounded-xl bg-amber-50 group-hover:bg-amber-100 text-amber-800 border border-amber-200 text-xs font-black transition-colors shadow-2xs">
+                        ⭐ نقاط وشهادة شكر
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="relative mt-8 pt-5 border-t border-rose-100/90 flex items-center justify-between">
+                    <span className="flex items-center gap-1.5 text-xs font-black text-rose-600 bg-rose-50 px-3 py-1 rounded-full border border-rose-200">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-rose-600" />
+                      <span>دخول مباشر للعبة</span>
+                    </span>
+                    <div className="flex items-center gap-2.5 px-5 py-3 rounded-2xl bg-gradient-to-r from-rose-500 to-pink-600 group-hover:from-rose-600 group-hover:to-pink-700 text-white font-black text-sm sm:text-base border-b-4 border-rose-700 active:border-b-0 active:translate-y-1 shadow-md shadow-rose-500/30 group-hover:shadow-lg group-hover:shadow-rose-500/40 transition-all">
+                      <span>ابدأ لعبة المطابقة 🧩</span>
+                      <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1.5 transition-transform duration-300" />
+                    </div>
+                  </div>
+                </button>
+              </div>
+
+              {/* Back to Step 1 */}
+              <div className="flex justify-center pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    audioManager.playClick();
+                    handleBack();
+                  }}
+                  className="rounded-2xl border-2 border-slate-200/90 bg-white/95 text-slate-700 hover:bg-slate-100 hover:text-indigo-600 hover:border-indigo-300 h-12 px-6 font-black text-sm gap-2.5 shadow-sm hover:shadow-md transition-all hover:scale-105 active:scale-95"
+                >
+                  <ArrowRight className="w-4 h-4" />
+                  <span>العودة لاختيار المسار التعليمي</span>
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Step 3: Specializations / Domains (for BOTH Nafis and Central) */}
+          {step === 3 && (
             <div className="space-y-8 sm:space-y-12 animate-in fade-in slide-in-from-bottom-6 duration-500 relative">
               {/* Domain Step Hero Banner */}
               <div className="text-center space-y-4 max-w-3xl mx-auto pt-2">
@@ -1147,7 +1392,7 @@ export default function StudentDashboard() {
                   <span>
                     {selection.trackType === "nafis"
                       ? "مسار بنك نافس • مجلدات المواد والتخصصات العلمية 🇸🇦"
-                      : "المسار المركزي • 6 مجالات علمية متخصصة 🎯"}
+                      : "المسار المركزي • مجالات علمية متخصصة 🎯"}
                   </span>
                   <span className="text-indigo-300">|</span>
                   <span className="text-emerald-600 font-extrabold">اختر وانطلق 🚀</span>
@@ -1164,7 +1409,7 @@ export default function StudentDashboard() {
                 </p>
               </div>
 
-              {/* Elegant Vertical List View for Domains (as requested: شكل قوائم) */}
+              {/* Elegant Vertical List View for Domains (as requested: شكل قوائم - Biology first) */}
               <div className="flex flex-col gap-3.5 max-w-4xl mx-auto w-full">
                 {displayDomains.length > 0 ? (
                   displayDomains.map((domain, idx) => {
@@ -1235,14 +1480,14 @@ export default function StudentDashboard() {
                   className="rounded-2xl border-2 border-slate-200/90 bg-white/95 text-slate-700 hover:bg-slate-100 hover:text-indigo-600 hover:border-indigo-300 h-12 px-6 font-black text-sm gap-2.5 shadow-sm hover:shadow-md transition-all hover:scale-105 active:scale-95"
                 >
                   <ArrowRight className="w-4 h-4" />
-                  <span>العودة لاختيار المسار التعليمي</span>
+                  <span>العودة لاختيار بوابة الانطلاق</span>
                 </Button>
               </div>
             </div>
           )}
 
-          {/* Step 3: Challenge Mode Selection (for BOTH Nafis and Central) */}
-          {step === 3 && (
+          {/* Step 4: Challenge Mode Selection (for BOTH Nafis and Central) */}
+          {step === 4 && (
             <div className="space-y-8 sm:space-y-12 animate-in fade-in slide-in-from-bottom-6 duration-500 relative">
               {/* Floating Ambient Science Badges (Desktop) */}
               <div

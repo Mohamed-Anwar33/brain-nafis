@@ -30,7 +30,22 @@ export default function AdminCentralExamQuestions() {
   const [itemToDelete, setItemToDelete] = useState<{ id: string; text: string } | null>(null);
   const [selectedDomainFilter, setSelectedDomainFilter] = useState<string>("all");
 
-  const availableDomains = useMemo(() => catalog?.domains || [], [catalog?.domains]);
+  const availableDomains = useMemo(() => {
+    const list = catalog?.domains || [];
+    return [...list].sort((a, b) => {
+      const getPriority = (name: string) => {
+        const n = (name || "").toLowerCase();
+        if (n.includes("أحياء") || n.includes("احياء")) return 1;
+        if (n.includes("كيمياء")) return 2;
+        if (n.includes("فيزياء")) return 3;
+        if (n.includes("كهرباء") || n.includes("مغناطيس")) return 4;
+        if (n.includes("أرض") || n.includes("ارض") || n.includes("فضاء") || n.includes("بيئة")) return 5;
+        if (n.includes("طبيعة") || n.includes("طبيعه")) return 6;
+        return 10;
+      };
+      return getPriority(a.name) - getPriority(b.name);
+    });
+  }, [catalog?.domains]);
 
   const domainMap = useMemo(() => {
     const map = new Map<string, { name: string; badgeClass: string; icon: string }>();

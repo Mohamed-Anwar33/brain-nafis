@@ -91,11 +91,27 @@ export function SelectionScopeFields({
     }
   }
 
-  // Available domains for the effective gradeSubject
+const getDomainSortPriority = (name?: string, slug?: string) => {
+  const n = (name || "").toLowerCase();
+  const s = (slug || "").toLowerCase();
+  if (n.includes("أحياء") || n.includes("احياء") || s.includes("bio")) return 1;
+  if (n.includes("كيمياء") || s.includes("chem")) return 2;
+  if (n.includes("فيزياء") || s.includes("phys")) return 3;
+  if (n.includes("كهرباء") || s.includes("elec")) return 4;
+  if (n.includes("أرض") || n.includes("ارض") || n.includes("فضاء") || s.includes("earth") || s.includes("space")) return 5;
+  if (n.includes("طبيعة") || n.includes("طبيعه") || s.includes("nature")) return 6;
+  return 10;
+};
+
+  // Available domains for the effective gradeSubject (Sorted: Biology first, Chemistry second, Physics third)
   const availableDomains = useMemo(() => {
-    if (!effectiveGsId) return domains;
-    const filtered = domains.filter((d) => d.grade_subject_id === effectiveGsId);
-    return filtered.length > 0 ? filtered : domains;
+    const list = !effectiveGsId
+      ? domains
+      : domains.filter((d) => d.grade_subject_id === effectiveGsId);
+    const result = list.length > 0 ? list : domains;
+    return [...result].sort(
+      (a, b) => getDomainSortPriority(a.name, a.slug) - getDomainSortPriority(b.name, b.slug),
+    );
   }, [domains, effectiveGsId]);
 
   // Resolve selected item objects for explicit rendering in SelectValue

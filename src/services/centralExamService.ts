@@ -122,7 +122,19 @@ export async function createCentralExamQuestion(
   question: Omit<CentralExamQuestion, 'id' | 'choices'>,
   choices: CentralExamChoiceInput[]
 ) {
-  const insertPayload: Record<string, unknown> = { ...question };
+  // Build a safe payload containing only recognized columns on central_exam_questions
+  const insertPayload: Record<string, unknown> = {
+    text: question.text,
+    image_url: question.image_url || null,
+    active: question.active ?? true,
+    order_index: question.order_index ?? 0,
+    track_type: question.track_type || "central",
+    grade_subject_id: question.grade_subject_id || null,
+    domain_id: question.domain_id || null,
+    wrong_reason: question.wrong_reason || null,
+    explanation_url: question.explanation_url || null,
+  };
+
   let { data: qData, error: qError } = await supabase
     .from("central_exam_questions")
     .insert(insertPayload)
@@ -130,26 +142,55 @@ export async function createCentralExamQuestion(
     .single();
 
   // If explanation_url column is not yet present on remote DB, fallback gracefully
-  if (qError && (qError.code === "42703" || qError.message?.includes("explanation_url"))) {
-    const fallbackReason = question.explanation_url
-      ? (question.wrong_reason ? `${question.wrong_reason}\n${question.explanation_url}` : question.explanation_url)
-      : question.wrong_reason || null;
-    delete insertPayload.explanation_url;
-    insertPayload.wrong_reason = fallbackReason;
+  if (qError && (qError.code === "42703" || qError.message?.includes("explanation_url") || qError.message?.includes("PGRST204"))) {
+    if (qError.message?.includes("explanation_url") || qError.code === "42703") {
+      const fallbackReason = question.explanation_url
+        ? (question.wrong_reason ? `${question.wrong_reason}\n${question.explanation_url}` : question.explanation_url)
+        : question.wrong_reason || null;
+      delete insertPayload.explanation_url;
+      insertPayload.wrong_reason = fallbackReason;
+      const retry = await supabase
+        .from("central_exam_questions")
+        .insert(insertPayload)
+        .select()
+        .single();
+      qData = retry.data;
+      qError = retry.error;
+    }
+  }
+
+  // General fallback: if any unexpected column error occurred, retry with essential fields
+  if (qError && (qError.code === "42703" || qError.code === "PGRST204")) {
+    console.warn("Retrying central question insert with essential payload due to schema mismatch:", qError);
+    const minimalPayload: Record<string, unknown> = {
+      text: question.text,
+      image_url: question.image_url || null,
+      active: question.active ?? true,
+      order_index: question.order_index ?? 0,
+      track_type: "central",
+      grade_subject_id: question.grade_subject_id || null,
+      domain_id: question.domain_id || null,
+      wrong_reason: question.wrong_reason || null,
+    };
     const retry = await supabase
       .from("central_exam_questions")
-      .insert(insertPayload)
+      .insert(minimalPayload)
       .select()
       .single();
     qData = retry.data;
     qError = retry.error;
   }
 
-  if (qError) throw qError;
+  if (qError) {
+    console.error("Error creating central exam question:", qError);
+    throw qError;
+  }
 
   const inserted = qData as unknown as { id: string };
   const choicesToInsert = choices.map(c => ({
-    ...c,
+    text: c.text!,
+    is_correct: !!c.is_correct,
+    image_url: c.image_url || null,
     question_id: inserted.id
   }));
 
@@ -157,7 +198,12 @@ export async function createCentralExamQuestion(
     .from("central_exam_choices")
     .insert(choicesToInsert);
 
-  if (cError) throw cError;
+  if (cError) {
+    console.error("Error inserting central exam choices:", cError);
+    // Cleanup created question to avoid orphan question without choices
+    await supabase.from("central_exam_questions").delete().eq("id", inserted.id);
+    throw cError;
+  }
 
   return qData;
 }
@@ -167,7 +213,17 @@ export async function updateCentralExamQuestion(
   question: Partial<CentralExamQuestion>,
   choices?: (Partial<CentralExamChoice> & { id?: string })[]
 ) {
-  const updatePayload: Record<string, unknown> = { ...question };
+  const updatePayload: Record<string, unknown> = {};
+  if (question.text !== undefined) updatePayload.text = question.text;
+  if (question.image_url !== undefined) updatePayload.image_url = question.image_url || null;
+  if (question.active !== undefined) updatePayload.active = question.active;
+  if (question.order_index !== undefined) updatePayload.order_index = question.order_index;
+  if (question.track_type !== undefined) updatePayload.track_type = question.track_type;
+  if (question.grade_subject_id !== undefined) updatePayload.grade_subject_id = question.grade_subject_id || null;
+  if (question.domain_id !== undefined) updatePayload.domain_id = question.domain_id || null;
+  if (question.wrong_reason !== undefined) updatePayload.wrong_reason = question.wrong_reason || null;
+  if (question.explanation_url !== undefined) updatePayload.explanation_url = question.explanation_url || null;
+
   let { error: qError } = await supabase
     .from("central_exam_questions")
     .update(updatePayload)
@@ -187,7 +243,10 @@ export async function updateCentralExamQuestion(
     qError = retry.error;
   }
 
-  if (qError) throw qError;
+  if (qError) {
+    console.error("Error updating central exam question:", qError);
+    throw qError;
+  }
 
   if (choices && choices.length > 0) {
     // Basic sync: delete old, insert new (for simplicity and safety)
@@ -196,11 +255,14 @@ export async function updateCentralExamQuestion(
       .delete()
       .eq('question_id', questionId);
 
-    if (delError) throw delError;
+    if (delError) {
+      console.error("Error deleting old choices:", delError);
+      throw delError;
+    }
 
     const choicesToInsert = choices.map(c => ({
       text: c.text!,
-      is_correct: c.is_correct || false,
+      is_correct: !!c.is_correct,
       image_url: c.image_url || null,
       question_id: questionId
     }));
@@ -209,18 +271,26 @@ export async function updateCentralExamQuestion(
       .from("central_exam_choices")
       .insert(choicesToInsert);
 
-    if (insError) throw insError;
+    if (insError) {
+      console.error("Error inserting updated choices:", insError);
+      throw insError;
+    }
   }
 
   return true;
 }
 
 export async function deleteCentralExamQuestion(questionId: string) {
+  // First delete associated choices to be safe if CASCADE is not configured
+  await supabase.from("central_exam_choices").delete().eq("question_id", questionId);
   const { error } = await supabase
     .from("central_exam_questions")
     .delete()
     .eq("id", questionId);
 
-  if (error) throw error;
+  if (error) {
+    console.error("Error deleting central exam question:", error);
+    throw error;
+  }
   return true;
 }

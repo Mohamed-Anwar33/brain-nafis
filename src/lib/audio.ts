@@ -127,6 +127,38 @@ class ComprehensiveAudioManager {
   }
 
   /**
+   * Crisp, subtle mechanical tick / ratchet sound for wheel spinning or countdowns
+   */
+  public playTick() {
+    if (this.isMuted) return;
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+
+    try {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = "sine";
+      const now = ctx.currentTime;
+
+      // Quick snappy tick: 900Hz -> 300Hz in 25ms
+      osc.frequency.setValueAtTime(900, now);
+      osc.frequency.exponentialRampToValueAtTime(300, now + 0.025);
+
+      gain.gain.setValueAtTime(0.12, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.025);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(now);
+      osc.stop(now + 0.025);
+    } catch (e) {
+      // Ignore audio failure
+    }
+  }
+
+  /**
    * Rewarding ascending chime for correct answers.
    * Pitch dynamically increases with combo multiplier!
    */

@@ -46,12 +46,24 @@ export default function ExamPage() {
 
   // Stage State
   const [showStageTransition, setShowStageTransition] = useState(false);
-  const [currentStage, setCurrentStage] = useState(1);
-  const TOTAL_STAGES = 4;
+  const snapshot = (examData?.selection_snapshot as any) || {};
+  const stageStart = snapshot.stage_start || 1;
+  const TOTAL_STAGES = snapshot.total_stages || (stageStart + 3);
+  const stagesInRound = Math.max(1, TOTAL_STAGES - stageStart + 1);
+  const [currentStage, setCurrentStage] = useState(stageStart);
   const questionsPerStage = Math.max(
     1,
-    Math.ceil((examData?.questions.length || 40) / TOTAL_STAGES)
+    Math.ceil((examData?.questions.length || 40) / stagesInRound)
   );
+
+  useEffect(() => {
+    if (examData?.selection_snapshot) {
+      const snap = examData.selection_snapshot as any;
+      if (snap.stage_start && snap.stage_start !== currentStage) {
+        setCurrentStage(snap.stage_start);
+      }
+    }
+  }, [examData]);
 
   // Refs for synchronous access inside timeouts/callbacks
   const scoreRef = useRef(0);
@@ -452,6 +464,18 @@ export default function ExamPage() {
     2: "المرحلة الثانية - تعميق الفهم",
     3: "المرحلة الثالثة - التحدي المتقدم",
     4: "المرحلة الرابعة - قمة الإتقان والتفوق",
+    5: "المرحلة الخامسة - تحدي الأبطال",
+    6: "المرحلة السادسة - صعود القمة",
+    7: "المرحلة السابعة - براعة وتألق",
+    8: "المرحلة الثامنة - وسام النخبة العظمى",
+    9: "المرحلة التاسعة - الانطلاقة الأسطورية",
+    10: "المرحلة العاشرة - قاهر التحديات",
+    11: "المرحلة الحادية عشرة - عبقري العلوم",
+    12: "المرحلة الثانية عشرة - وسام المجد العلمي",
+    13: "المرحلة الثالثة عشرة - صانع المستحيل",
+    14: "المرحلة الرابعة عشرة - درع التفوق",
+    15: "المرحلة الخامسة عشرة - أسطورة العلوم",
+    16: "المرحلة السادسة عشرة - التتويج الملكي",
   };
 
   // Calculate stage specific details

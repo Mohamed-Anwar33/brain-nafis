@@ -52,6 +52,7 @@ export default function ResultPage() {
         const row = data as unknown as AttemptRow;
         const snapshot = (row.selection_snapshot as any) || {};
         setResult({
+          attempt_id: attemptId,
           student_name: row.student_name || "طالب",
           score: row.score || 0,
           question_count: row.question_count || 40,
@@ -60,6 +61,7 @@ export default function ResultPage() {
           finished_at: row.finished_at ?? "",
           stages_completed: snapshot.stages_completed ?? 4,
           total_stages: snapshot.total_stages ?? 4,
+          selection_snapshot: snapshot,
         });
       } catch (err) {
         console.error("Error loading result:", err);

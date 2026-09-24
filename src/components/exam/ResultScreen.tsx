@@ -14,6 +14,7 @@ import {
   Zap,
   Flame,
   ShieldCheck,
+  Loader2,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ar } from "date-fns/locale";
@@ -23,6 +24,10 @@ import { CertificateModal } from "@/components/exam/CertificateModal";
 import { SoundToggle } from "@/components/ui/SoundToggle";
 import { audioManager } from "@/lib/audio";
 import { cn } from "@/lib/utils";
+import { startNafisStagesRound } from "@/services/nafisExamFlow";
+import { getStoredSelectionContext } from "@/lib/selection-context";
+import { SelectionContext } from "@/types/selection";
+import { toast } from "sonner";
 
 interface ResultScreenProps {
   result: ExamResult;
@@ -32,6 +37,69 @@ export function ResultScreen({ result }: ResultScreenProps) {
   const navigate = useNavigate();
   const [showCertificateModal, setShowCertificateModal] = useState(false);
   const [revealedStars, setRevealedStars] = useState(0);
+  const [isStartingNextRound, setIsStartingNextRound] = useState(false);
+
+  const getActiveContext = (): SelectionContext => {
+    const storedCtx = getStoredSelectionContext();
+    const snapshot = (result.selection_snapshot as any) || {};
+    return (
+      storedCtx || {
+        trackType: snapshot.track_type || "nafis",
+        experienceType: snapshot.experience_type || "quick-quiz",
+        gradeId: snapshot.grade_id || "",
+        gradeName: snapshot.grade_name || "",
+        subjectId: snapshot.subject_id || "",
+        subjectName: snapshot.subject_name || "",
+        gradeSubjectId: snapshot.grade_subject_id || "",
+        domainId: snapshot.domain_id || null,
+        domainName: snapshot.domain_name || null,
+      }
+    );
+  };
+
+  const handleContinueNextRound = async () => {
+    if (isStartingNextRound) return;
+    setIsStartingNextRound(true);
+    audioManager.playPowerUp();
+
+    try {
+      const context = getActiveContext();
+      const currentCompleted = result.stages_completed ?? 4;
+      const nextStageStart = currentCompleted + 1; // 5, 9, 13...
+
+      await startNafisStagesRound({
+        context,
+        nextStageStart,
+        studentName: result.student_name,
+        navigate,
+      });
+    } catch (err: any) {
+      console.error("Error starting next round:", err);
+      toast.error(err?.message || "حدث خطأ أثناء بدء المراحل التالية");
+      setIsStartingNextRound(false);
+    }
+  };
+
+  const handleRestartFresh = async () => {
+    if (isStartingNextRound) return;
+    setIsStartingNextRound(true);
+    audioManager.playClick();
+
+    try {
+      const context = getActiveContext();
+      await startNafisStagesRound({
+        context,
+        nextStageStart: 1,
+        studentName: result.student_name,
+        navigate,
+      });
+    } catch (err: any) {
+      console.error("Error restarting quiz:", err);
+      navigate("/student/dashboard");
+    } finally {
+      setIsStartingNextRound(false);
+    }
+  };
 
   const percentage =
     result.question_count > 0
@@ -338,7 +406,9 @@ export function ResultScreen({ result }: ResultScreenProps) {
 
                         <div className="space-y-1">
                           <h3 className="text-lg sm:text-xl font-black text-slate-900">
-                            أحسنت باجتياز المراحل الأربع وحصولك على الشهادة! 🎓
+                            {stagesCompleted <= 4
+                              ? "أحسنت باجتياز المراحل الأربع وحصولك على الشهادة! 🎓"
+                              : `أحسنت باجتياز ${stagesCompleted} مراحل بنجاح واصل التميز! 🎓`}
                           </h3>
                           <p className="text-xs sm:text-sm text-slate-600 font-bold leading-relaxed max-w-lg mx-auto">
                             يلا يا بطل كمل بقية المراحل! واصل التدرب وحل المزيد من الأسئلة في بنك نافس لترسيخ معلوماتك وتحقيق أعلى درجات التميز والتفوق 🚀
@@ -347,14 +417,21 @@ export function ResultScreen({ result }: ResultScreenProps) {
 
                         <div className="pt-1 flex flex-col sm:flex-row items-center justify-center gap-3">
                           <Button
-                            onClick={() => {
-                              audioManager.playPowerUp();
-                              navigate("/student/dashboard");
-                            }}
-                            className="w-full sm:w-auto min-h-[3rem] px-8 rounded-2xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-600 hover:to-orange-600 text-white font-black text-sm sm:text-base shadow-lg shadow-amber-500/30 flex items-center justify-center gap-2.5 transition-all hover:scale-105 active:scale-95 cursor-pointer"
+                            onClick={handleContinueNextRound}
+                            disabled={isStartingNextRound}
+                            className="w-full sm:w-auto min-h-[3.25rem] px-8 rounded-2xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-600 hover:to-orange-600 text-white font-black text-sm sm:text-base shadow-lg shadow-amber-500/30 flex items-center justify-center gap-2.5 transition-all hover:scale-105 active:scale-95 cursor-pointer disabled:opacity-75"
                           >
-                            <Flame className="w-5 h-5 fill-white" />
-                            <span>يلا يا بطل كمل بقية المراحل 🚀</span>
+                            {isStartingNextRound ? (
+                              <>
+                                <Loader2 className="w-5 h-5 animate-spin" />
+                                <span>جاري تجهيز المرحلة {stagesCompleted + 1} إلى {stagesCompleted + 4}... 🚀</span>
+                              </>
+                            ) : (
+                              <>
+                                <Flame className="w-5 h-5 fill-white animate-bounce" />
+                                <span>يلا يا بطل كمل بقية المراحل (المرحلة {stagesCompleted + 1} إلى {stagesCompleted + 4}) 🚀</span>
+                              </>
+                            )}
                           </Button>
                         </div>
                       </div>
@@ -402,11 +479,12 @@ export function ResultScreen({ result }: ResultScreenProps) {
                   لوحة التحديات
                 </Button>
                 <Button
-                  onClick={() => navigate("/student/dashboard")}
+                  onClick={handleRestartFresh}
+                  disabled={isStartingNextRound}
                   className="h-12 sm:h-14 rounded-2xl bg-gradient-to-r from-indigo-600 via-blue-600 to-emerald-600 text-white shadow-lg shadow-indigo-500/20 font-bold text-base hover:scale-[1.01] active:scale-95 transition-all"
                 >
                   <RotateCcw className="w-5 h-5 ml-2" />
-                  تحدي جديد
+                  <span>تحدي جديد</span>
                 </Button>
               </div>
             </div>

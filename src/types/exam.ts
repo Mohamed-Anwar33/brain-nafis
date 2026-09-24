@@ -36,6 +36,7 @@ export interface AnswerResponse {
 }
 
 export interface ExamResult {
+  attempt_id?: string;
   student_name: string;
   score: number;
   question_count: number;
@@ -44,6 +45,7 @@ export interface ExamResult {
   finished_at: string;
   stages_completed?: number;
   total_stages?: number;
+  selection_snapshot?: Record<string, any>;
 }
 
 export interface Settings {

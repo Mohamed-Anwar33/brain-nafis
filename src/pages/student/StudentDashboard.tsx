@@ -56,6 +56,7 @@ import {
   getStoredSelectionContext,
   saveSelectionContext,
 } from "@/lib/selection-context";
+import { startNafisStagesRound } from "@/services/nafisExamFlow";
 import {
   applySelectionFilters,
   getScopedHistoryIds,
@@ -638,99 +639,12 @@ export default function StudentDashboard() {
   };
 
   const startNafisQuickQuiz = async (context: SelectionContext) => {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    if (!session) {
-      navigate("/");
-      return;
-    }
-
-    const scopedQuestionsQuery = applySelectionFilters(
-      supabase
-        .from("questions")
-        .select("*, choices(*)")
-        .eq("active", true)
-        .order("stage_number", { ascending: true })
-        .order("created_at", { ascending: true }),
+    await startNafisStagesRound({
       context,
-    );
-    const { data: allQuestionsData, error: questionsError } = await scopedQuestionsQuery;
-
-    if (questionsError) {
-      throw questionsError;
-    }
-
-    const availableQuestions = (allQuestionsData || []) as DashboardQuestionRow[];
-
-    if (!availableQuestions || availableQuestions.length === 0) {
-      if (context.domainName) {
-        toast.error(`لا توجد أسئلة مخصصة لتخصص "${context.domainName}" حالياً، يُرجى تصنيف الأسئلة من لوحة التحكم`);
-      } else {
-        toast.error("لا توجد أسئلة متاحة لهذا الصف والمادة حاليًا");
-      }
-      return;
-    }
-
-    const TARGET_QUESTIONS = 40;
-    const TOTAL_STAGES = 4;
-    const orderedQuestions = availableQuestions.slice(0, TARGET_QUESTIONS);
-    const questionsPerStage = Math.max(1, Math.ceil(orderedQuestions.length / TOTAL_STAGES));
-
-    const { data: attempt, error: attemptError } = await supabase
-      .from("attempts")
-      .insert({
-        student_name: studentName || "طالب",
-        score: 0,
-        question_count: orderedQuestions.length,
-        ...getScopedPayload(context),
-      })
-      .select()
-      .single();
-
-    if (attemptError) {
-      throw attemptError;
-    }
-
-    const attemptRow = attempt as unknown as { id: string };
-
-    await recordScopedHistory(
-      session.user.id,
-      "exam",
-      orderedQuestions.map((q) => q.id),
-      context,
-    );
-
-    const examQuestions = orderedQuestions.map((question, index: number) => {
-      const stageNumber = Math.min(TOTAL_STAGES, Math.floor(index / questionsPerStage) + 1);
-      return {
-        id: question.id,
-        text: question.text,
-        image_url: question.image_url,
-        wrong_reason: question.wrong_reason,
-        explanation_url: question.explanation_url,
-        stage_number: stageNumber,
-        order_index: index,
-        choices: (question.choices || []).map((choice) => ({
-          id: choice.id,
-          text: choice.text,
-          image_url: choice.image_url,
-          is_correct: choice.is_correct,
-        })),
-      };
+      nextStageStart: 1,
+      studentName: studentName || "طالب",
+      navigate,
     });
-
-    const attemptData = {
-      attempt_id: attemptRow.id,
-      student_name: studentName || "طالب",
-      question_count: examQuestions.length,
-      score: 0,
-      selection_snapshot: getScopedPayload(context).selection_snapshot,
-      questions: examQuestions,
-    };
-
-    sessionStorage.setItem(`exam_${attemptRow.id}`, JSON.stringify(attemptData));
-    navigate(`/exam/${attemptRow.id}`);
   };
 
 

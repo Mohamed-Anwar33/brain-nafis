@@ -33,7 +33,6 @@ export function CentralExamQuestionForm({ question, onComplete, defaultDomainId 
   const [imageUrl, setImageUrl] = useState(question?.image_url || "");
   const [active, setActive] = useState(question?.active ?? true);
   const [orderIndex, setOrderIndex] = useState(question?.order_index || 0);
-  const [stageNumber, setStageNumber] = useState<number>(question?.stage_number || 1);
   const [wrongReason, setWrongReason] = useState(question?.wrong_reason || "");
   const [explanationUrl, setExplanationUrl] = useState(question?.explanation_url || "");
   const [scope, setScope] = useState<SelectionScopeValue>(() => ({
@@ -67,7 +66,6 @@ export function CentralExamQuestionForm({ question, onComplete, defaultDomainId 
     setImagePreview(question?.image_url || null);
     setActive(question?.active ?? true);
     setOrderIndex(question?.order_index || 0);
-    setStageNumber(question?.stage_number || 1);
     setWrongReason(question?.wrong_reason || "");
     setExplanationUrl(question?.explanation_url || "");
 
@@ -82,20 +80,28 @@ export function CentralExamQuestionForm({ question, onComplete, defaultDomainId 
         derivedGradeId = match.grade_id;
         derivedSubjectId = match.subject_id;
       }
-    } else if (!targetGsId && catalog?.grades?.length === 1) {
-      const onlyGrade = catalog.grades[0];
-      derivedGradeId = onlyGrade.id;
-      const gsList = (catalog.gradeSubjects || []).filter((gs) => gs.grade_id === onlyGrade.id);
-      if (gsList.length === 1) {
-        derivedSubjectId = gsList[0].subject_id;
-        targetGsId = gsList[0].id;
+    } else if (!targetGsId && catalog?.gradeSubjects && catalog.gradeSubjects.length > 0) {
+      const firstGs = catalog.gradeSubjects[0];
+      targetGsId = firstGs.id;
+      derivedGradeId = firstGs.grade_id;
+      derivedSubjectId = firstGs.subject_id;
+    }
+
+    if (!derivedDomainId) {
+      if (defaultDomainId && defaultDomainId !== "all") {
+        derivedDomainId = defaultDomainId;
+      } else if (catalog?.domains && catalog.domains.length > 0) {
+        const preferredDomain =
+          catalog.domains.find((d) => d.name.includes("أحياء") || d.slug === "biology") ||
+          catalog.domains[0];
+        derivedDomainId = preferredDomain.id;
       }
     }
 
     setScope((prev) => ({
       trackType: "central",
       gradeSubjectId: targetGsId || prev.gradeSubjectId,
-      domainId: prev.domainId || derivedDomainId || (defaultDomainId && defaultDomainId !== "all" ? defaultDomainId : "") || "",
+      domainId: derivedDomainId || prev.domainId || (defaultDomainId && defaultDomainId !== "all" ? defaultDomainId : "") || "",
       gradeId: derivedGradeId || prev.gradeId,
       subjectId: derivedSubjectId || prev.subjectId,
     }));
@@ -219,7 +225,26 @@ export function CentralExamQuestionForm({ question, onComplete, defaultDomainId 
       return;
     }
 
-    const scopeError = validateSelectionScope(scope);
+    const effectiveGsId = scope.gradeSubjectId || catalog?.gradeSubjects?.[0]?.id || "";
+    let effectiveDomainId = scope.domainId;
+    if (!effectiveDomainId) {
+      if (defaultDomainId && defaultDomainId !== "all") {
+        effectiveDomainId = defaultDomainId;
+      } else if (catalog?.domains && catalog.domains.length > 0) {
+        const preferredDomain =
+          catalog.domains.find((d) => d.name.includes("أحياء") || d.slug === "biology") ||
+          catalog.domains[0];
+        effectiveDomainId = preferredDomain.id;
+      }
+    }
+
+    const effectiveScope: SelectionScopeValue = {
+      ...scope,
+      gradeSubjectId: effectiveGsId,
+      domainId: effectiveDomainId,
+    };
+
+    const scopeError = validateSelectionScope(effectiveScope);
     if (scopeError) {
       toast.error(scopeError);
       return;
@@ -233,10 +258,9 @@ export function CentralExamQuestionForm({ question, onComplete, defaultDomainId 
           image_url: imageUrl || null,
           active,
           order_index: orderIndex,
-          stage_number: stageNumber,
           track_type: "central",
-          grade_subject_id: scope.gradeSubjectId,
-          domain_id: scope.domainId,
+          grade_subject_id: effectiveScope.gradeSubjectId,
+          domain_id: effectiveScope.domainId,
           wrong_reason: wrongReason || null,
           explanation_url: explanationUrl || null,
         }, validChoices);
@@ -247,19 +271,19 @@ export function CentralExamQuestionForm({ question, onComplete, defaultDomainId 
           image_url: imageUrl || null,
           active,
           order_index: orderIndex,
-          stage_number: stageNumber,
           track_type: "central",
-          grade_subject_id: scope.gradeSubjectId,
-          domain_id: scope.domainId,
+          grade_subject_id: effectiveScope.gradeSubjectId,
+          domain_id: effectiveScope.domainId,
           wrong_reason: wrongReason || null,
           explanation_url: explanationUrl || null,
         }, validChoices as CentralExamChoiceInput[]);
         toast.success("تم إضافة السؤال بنجاح");
       }
       onComplete();
-    } catch (error) {
-      console.error(error);
-      toast.error("حدث خطأ أثناء حفظ السؤال");
+    } catch (error: any) {
+      console.error("Central exam question save error:", error);
+      const msg = error?.message || error?.error_description || "حدث خطأ غير متوقع";
+      toast.error(`حدث خطأ أثناء حفظ السؤال: ${msg}`);
     } finally {
       setLoading(false);
     }
@@ -295,8 +319,8 @@ export function CentralExamQuestionForm({ question, onComplete, defaultDomainId 
           />
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="space-y-2 sm:col-span-1">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-2">
             <Label>صورة السؤال (اختياري)</Label>
             <div className="flex gap-2">
               <input
@@ -342,23 +366,13 @@ export function CentralExamQuestionForm({ question, onComplete, defaultDomainId 
             </div>
           </div>
 
-          <div className="space-y-2 sm:col-span-1">
-            <Label>رقم المرحلة</Label>
-            <Input 
-              type="number"
-              min={1}
-              max={10}
-              value={stageNumber} 
-              onChange={(e) => setStageNumber(parseInt(e.target.value) || 1)} 
-            />
-          </div>
-
-          <div className="space-y-2 sm:col-span-1">
+          <div className="space-y-2">
             <Label>ترتيب الظهور (اختياري)</Label>
             <Input 
               type="number"
               value={orderIndex} 
               onChange={(e) => setOrderIndex(parseInt(e.target.value) || 0)} 
+              placeholder="0"
             />
           </div>
         </div>

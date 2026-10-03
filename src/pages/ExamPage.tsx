@@ -180,7 +180,6 @@ export default function ExamPage() {
         // Enforce 4 stages for Nafis exam (up to 40 questions, 10 per stage)
         const TARGET_QUESTIONS = 40;
         const selected = filteredQuestions.slice(0, TARGET_QUESTIONS);
-        const qPerStage = Math.max(1, Math.ceil(selected.length / TOTAL_STAGES));
 
         const transformedQuestions: ExamQuestionType[] = selected.map(
           (question, index) => ({
@@ -189,7 +188,7 @@ export default function ExamPage() {
             image_url: question.image_url,
             wrong_reason: question.wrong_reason,
             explanation_url: question.explanation_url,
-            stage_number: Math.min(TOTAL_STAGES, Math.floor(index / qPerStage) + 1),
+            stage_number: question.stage_number || 1,
             order_index: index,
             choices: question.choices.map((choice) => ({
               id: choice.id,
@@ -508,6 +507,7 @@ export default function ExamPage() {
       stage={currentStage}
       totalStages={TOTAL_STAGES}
       onAnswer={handleAnswer}
+      onAdvance={nextQuestion}
       disabled={isSubmitting}
       wrongReason={currentWrongReason}
     />

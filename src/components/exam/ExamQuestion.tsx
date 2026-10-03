@@ -15,6 +15,7 @@ interface ExamQuestionProps {
   stage?: number;
   totalStages?: number;
   onAnswer: (choiceId: string) => Promise<boolean>;
+  onAdvance: () => void;
   disabled: boolean;
   wrongReason?: string | null;
 }
@@ -28,12 +29,14 @@ export function ExamQuestion({
   onAnswer,
   disabled,
   wrongReason,
+  onAdvance,
 }: ExamQuestionProps) {
   const [selectedChoice, setSelectedChoice] = useState<string | null>(null);
   const [answerState, setAnswerState] = useState<"correct" | "wrong" | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pendingChoice, setPendingChoice] = useState<string | null>(null);
   const [showExplanationModal, setShowExplanationModal] = useState(false);
+  const [hasOpenedExplanationVideo, setHasOpenedExplanationVideo] = useState(false);
 
   // Gamification States
   const [streak, setStreak] = useState(0);
@@ -46,6 +49,7 @@ export function ExamQuestion({
     setAnswerState(null);
     setPendingChoice(null);
     setShowExplanationModal(false);
+    setHasOpenedExplanationVideo(false);
   }, [question.id]);
 
   const handleChoiceClick = async (choice: Choice) => {
@@ -237,10 +241,13 @@ export function ExamQuestion({
                 <span>توضيح السؤال والإرشاد العلمي:</span>
               </div>
 
-              {question.explanation_url && (
+              {(question.explanation_url || wrongReason?.includes("http")) && (
                 <button
                   type="button"
-                  onClick={() => setShowExplanationModal(true)}
+                  onClick={() => {
+                    setHasOpenedExplanationVideo(true);
+                    setShowExplanationModal(true);
+                  }}
                   className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-sky-600 text-white font-black text-xs sm:text-sm hover:opacity-95 transition-all shadow-md shadow-indigo-500/20"
                 >
                   <PlayCircle className="w-4 h-4" />
@@ -253,6 +260,16 @@ export function ExamQuestion({
               <p className="text-sm sm:text-base leading-relaxed text-amber-950 font-bold pt-2 border-t border-amber-200/70">
                 {wrongReason}
               </p>
+            )}
+
+            {hasOpenedExplanationVideo && (
+              <button
+                type="button"
+                onClick={onAdvance}
+                className="w-full rounded-xl bg-amber-600 px-4 py-3 font-black text-white"
+              >
+                متابعة للسؤال التالي
+              </button>
             )}
           </div>
         )}

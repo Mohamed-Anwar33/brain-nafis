@@ -9,6 +9,7 @@ import {
   resetScopedHistory,
 } from "@/lib/selection-scope";
 import { toast } from "sonner";
+import { orderNafisQuestions } from "@/lib/nafis-quick-quiz";
 
 interface StartNafisRoundOptions {
   context: SelectionContext;
@@ -98,18 +99,10 @@ export async function startNafisStagesRound({
     }
   }
 
-  // 3. Shuffle questions using Fisher-Yates
-  const shuffled = [...availableQuestions];
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-  }
-
   // 4. Determine batch questions (up to 40 questions, at least 4)
-  const TARGET_QUESTIONS = Math.min(40, Math.max(4, shuffled.length));
+  const TARGET_QUESTIONS = Math.min(40, Math.max(4, availableQuestions.length));
   const STAGES_IN_ROUND = 4;
-  const orderedQuestions = shuffled.slice(0, TARGET_QUESTIONS);
-  const questionsPerStage = Math.max(1, Math.ceil(orderedQuestions.length / STAGES_IN_ROUND));
+  const orderedQuestions = orderNafisQuestions(availableQuestions).slice(0, TARGET_QUESTIONS);
   const totalStages = nextStageStart + STAGES_IN_ROUND - 1; // e.g. 5 + 4 - 1 = 8
 
   // 5. Create attempt in database
@@ -155,16 +148,13 @@ export async function startNafisStagesRound({
 
   // 7. Map questions with their relative and absolute stage numbers
   const examQuestions = orderedQuestions.map((question, index: number) => {
-    const stageOffset = Math.min(STAGES_IN_ROUND - 1, Math.floor(index / questionsPerStage));
-    const stageNumber = nextStageStart + stageOffset;
-
     return {
       id: question.id,
       text: question.text,
       image_url: question.image_url,
       wrong_reason: question.wrong_reason,
       explanation_url: question.explanation_url,
-      stage_number: stageNumber,
+      stage_number: question.stage_number ?? nextStageStart,
       order_index: index,
       choices: (question.choices || []).map((choice: any) => ({
         id: choice.id,

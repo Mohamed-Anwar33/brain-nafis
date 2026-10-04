@@ -16,6 +16,17 @@ export function orderNafisQuestions<T extends NafisQuestionForOrdering>(question
   });
 }
 
-export function canAdvanceAfterWrongAnswer(hasOpenedExplanationVideo: boolean): boolean {
-  return hasOpenedExplanationVideo;
+export function canAdvanceAfterWrongAnswer(
+  hasOpenedExplanationVideo: boolean,
+  hasExplanationVideo = true,
+): boolean {
+  return !hasExplanationVideo || hasOpenedExplanationVideo;
+}
+
+export function canChooseAnswerAfterWrongAnswer(
+  hasWrongAnswer: boolean,
+  hasExplanationVideo = true,
+  hasOpenedExplanationVideo = false,
+): boolean {
+  return !hasWrongAnswer || !hasExplanationVideo || hasOpenedExplanationVideo;
 }

@@ -507,7 +507,6 @@ export default function ExamPage() {
       stage={currentStage}
       totalStages={TOTAL_STAGES}
       onAnswer={handleAnswer}
-      onAdvance={nextQuestion}
       disabled={isSubmitting}
       wrongReason={currentWrongReason}
     />

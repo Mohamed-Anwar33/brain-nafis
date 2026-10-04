@@ -7,6 +7,7 @@ import { StreakCounter } from "@/components/gamification/StreakCounter";
 import { FloatingXp } from "@/components/gamification/FloatingXp";
 import { SoundToggle } from "@/components/ui/SoundToggle";
 import { audioManager } from "@/lib/audio";
+import { canChooseAnswerAfterWrongAnswer } from "@/lib/nafis-quick-quiz";
 
 interface ExamQuestionProps {
   question: ExamQuestionType;
@@ -15,7 +16,6 @@ interface ExamQuestionProps {
   stage?: number;
   totalStages?: number;
   onAnswer: (choiceId: string) => Promise<boolean>;
-  onAdvance: () => void;
   disabled: boolean;
   wrongReason?: string | null;
 }
@@ -29,7 +29,6 @@ export function ExamQuestion({
   onAnswer,
   disabled,
   wrongReason,
-  onAdvance,
 }: ExamQuestionProps) {
   const [selectedChoice, setSelectedChoice] = useState<string | null>(null);
   const [answerState, setAnswerState] = useState<"correct" | "wrong" | null>(null);
@@ -97,6 +96,14 @@ export function ExamQuestion({
   };
 
   const progress = ((currentIndex + 1) / totalQuestions) * 100;
+  const hasExplanationVideo = Boolean(
+    question.explanation_url || wrongReason?.includes("http"),
+  );
+  const isWrongAnswerBlocked = !canChooseAnswerAfterWrongAnswer(
+    answerState === "wrong",
+    hasExplanationVideo,
+    hasOpenedExplanationVideo,
+  );
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col" dir="rtl">
@@ -170,9 +177,10 @@ export function ExamQuestion({
               <button
                 key={choice.id}
                 onClick={() => handleChoiceClick(choice)}
-                disabled={disabled || isSubmitting || answerState === "correct"}
+                disabled={disabled || isSubmitting || answerState === "correct" || isWrongAnswerBlocked}
                 className={cn(
                   "w-full text-right p-4 sm:p-5 rounded-2xl sm:rounded-3xl border-2 transition-all duration-200 flex items-center justify-between gap-4 outline-none",
+                  isWrongAnswerBlocked && "opacity-50 grayscale cursor-not-allowed bg-slate-100 border-slate-200",
                   isCorrectAnswer
                     ? "border-emerald-500 bg-emerald-50/90 text-emerald-950 shadow-lg shadow-emerald-500/20 scale-[1.01]"
                     : isWrongAnswer
@@ -262,15 +270,6 @@ export function ExamQuestion({
               </p>
             )}
 
-            {hasOpenedExplanationVideo && (
-              <button
-                type="button"
-                onClick={onAdvance}
-                className="w-full rounded-xl bg-amber-600 px-4 py-3 font-black text-white"
-              >
-                متابعة للسؤال التالي
-              </button>
-            )}
           </div>
         )}
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canAdvanceAfterWrongAnswer, orderNafisQuestions } from "@/lib/nafis-quick-quiz";
+import { canChooseAnswerAfterWrongAnswer, orderNafisQuestions } from "@/lib/nafis-quick-quiz";
 
 describe("Nafis quick quiz flow", () => {
   it("keeps questions in their assigned stage order without randomizing them", () => {
@@ -16,8 +16,9 @@ describe("Nafis quick quiz flow", () => {
     ]);
   });
 
-  it("does not allow moving on after a wrong answer until the video is opened", () => {
-    expect(canAdvanceAfterWrongAnswer(false)).toBe(false);
-    expect(canAdvanceAfterWrongAnswer(true)).toBe(true);
+  it("disables all answer choices after a wrong answer until the video is opened", () => {
+    expect(canChooseAnswerAfterWrongAnswer(true, true, false)).toBe(false);
+    expect(canChooseAnswerAfterWrongAnswer(true, true, true)).toBe(true);
+    expect(canChooseAnswerAfterWrongAnswer(true, false, false)).toBe(true);
   });
 });

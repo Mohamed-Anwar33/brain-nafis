@@ -6,6 +6,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { audioManager } from "@/lib/audio";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { getNafisStageProgress, selectNafisRoundQuestions } from "@/lib/nafis-quick-quiz";
+import { applySelectionFilters } from "@/lib/selection-scope";
+import { SelectionContext } from "@/types/selection";
 import { StageTransition } from "@/components/exam/StageTransition";
 
 type QuestionChoiceRow = {
@@ -49,19 +52,13 @@ export default function ExamPage() {
   const snapshot = (examData?.selection_snapshot as any) || {};
   const stageStart = snapshot.stage_start || 1;
   const TOTAL_STAGES = snapshot.total_stages || (stageStart + 3);
-  const stagesInRound = Math.max(1, TOTAL_STAGES - stageStart + 1);
   const [currentStage, setCurrentStage] = useState(stageStart);
-  const questionsPerStage = Math.max(
-    1,
-    Math.ceil((examData?.questions.length || 40) / stagesInRound)
-  );
+  const stageProgress = getNafisStageProgress(examData?.questions || [], currentIndex);
 
   useEffect(() => {
     if (examData?.selection_snapshot) {
       const snap = examData.selection_snapshot as any;
-      if (snap.stage_start && snap.stage_start !== currentStage) {
-        setCurrentStage(snap.stage_start);
-      }
+      setCurrentStage(examData.questions[0]?.stage_number ?? snap.stage_start ?? 1);
     }
   }, [examData]);
 
@@ -83,7 +80,7 @@ export default function ExamPage() {
   const handleNextStage = () => {
     setShowStageTransition(false);
     setCurrentIndex(prev => prev + 1);
-    setCurrentStage(prev => prev + 1);
+    setCurrentStage(stageProgress.nextStage ?? currentStage);
     // Use refs for accurate values
     setStageStartScore(scoreRef.current);
     setStagePenaltiesStart(penaltiesRef.current);
@@ -127,12 +124,25 @@ export default function ExamPage() {
           return;
         }
 
-        const { data: questionsData, error: questionsError } = await supabase
-          .from("questions")
-          .select("*, choices(*)")
-          .eq("active", true)
-          .order("stage_number", { ascending: true })
-          .order("created_at", { ascending: true });
+        const { data: attemptData, error: attemptError } = await supabase
+          .from("attempts").select("*").eq("id", attemptId || "").single();
+        if (attemptError) throw attemptError;
+        const attempt = attemptData as unknown as { student_name: string; track_type?: string; grade_subject_id?: string; selection_snapshot?: unknown };
+        const savedSnapshot = (attempt?.selection_snapshot as any) || {};
+        const context: SelectionContext = {
+          trackType: savedSnapshot.track_type || attempt.track_type || "nafis",
+          experienceType: "quick-quiz",
+          gradeId: savedSnapshot.grade_id || "",
+          gradeName: savedSnapshot.grade_name || "",
+          subjectId: savedSnapshot.subject_id || "",
+          subjectName: savedSnapshot.subject_name || "",
+          gradeSubjectId: savedSnapshot.grade_subject_id || attempt.grade_subject_id || "",
+          domainId: savedSnapshot.domain_id || null,
+          domainName: savedSnapshot.domain_name || null,
+        };
+        const { data: questionsData, error: questionsError } = await applySelectionFilters(
+          supabase.from("questions").select("*, choices(*)").eq("active", true), context,
+        );
 
         if (questionsError) {
           throw questionsError;
@@ -166,20 +176,13 @@ export default function ExamPage() {
           return;
         }
 
-        let studentName = "";
-        if (attemptId && attemptId !== "new") {
-          const { data: attempt } = await supabase
-            .from("attempts")
-            .select("*")
-            .eq("id", attemptId)
-            .single();
-
-          studentName = (attempt as any)?.student_name || "";
+        const studentName = attempt.student_name || "";
+        const selected = selectNafisRoundQuestions(filteredQuestions, savedSnapshot.stage_start || 1, displayOrderMap);
+        if (!selected.length) {
+          toast.error("لا توجد أسئلة متاحة لهذه المراحل");
+          navigate("/student/dashboard");
+          return;
         }
-
-        // Enforce 4 stages for Nafis exam (up to 40 questions, 10 per stage)
-        const TARGET_QUESTIONS = 40;
-        const selected = filteredQuestions.slice(0, TARGET_QUESTIONS);
 
         const transformedQuestions: ExamQuestionType[] = selected.map(
           (question, index) => ({
@@ -205,6 +208,7 @@ export default function ExamPage() {
           question_count: transformedQuestions.length,
           score: 0,
           questions: transformedQuestions,
+          selection_snapshot: savedSnapshot,
         });
       } catch (err) {
         console.error("Failed to load exam:", err);
@@ -290,7 +294,7 @@ export default function ExamPage() {
       const nextIndex = currentIndex + 1;
 
       // Check if we reached a stage boundary before the final stage
-      if (nextIndex % questionsPerStage === 0 && currentStage < TOTAL_STAGES) {
+      if (stageProgress.nextStage !== stageProgress.stage) {
         setShowStageTransition(true);
       } else {
         setCurrentIndex(prev => prev + 1);
@@ -298,7 +302,7 @@ export default function ExamPage() {
     } else {
       finishExam(TOTAL_STAGES); // refs will ensure correct score is used
     }
-  }, [examData, currentIndex, finishExam, questionsPerStage, currentStage]);
+  }, [examData, currentIndex, finishExam, stageProgress.nextStage, stageProgress.stage, TOTAL_STAGES]);
 
 
 
@@ -478,7 +482,7 @@ export default function ExamPage() {
   };
 
   // Calculate stage specific details
-  const currentStageTotalQuestions = questionsPerStage;
+  const currentStageTotalQuestions = stageProgress.total;
 
   if (showStageTransition) {
     // Calculate NET score for this stage (correct answers - penalties)
@@ -493,7 +497,7 @@ export default function ExamPage() {
         totalQuestions={currentStageTotalQuestions}
         onNext={handleNextStage}
         onFinishEarly={() => finishExam(currentStage)}
-        stageTitle={STAGE_TITLES[currentStage] || stageTitlesMap[currentStage] || `المرحلة ${currentStage}`}
+        stageTitle={stageTitlesMap[currentStage] || STAGE_TITLES[currentStage] || `المرحلة ${currentStage}`}
         totalStages={TOTAL_STAGES}
       />
     );
@@ -502,7 +506,7 @@ export default function ExamPage() {
   return (
     <ExamQuestion
       question={currentQuestion}
-      currentIndex={currentIndex % questionsPerStage} // Relative index within stage (0 to questionsPerStage - 1)
+      currentIndex={stageProgress.index}
       totalQuestions={currentStageTotalQuestions} // Total for this stage
       stage={currentStage}
       totalStages={TOTAL_STAGES}

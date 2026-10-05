@@ -4,12 +4,9 @@ import { SelectionContext } from "@/types/selection";
 import {
   applySelectionFilters,
   getScopedPayload,
-  getScopedHistoryIds,
-  recordScopedHistory,
-  resetScopedHistory,
 } from "@/lib/selection-scope";
 import { toast } from "sonner";
-import { orderNafisQuestions } from "@/lib/nafis-quick-quiz";
+import { selectNafisRoundQuestions } from "@/lib/nafis-quick-quiz";
 
 interface StartNafisRoundOptions {
   context: SelectionContext;
@@ -44,35 +41,9 @@ export async function startNafisStagesRound({
     context,
   );
 
-  let { data: allQuestionsData, error: questionsError } = await scopedQuestionsQuery;
+  const { data: allQuestionsData, error: questionsError } = await scopedQuestionsQuery;
 
-  // Fallback: if no questions found with exact domain, try by grade_subject_id
-  if ((!allQuestionsData || allQuestionsData.length === 0) && context.gradeSubjectId) {
-    const fallbackRes = await supabase
-      .from("questions")
-      .select("*, choices(*)")
-      .eq("active", true)
-      .eq("grade_subject_id", context.gradeSubjectId);
-    if (fallbackRes.data && fallbackRes.data.length > 0) {
-      allQuestionsData = fallbackRes.data;
-    }
-  }
-
-  // Fallback 2: Any active questions in the platform
-  if (!allQuestionsData || allQuestionsData.length === 0) {
-    const anyRes = await supabase
-      .from("questions")
-      .select("*, choices(*)")
-      .eq("active", true)
-      .limit(60);
-    if (anyRes.data && anyRes.data.length > 0) {
-      allQuestionsData = anyRes.data;
-    }
-  }
-
-  if (questionsError && (!allQuestionsData || allQuestionsData.length === 0)) {
-    throw questionsError;
-  }
+  if (questionsError) throw questionsError;
 
   const pool = (allQuestionsData || []) as any[];
   if (pool.length === 0) {
@@ -80,30 +51,21 @@ export async function startNafisStagesRound({
     return;
   }
 
-  // 2. Filter out already seen questions for seamless continuous practice
-  let availableQuestions = [...pool];
-  if (userId) {
-    try {
-      const seenIds = await getScopedHistoryIds(userId, "exam", context);
-      const unseen = pool.filter((q) => !seenIds.has(q.id));
-      if (unseen.length >= 8) {
-        availableQuestions = unseen;
-      } else {
-        // Reset history so questions loop endlessly
-        await resetScopedHistory(userId, "exam", context);
-        availableQuestions = pool;
-      }
-    } catch (e) {
-      console.warn("History scoping warning, falling back to full pool:", e);
-      availableQuestions = pool;
-    }
+  // Use a fixed question order, then split the student round into groups of ten.
+  const { data: stageTitles, error: stagesError } = await supabase
+    .from("stage_titles").select("stage_number, is_active, display_order");
+  if (stagesError) throw stagesError;
+  const stages = (stageTitles || []) as unknown as { stage_number: number; is_active: boolean | null; display_order: number | null }[];
+  const displayOrder = Object.fromEntries(stages.map(stage => [stage.stage_number, stage.display_order ?? stage.stage_number]));
+  const activePool = stages.length ? pool.filter(question =>
+    stages.some(stage => stage.stage_number === (question.stage_number ?? 1) && stage.is_active !== false),
+  ) : pool;
+  const orderedQuestions = selectNafisRoundQuestions(activePool, nextStageStart, displayOrder);
+  if (!orderedQuestions.length) {
+    toast.error("لا توجد أسئلة متاحة لهذه المراحل في المجال المحدد");
+    return;
   }
-
-  // 4. Determine batch questions (up to 40 questions, at least 4)
-  const TARGET_QUESTIONS = Math.min(40, Math.max(4, availableQuestions.length));
-  const STAGES_IN_ROUND = 4;
-  const orderedQuestions = orderNafisQuestions(availableQuestions).slice(0, TARGET_QUESTIONS);
-  const totalStages = nextStageStart + STAGES_IN_ROUND - 1; // e.g. 5 + 4 - 1 = 8
+  const totalStages = Math.max(...orderedQuestions.map(q => q.stage_number ?? 1));
 
   // 5. Create attempt in database
   const scopedPayload = getScopedPayload(context);
@@ -132,20 +94,6 @@ export async function startNafisStagesRound({
 
   const attemptRow = attempt as unknown as { id: string };
 
-  // 6. Record seen question IDs
-  if (userId) {
-    try {
-      await recordScopedHistory(
-        userId,
-        "exam",
-        orderedQuestions.map((q) => q.id),
-        context,
-      );
-    } catch (e) {
-      console.warn("Error recording seen questions:", e);
-    }
-  }
-
   // 7. Map questions with their relative and absolute stage numbers
   const examQuestions = orderedQuestions.map((question, index: number) => {
     return {
@@ -154,7 +102,7 @@ export async function startNafisStagesRound({
       image_url: question.image_url,
       wrong_reason: question.wrong_reason,
       explanation_url: question.explanation_url,
-      stage_number: question.stage_number ?? nextStageStart,
+      stage_number: question.stage_number ?? 1,
       order_index: index,
       choices: (question.choices || []).map((choice: any) => ({
         id: choice.id,

@@ -18,6 +18,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { getCentralExamQuestions, CentralExamQuestion } from "@/services/centralExamService";
+import { selectCentralQuickQuizQuestions } from "@/lib/central-quick-quiz";
 import { SaudiLoader } from "@/components/ui/SaudiLoader";
 import { ExplanationModal } from "@/components/exam/ExplanationModal";
 import { CertificateModal } from "@/components/exam/CertificateModal";
@@ -142,25 +143,7 @@ export default function CentralExamPlay() {
     try {
       const activeQuestions = await getCentralExamQuestions(selectionContext);
       
-      // Filter questions matching current stage if stage_number exists
-      const stageQuestions = activeQuestions.filter(q => !q.stage_number || q.stage_number === stage);
-      const questionsToUse = stageQuestions.length > 0 ? stageQuestions : activeQuestions;
-
-      // Deterministic order by stage and order_index - NO random shuffle or slicing
-      const sortedQuestions = [...questionsToUse].sort((a, b) => {
-        const stageA = a.stage_number ?? 1;
-        const stageB = b.stage_number ?? 1;
-        if (stageA !== stageB) {
-          return stageA - stageB;
-        }
-        if (a.order_index !== undefined && b.order_index !== undefined && a.order_index !== b.order_index) {
-          return a.order_index - b.order_index;
-        }
-        return new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime();
-      });
-
-      // Enforce strict maximum of 10 questions per stage
-      setQuestions(sortedQuestions.slice(0, 10));
+      setQuestions(selectCentralQuickQuizQuestions(activeQuestions, stage));
     } catch (err) {
       console.error("Error loading central exam questions:", err);
       toast.error("فشل تحميل أسئلة الاختبار المركزي");

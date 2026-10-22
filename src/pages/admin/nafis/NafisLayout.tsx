@@ -84,6 +84,7 @@ export default function NafisLayout() {
   const navItems = [
     { path: "/admin/nafis", icon: LayoutDashboard, label: "لوحة التحكم" },
     { path: "/admin/nafis/questions", icon: FileQuestion, label: "بنك الأسئلة" },
+    { path: "/admin/nafis/science-activities", icon: BookOpen, label: "القراءة والمختبر" },
     { path: "/admin/nafis/matching", icon: Gamepad2, label: "لعبة المطابقة" },
     { path: "/admin/nafis/ordering", icon: Puzzle, label: "لغز الترتيب" },
     { path: "/admin/nafis/speed", icon: Timer, label: "تحدي السرعة" },

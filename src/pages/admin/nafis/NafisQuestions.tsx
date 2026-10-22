@@ -63,6 +63,8 @@ interface Question {
   domain_id?: string | null;
   wrong_reason?: string | null;
   explanation_url?: string | null;
+  scientific_skill?: string | null;
+  scientific_concept?: string | null;
 }
 
 interface StageTitle {
@@ -109,6 +111,8 @@ export default function NafisQuestions() {
   const [filterStatus, setFilterStatus] = useState<"all" | "active" | "inactive">("all");
   const [filterDomain, setFilterDomain] = useState<string>("all");
   const [bulkDomainId, setBulkDomainId] = useState<string>("");
+  const [bulkSkill, setBulkSkill] = useState("");
+  const [bulkConcept, setBulkConcept] = useState("");
   const [isBulkUpdating, setIsBulkUpdating] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [pageSize, setPageSize] = useState(25);
@@ -155,7 +159,7 @@ export default function NafisQuestions() {
     try {
       let query = supabase
         .from("questions")
-        .select("*, image_url", { count: "exact" })
+        .select("*, image_url, scientific_skill, scientific_concept", { count: "exact" })
         .or('track_type.eq.nafis,track_type.is.null') // Filter for Nafis only
         .order("stage_number", { ascending: true })
         .order("created_at", { ascending: sortOrder === "oldest" })
@@ -254,6 +258,23 @@ export default function NafisQuestions() {
     } finally {
       setIsBulkUpdating(false);
     }
+  };
+
+  const handleBulkClassification = async () => {
+    if (!selectedIds.size || (!bulkSkill && !bulkConcept.trim())) return;
+    setIsBulkUpdating(true);
+    try {
+      const { error } = await supabase.from("questions").update({
+        ...(bulkSkill ? { scientific_skill: bulkSkill } : {}),
+        ...(bulkConcept.trim() ? { scientific_concept: bulkConcept.trim() } : {}),
+      }).in("id", Array.from(selectedIds));
+      if (error) throw error;
+      toast.success(`تم تصنيف ${selectedIds.size} سؤال`);
+      setBulkSkill(""); setBulkConcept(""); setSelectedIds(new Set()); fetchQuestions();
+    } catch (error) {
+      console.error(error);
+      toast.error("تعذر حفظ التصنيف. تأكدي من تطبيق تحديث قاعدة البيانات.");
+    } finally { setIsBulkUpdating(false); }
   };
 
   const handleInlineDomainChange = async (questionId: string, domainId: string) => {
@@ -659,6 +680,19 @@ export default function NafisQuestions() {
               </div>
 
               <div className="flex items-center gap-2 flex-wrap">
+                <Select value={bulkSkill || "none"} onValueChange={(value) => setBulkSkill(value === "none" ? "" : value)}>
+                  <SelectTrigger className="w-48 bg-white h-9 text-xs"><SelectValue placeholder="المهارة العلمية" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">بدون تغيير المهارة</SelectItem>
+                    <SelectItem value="فهم المفاهيم العلمية">فهم المفاهيم العلمية</SelectItem>
+                    <SelectItem value="الاستدلال العلمي">الاستدلال العلمي</SelectItem>
+                    <SelectItem value="التطبيق">التطبيق</SelectItem>
+                    <SelectItem value="قراءة الرسوم والبيانات">قراءة الرسوم والبيانات</SelectItem>
+                    <SelectItem value="الفهم القرائي العلمي">الفهم القرائي العلمي</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Input className="w-40 bg-white h-9 text-xs" value={bulkConcept} onChange={(event) => setBulkConcept(event.target.value)} placeholder="المفهوم العلمي" />
+                <Button size="sm" disabled={isBulkUpdating || (!bulkSkill && !bulkConcept.trim())} onClick={handleBulkClassification} className="h-9 text-xs">تطبيق تصنيف المهارة</Button>
                 <Select value={bulkDomainId} onValueChange={setBulkDomainId}>
                   <SelectTrigger className="w-56 bg-white h-9 text-xs font-black border-indigo-200 shadow-2xs">
                     <SelectValue placeholder="اختر التخصص لتعيينه..." />

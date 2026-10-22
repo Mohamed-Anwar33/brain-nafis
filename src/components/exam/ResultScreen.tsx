@@ -299,6 +299,35 @@ export function ResultScreen({ result }: ResultScreenProps) {
             </div>
           </div>
 
+          {result.skill_analysis && result.skill_analysis.length > 0 && (
+            <section className="px-6 sm:px-10 mb-6" aria-labelledby="skill-analysis-title">
+              <div className="rounded-2xl border border-indigo-100 bg-indigo-50/60 p-5 space-y-4">
+                <div>
+                  <h2 id="skill-analysis-title" className="font-black text-slate-900">تحليل أدائك حسب المهارات</h2>
+                  <p className="mt-1 text-xs text-slate-600">يعتمد التحليل على إجابات الاختبار الأساسية، ولا تدخل أسئلة التدريب المشابه في الدرجة.</p>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {result.skill_analysis.map((item) => {
+                    const needsPractice = item.percentage < 70;
+                    return (
+                      <article key={item.skill} className="rounded-xl border bg-white p-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <h3 className="font-bold text-slate-800">{item.skill}</h3>
+                          <span className={`shrink-0 rounded-full px-2 py-1 text-xs font-black ${needsPractice ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800"}`}>
+                            {needsPractice ? "تحتاج إلى تدريب" : "متقنة"}
+                          </span>
+                        </div>
+                        <p className="mt-2 text-sm text-slate-600">{item.correct} من {item.total} صحيحة ({item.percentage}٪)</p>
+                        <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100"><div className={`h-full ${needsPractice ? "bg-amber-500" : "bg-emerald-500"}`} style={{ width: `${item.percentage}%` }} /></div>
+                        {item.concepts.length > 0 && <p className="mt-2 text-xs text-slate-500">المفاهيم: {item.concepts.join("، ")}</p>}
+                      </article>
+                    );
+                  })}
+                </div>
+              </div>
+            </section>
+          )}
+
           {/* Badges Earned Section */}
           <div className="px-6 sm:px-10 mb-6">
             <div className="bg-slate-50/80 rounded-2xl p-4 sm:p-5 border border-slate-100 space-y-3">

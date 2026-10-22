@@ -13,6 +13,10 @@ export interface Question {
   wrong_reason?: string | null;
   explanation_url?: string | null;
   stage_number?: number | null;
+  grade_subject_id?: string | null;
+  domain_id?: string | null;
+  scientific_skill?: string | null;
+  scientific_concept?: string | null;
 }
 
 export interface ExamQuestion extends Question {
@@ -46,6 +50,7 @@ export interface ExamResult {
   stages_completed?: number;
   total_stages?: number;
   selection_snapshot?: Record<string, any>;
+  skill_analysis?: Array<{ skill: string; correct: number; total: number; percentage: number; concepts: string[] }>;
 }
 
 export interface Settings {

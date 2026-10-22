@@ -48,6 +48,8 @@ import AdminResultsPage from "./pages/admin/AdminResultsPage";
 
 // Treasure Adventure Admin import
 import TreasureAdventuresAdmin from "./pages/admin/treasure/TreasureAdventuresAdmin";
+import ScientificActivities from "./pages/student/ScientificActivities";
+import ScientificActivitiesAdmin from "./pages/admin/nafis/ScientificActivitiesAdmin";
 
 const queryClient = new QueryClient();
 
@@ -63,6 +65,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/student/dashboard" element={<StudentDashboard />} />
             <Route path="/student/games" element={<StudentGamesHub />} />
+            <Route path="/student/science-activities" element={<ScientificActivities />} />
 
             <Route path="/exam/:attemptId" element={<ExamPage />} />
             <Route path="/result/:attemptId" element={<ResultPage />} />
@@ -92,6 +95,7 @@ const App = () => (
             <Route path="/admin/nafis" element={<NafisLayout />}>
               <Route index element={<NafisDashboard />} />
               <Route path="questions" element={<NafisQuestions />} />
+              <Route path="science-activities" element={<ScientificActivitiesAdmin />} />
               <Route path="matching" element={<NafisMatching />} />
               <Route path="ordering" element={<NafisOrdering />} />
               <Route path="speed" element={<NafisSpeed />} />

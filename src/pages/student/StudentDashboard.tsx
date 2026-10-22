@@ -1369,6 +1369,12 @@ export default function StudentDashboard() {
                 </button>
               </div>
 
+              <div className="mx-auto max-w-5xl">
+                <Button type="button" variant="outline" className="w-full border-indigo-200 bg-white text-indigo-800" onClick={() => navigate("/student/science-activities")}>
+                  <BookOpen className="ml-2 h-4 w-4" /> الفهم القرائي والمختبر الافتراضي
+                </Button>
+              </div>
+
               {/* Direct Domain Games Launchpad */}
               <div className="pt-2 max-w-5xl mx-auto space-y-4">
                 <div className="flex items-center justify-between px-2">

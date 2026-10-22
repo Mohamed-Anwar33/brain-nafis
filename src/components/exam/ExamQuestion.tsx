@@ -8,6 +8,13 @@ import { FloatingXp } from "@/components/gamification/FloatingXp";
 import { SoundToggle } from "@/components/ui/SoundToggle";
 import { audioManager } from "@/lib/audio";
 import { canChooseAnswerAfterWrongAnswer } from "@/lib/nafis-quick-quiz";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+
+type SimilarQuestion = ExamQuestionType;
+type SimilarQuestionRow = Omit<SimilarQuestion, "choices" | "order_index"> & {
+  choices: Array<{ id: string; text: string; is_correct: boolean; image_url?: string | null }>;
+};
 
 interface ExamQuestionProps {
   question: ExamQuestionType;
@@ -18,6 +25,7 @@ interface ExamQuestionProps {
   onAnswer: (choiceId: string) => Promise<boolean>;
   disabled: boolean;
   wrongReason?: string | null;
+  onSimilarQuestionAnswer?: (question: SimilarQuestion, choiceId: string) => Promise<boolean>;
 }
 
 export function ExamQuestion({
@@ -29,6 +37,7 @@ export function ExamQuestion({
   onAnswer,
   disabled,
   wrongReason,
+  onSimilarQuestionAnswer,
 }: ExamQuestionProps) {
   const [selectedChoice, setSelectedChoice] = useState<string | null>(null);
   const [answerState, setAnswerState] = useState<"correct" | "wrong" | null>(null);
@@ -36,6 +45,10 @@ export function ExamQuestion({
   const [pendingChoice, setPendingChoice] = useState<string | null>(null);
   const [showExplanationModal, setShowExplanationModal] = useState(false);
   const [hasOpenedExplanationVideo, setHasOpenedExplanationVideo] = useState(false);
+  const [similarQuestion, setSimilarQuestion] = useState<SimilarQuestion | null>(null);
+  const [showSimilarQuestion, setShowSimilarQuestion] = useState(false);
+  const [similarState, setSimilarState] = useState<"loading" | "ready" | "correct" | "wrong" | "empty" | null>(null);
+  const [similarChoiceId, setSimilarChoiceId] = useState<string | null>(null);
 
   // Gamification States
   const [streak, setStreak] = useState(0);
@@ -49,6 +62,10 @@ export function ExamQuestion({
     setPendingChoice(null);
     setShowExplanationModal(false);
     setHasOpenedExplanationVideo(false);
+    setSimilarQuestion(null);
+    setShowSimilarQuestion(false);
+    setSimilarState(null);
+    setSimilarChoiceId(null);
   }, [question.id]);
 
   const handleChoiceClick = async (choice: Choice) => {
@@ -96,6 +113,60 @@ export function ExamQuestion({
   };
 
   const progress = ((currentIndex + 1) / totalQuestions) * 100;
+
+  const loadSimilarQuestion = async () => {
+    if (!question.scientific_skill || !question.scientific_concept) {
+      setSimilarState("empty");
+      return;
+    }
+    setSimilarState("loading");
+    try {
+      let query = supabase.from("questions").select("*, choices(*)")
+        .eq("active", true)
+        .eq("scientific_skill", question.scientific_skill)
+        .eq("scientific_concept", question.scientific_concept)
+        .neq("id", question.id);
+      if (question.grade_subject_id) query = query.eq("grade_subject_id", question.grade_subject_id);
+      if (question.domain_id) query = query.eq("domain_id", question.domain_id);
+      const { data, error } = await query.limit(20);
+      if (error) throw error;
+      const candidates = ((data || []) as unknown as SimilarQuestionRow[]).filter((item) => Array.isArray(item.choices) && item.choices.length >= 2);
+      if (!candidates.length) {
+        setSimilarState("empty");
+        return;
+      }
+      const candidate = candidates[Math.floor(Math.random() * candidates.length)];
+      setSimilarQuestion({
+        id: candidate.id,
+        text: candidate.text,
+        image_url: candidate.image_url,
+        wrong_reason: candidate.wrong_reason,
+        explanation_url: candidate.explanation_url,
+        stage_number: candidate.stage_number,
+        scientific_skill: candidate.scientific_skill,
+        scientific_concept: candidate.scientific_concept,
+        order_index: -1,
+        choices: candidate.choices.map((choice) => ({ id: choice.id, text: choice.text, is_correct: choice.is_correct, image_url: choice.image_url || undefined })),
+      });
+      setSimilarState("ready");
+    } catch (error) {
+      console.error("Failed to load a similar question:", error);
+      setSimilarState("empty");
+    }
+  };
+
+  const answerSimilarQuestion = async (choiceId: string) => {
+    if (!similarQuestion || !onSimilarQuestionAnswer || similarState === "correct") return;
+    setSimilarChoiceId(choiceId);
+    setSimilarState("loading");
+    try {
+      const correct = await onSimilarQuestionAnswer(similarQuestion, choiceId);
+      setSimilarState(correct ? "correct" : "wrong");
+    } catch (error) {
+      console.error("Failed to submit practice answer:", error);
+      setSimilarState("ready");
+    }
+  };
   const hasExplanationVideo = Boolean(
     question.explanation_url || wrongReason?.includes("http"),
   );
@@ -271,6 +342,35 @@ export function ExamQuestion({
             )}
 
           </div>
+        )}
+
+        {answerState === "wrong" && (
+          <section className="rounded-3xl border border-indigo-200 bg-indigo-50/70 p-5 text-right space-y-3">
+            {!showSimilarQuestion ? (
+              <Button type="button" onClick={() => { setShowSimilarQuestion(true); void loadSimilarQuestion(); }} className="gap-2" disabled={!onSimilarQuestionAnswer}>
+                جرّبي سؤالًا مشابهًا
+              </Button>
+            ) : similarState === "loading" ? (
+              <div className="flex items-center gap-2 text-indigo-800"><Loader2 className="h-4 w-4 animate-spin" /> جارٍ تجهيز سؤال على نفس المهارة والمفهوم...</div>
+            ) : similarState === "empty" ? (
+              <p className="text-sm font-bold text-slate-700">لا يوجد حاليًا سؤال آخر مصنف بنفس المهارة والمفهوم.</p>
+            ) : similarQuestion ? (
+              <div className="space-y-3">
+                <h3 className="font-black text-indigo-950">سؤال تدريب على {similarQuestion.scientific_skill}</h3>
+                <p className="font-bold leading-relaxed">{similarQuestion.text}</p>
+                {similarQuestion.image_url && <img src={similarQuestion.image_url} alt="صورة السؤال التدريبي" className="max-h-48 rounded-xl object-contain" />}
+                <div className="grid gap-2">
+                  {similarQuestion.choices.map((choice) => (
+                    <Button key={choice.id} type="button" variant={similarChoiceId === choice.id && similarState === "correct" ? "default" : "outline"} disabled={similarState === "correct" || similarState === "loading"} onClick={() => void answerSimilarQuestion(choice.id)} className="h-auto min-h-11 justify-start whitespace-normal text-right">
+                      {choice.text}
+                    </Button>
+                  ))}
+                </div>
+                {similarState === "correct" && <p className="font-bold text-emerald-700">إجابة صحيحة، أحسنتِ! تم تسجيل نتيجة التدريب.</p>}
+                {similarState === "wrong" && <div className="flex items-center gap-3"><p className="font-bold text-rose-700">ليست الإجابة الصحيحة، حاولي خيارًا آخر.</p><Button type="button" variant="ghost" onClick={() => setSimilarState("ready")}>إعادة المحاولة</Button></div>}
+              </div>
+            ) : null}
+          </section>
         )}
 
         <ExplanationModal

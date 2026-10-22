@@ -59,6 +59,8 @@ interface Question {
   created_at: string;
   image_url?: string;
   stage_number?: number;
+  scientific_skill?: string | null;
+  scientific_concept?: string | null;
 }
 
 interface StageTitle {
@@ -98,6 +100,8 @@ export default function AdminQuestions() {
   const [editingStageTitle, setEditingStageTitle] = useState<number | null>(null);
   const [editTitleValue, setEditTitleValue] = useState("");
   const [moveToStage, setMoveToStage] = useState<string>("");
+  const [bulkSkill, setBulkSkill] = useState("");
+  const [bulkConcept, setBulkConcept] = useState("");
 
   // Preview State
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
@@ -129,7 +133,7 @@ export default function AdminQuestions() {
     try {
       let query = supabase
         .from("questions")
-        .select("*, image_url", { count: "exact" })
+        .select("*, image_url, scientific_skill, scientific_concept", { count: "exact" })
         .order("stage_number", { ascending: true })
         .order("created_at", { ascending: sortOrder === "oldest" })
         .range(currentPage * pageSize, (currentPage + 1) * pageSize - 1);
@@ -246,6 +250,23 @@ export default function AdminQuestions() {
     } catch (err) {
       console.error("Error moving questions:", err);
       toast.error("حدث خطأ أثناء نقل الأسئلة");
+    }
+  };
+
+  const handleBulkClassification = async () => {
+    if (!selectedIds.size || (!bulkSkill && !bulkConcept.trim())) return;
+    try {
+      const { error } = await supabase.from("questions").update({
+        ...(bulkSkill ? { scientific_skill: bulkSkill } : {}),
+        ...(bulkConcept.trim() ? { scientific_concept: bulkConcept.trim() } : {}),
+      }).in("id", Array.from(selectedIds));
+      if (error) throw error;
+      toast.success(`تم تصنيف ${selectedIds.size} سؤال`);
+      setBulkSkill(""); setBulkConcept(""); setSelectedIds(new Set());
+      fetchQuestions();
+    } catch (error) {
+      console.error(error);
+      toast.error("تعذر حفظ تصنيف الأسئلة. تأكدي من تطبيق تحديث قاعدة البيانات.");
     }
   };
 
@@ -643,6 +664,21 @@ export default function AdminQuestions() {
                 تم تحديد {selectedIds.size} سؤال
               </span>
               <div className="flex gap-2 flex-wrap">
+                <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-white p-2">
+                  <Select value={bulkSkill || "none"} onValueChange={(value) => setBulkSkill(value === "none" ? "" : value)}>
+                    <SelectTrigger className="h-8 w-52 text-xs"><SelectValue placeholder="تعيين المهارة" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">بدون تغيير المهارة</SelectItem>
+                      <SelectItem value="فهم المفاهيم العلمية">فهم المفاهيم العلمية</SelectItem>
+                      <SelectItem value="الاستدلال العلمي">الاستدلال العلمي</SelectItem>
+                      <SelectItem value="التطبيق">التطبيق</SelectItem>
+                      <SelectItem value="قراءة الرسوم والبيانات">قراءة الرسوم والبيانات</SelectItem>
+                      <SelectItem value="الفهم القرائي العلمي">الفهم القرائي العلمي</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Input className="h-8 w-44 text-xs" value={bulkConcept} onChange={(event) => setBulkConcept(event.target.value)} placeholder="المفهوم (اختياري)" />
+                  <Button size="sm" className="h-8" disabled={!bulkSkill && !bulkConcept.trim()} onClick={handleBulkClassification}>تطبيق التصنيف</Button>
+                </div>
                 {selectedIds.size < totalCount && (
                   <Button
                     variant="secondary"

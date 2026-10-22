@@ -25,9 +25,45 @@ type QuestionRow = {
   wrong_reason?: string | null;
   explanation_url?: string | null;
   stage_number?: number | null;
+  scientific_skill?: string | null;
+  scientific_concept?: string | null;
+  grade_subject_id?: string | null;
+  domain_id?: string | null;
   created_at: string;
   choices: QuestionChoiceRow[];
 };
+
+type ResponseHistoryEntry = { questionId: string; isCorrect: boolean; isPractice: boolean };
+type PersistedSkillAnswer = {
+  question_id: string;
+  is_correct: boolean | null;
+  is_practice: boolean | null;
+  questions: { scientific_skill?: string | null; scientific_concept?: string | null } | null;
+};
+
+function buildSkillAnalysis(questions: ExamQuestionType[], responses: ResponseHistoryEntry[]) {
+  const questionById = new Map(questions.map((question) => [question.id, question]));
+  const groups = new Map<string, { correct: number; total: number; concepts: Set<string> }>();
+  const finalResponses = new Map<string, ResponseHistoryEntry>();
+  for (const response of responses) if (!response.isPractice) finalResponses.set(response.questionId, response);
+  for (const response of finalResponses.values()) {
+    const question = questionById.get(response.questionId);
+    const skill = question?.scientific_skill;
+    if (!skill) continue;
+    const current = groups.get(skill) || { correct: 0, total: 0, concepts: new Set<string>() };
+    current.total += 1;
+    if (response.isCorrect) current.correct += 1;
+    if (question.scientific_concept) current.concepts.add(question.scientific_concept);
+    groups.set(skill, current);
+  }
+  return Array.from(groups, ([skill, values]) => ({
+    skill,
+    correct: values.correct,
+    total: values.total,
+    percentage: Math.round((values.correct / values.total) * 100),
+    concepts: Array.from(values.concepts),
+  }));
+}
 
 export default function ExamPage() {
   const { attemptId } = useParams<{ attemptId: string }>();
@@ -49,16 +85,17 @@ export default function ExamPage() {
 
   // Stage State
   const [showStageTransition, setShowStageTransition] = useState(false);
-  const snapshot = (examData?.selection_snapshot as any) || {};
-  const stageStart = snapshot.stage_start || 1;
-  const TOTAL_STAGES = snapshot.total_stages || (stageStart + 3);
+  const snapshot = examData?.selection_snapshot || {};
+  const stageStart = typeof snapshot.stage_start === "number" ? snapshot.stage_start : 1;
+  const TOTAL_STAGES = typeof snapshot.total_stages === "number" ? snapshot.total_stages : stageStart + 3;
   const [currentStage, setCurrentStage] = useState(stageStart);
   const stageProgress = getNafisStageProgress(examData?.questions || [], currentIndex);
 
   useEffect(() => {
     if (examData?.selection_snapshot) {
-      const snap = examData.selection_snapshot as any;
-      setCurrentStage(examData.questions[0]?.stage_number ?? snap.stage_start ?? 1);
+      const snap = examData.selection_snapshot;
+      const snapStageStart = typeof snap.stage_start === "number" ? snap.stage_start : 1;
+      setCurrentStage(examData.questions[0]?.stage_number ?? snapStageStart);
     }
   }, [examData]);
 
@@ -67,6 +104,7 @@ export default function ExamPage() {
   const penaltiesRef = useRef(0);
   const questionsWithErrorsRef = useRef<Set<string>>(new Set());
   const questionPenaltiesRef = useRef<Record<string, number>>({});
+  const responseHistoryRef = useRef<ResponseHistoryEntry[]>([]);
 
   // Track score and penalties at the start of the current stage to calculate delta
   const [stageStartScore, setStageStartScore] = useState(0);
@@ -102,7 +140,7 @@ export default function ExamPage() {
         const displayOrderMap: Record<number, number> = {};
 
         if (stageTitlesData) {
-          stageTitlesData.forEach((stage: any) => {
+          (stageTitlesData as unknown as Array<{ stage_number: number; title: string; display_order?: number; is_active?: boolean }>).forEach((stage) => {
             titlesMap[stage.stage_number] = stage.title;
             displayOrderMap[stage.stage_number] =
               stage.display_order || stage.stage_number;
@@ -128,17 +166,21 @@ export default function ExamPage() {
           .from("attempts").select("*").eq("id", attemptId || "").single();
         if (attemptError) throw attemptError;
         const attempt = attemptData as unknown as { student_name: string; track_type?: string; grade_subject_id?: string; selection_snapshot?: unknown };
-        const savedSnapshot = (attempt?.selection_snapshot as any) || {};
+        const savedSnapshot = attempt.selection_snapshot && typeof attempt.selection_snapshot === "object"
+          ? attempt.selection_snapshot as Record<string, unknown>
+          : {};
         const context: SelectionContext = {
-          trackType: savedSnapshot.track_type || attempt.track_type || "nafis",
+          trackType: typeof savedSnapshot.track_type === "string"
+            ? savedSnapshot.track_type as SelectionContext["trackType"]
+            : (attempt.track_type as SelectionContext["trackType"] | undefined) || "nafis",
           experienceType: "quick-quiz",
-          gradeId: savedSnapshot.grade_id || "",
-          gradeName: savedSnapshot.grade_name || "",
-          subjectId: savedSnapshot.subject_id || "",
-          subjectName: savedSnapshot.subject_name || "",
-          gradeSubjectId: savedSnapshot.grade_subject_id || attempt.grade_subject_id || "",
-          domainId: savedSnapshot.domain_id || null,
-          domainName: savedSnapshot.domain_name || null,
+          gradeId: typeof savedSnapshot.grade_id === "string" ? savedSnapshot.grade_id : "",
+          gradeName: typeof savedSnapshot.grade_name === "string" ? savedSnapshot.grade_name : "",
+          subjectId: typeof savedSnapshot.subject_id === "string" ? savedSnapshot.subject_id : "",
+          subjectName: typeof savedSnapshot.subject_name === "string" ? savedSnapshot.subject_name : "",
+          gradeSubjectId: typeof savedSnapshot.grade_subject_id === "string" ? savedSnapshot.grade_subject_id : attempt.grade_subject_id || "",
+          domainId: typeof savedSnapshot.domain_id === "string" ? savedSnapshot.domain_id : null,
+          domainName: typeof savedSnapshot.domain_name === "string" ? savedSnapshot.domain_name : null,
         };
         const { data: questionsData, error: questionsError } = await applySelectionFilters(
           supabase.from("questions").select("*, choices(*)").eq("active", true), context,
@@ -177,7 +219,8 @@ export default function ExamPage() {
         }
 
         const studentName = attempt.student_name || "";
-        const selected = selectNafisRoundQuestions(filteredQuestions, savedSnapshot.stage_start || 1, displayOrderMap);
+        const savedStageStart = typeof savedSnapshot.stage_start === "number" ? savedSnapshot.stage_start : 1;
+        const selected = selectNafisRoundQuestions(filteredQuestions, savedStageStart, displayOrderMap);
         if (!selected.length) {
           toast.error("لا توجد أسئلة متاحة لهذه المراحل");
           navigate("/student/dashboard");
@@ -192,6 +235,10 @@ export default function ExamPage() {
             wrong_reason: question.wrong_reason,
             explanation_url: question.explanation_url,
             stage_number: question.stage_number || 1,
+            scientific_skill: question.scientific_skill || null,
+            scientific_concept: question.scientific_concept || null,
+            grade_subject_id: question.grade_subject_id || null,
+            domain_id: question.domain_id || null,
             order_index: index,
             choices: question.choices.map((choice) => ({
               id: choice.id,
@@ -210,6 +257,7 @@ export default function ExamPage() {
           questions: transformedQuestions,
           selection_snapshot: savedSnapshot,
         });
+        responseHistoryRef.current = [];
       } catch (err) {
         console.error("Failed to load exam:", err);
         toast.error("فشل تحميل الاختبار. يرجى المحاولة مرة أخرى.");
@@ -244,6 +292,7 @@ export default function ExamPage() {
         total_penalty: finalPenalty,
         stages_completed: stagesCompletedCount,
         total_stages: TOTAL_STAGES,
+        skill_analysis: buildSkillAnalysis(examData.questions, responseHistoryRef.current),
         started_at: new Date().toISOString(), // approximate
         finished_at: new Date().toISOString()
       };
@@ -256,7 +305,7 @@ export default function ExamPage() {
           total_penalty: finalPenalty,
           finished_at: new Date().toISOString(),
           selection_snapshot: {
-            ...((examData.selection_snapshot as any) || {}),
+            ...(examData.selection_snapshot || {}),
             stages_completed: stagesCompletedCount,
             total_stages: TOTAL_STAGES,
           }
@@ -278,6 +327,21 @@ export default function ExamPage() {
       });
 
       // Store result and navigate
+      const { data: persistedAnswers } = await supabase.from("attempt_answers")
+        .select("question_id,is_correct,is_practice,answered_at,questions(scientific_skill,scientific_concept)")
+        .eq("attempt_id", attemptId).order("answered_at", { ascending: true });
+      const skillGroups: Record<string, { correct: number; total: number; concepts: Set<string> }> = {};
+      const latestAnswers = new Map<string, PersistedSkillAnswer>();
+      for (const answer of (persistedAnswers || []) as unknown as PersistedSkillAnswer[]) if (!answer.is_practice) latestAnswers.set(answer.question_id, answer);
+      for (const answer of latestAnswers.values()) {
+        if (answer.is_practice || !answer.questions?.scientific_skill) continue;
+        const skill = answer.questions.scientific_skill as string;
+        const group = skillGroups[skill] || (skillGroups[skill] = { correct: 0, total: 0, concepts: new Set<string>() });
+        group.total += 1;
+        if (answer.is_correct) group.correct += 1;
+        if (answer.questions.scientific_concept) group.concepts.add(answer.questions.scientific_concept);
+      }
+      resultData.skill_analysis = Object.entries(skillGroups).map(([skill, group]) => ({ skill, correct: group.correct, total: group.total, percentage: Math.round(group.correct / group.total * 100), concepts: Array.from(group.concepts) }));
       sessionStorage.setItem(`result_${attemptId}`, JSON.stringify(resultData));
       sessionStorage.removeItem(`exam_${attemptId}`);
 
@@ -287,7 +351,7 @@ export default function ExamPage() {
       toast.error("حدث خطأ أثناء إنهاء الاختبار");
       setIsFinishing(false);
     }
-  }, [attemptId, navigate, examData]); // Removed score dependencies to rely on refs
+  }, [attemptId, navigate, examData, TOTAL_STAGES]); // Removed score dependencies to rely on refs
 
   const nextQuestion = useCallback(() => {
     if (examData && currentIndex < examData.questions.length - 1) {
@@ -328,14 +392,16 @@ export default function ExamPage() {
       setCompletedQuestions(prev => new Set(prev).add(currentQuestion.id));
 
       // Save answer to database (Critical for exam-finish validation)
-      const wrongCount = questionPenaltiesRef.current[currentQuestion.id] || 0;
       await supabase.from("attempt_answers").insert({
         attempt_id: attemptId,
         question_id: currentQuestion.id,
-        choice_id: choiceId,
+        selected_choice_id: choiceId,
         is_correct: true,
-        wrong_count: wrongCount
+        wrong_count: questionPenaltiesRef.current[currentQuestion.id] || 0,
+        response_order: Date.now(),
+        is_practice: false,
       });
+      responseHistoryRef.current.push({ questionId: currentQuestion.id, isCorrect: true, isPractice: false });
 
     } else {
       audioManager.playWrong();
@@ -353,6 +419,20 @@ export default function ExamPage() {
 
       // Track per-question penalties for database record
       questionPenaltiesRef.current[currentQuestion.id] = (questionPenaltiesRef.current[currentQuestion.id] || 0) + 1;
+
+      const wrongCount = questionPenaltiesRef.current[currentQuestion.id];
+      const { error: answerError } = await supabase.from("attempt_answers").insert({
+        attempt_id: attemptId,
+        question_id: currentQuestion.id,
+        selected_choice_id: choiceId,
+        is_correct: false,
+        wrong_count: wrongCount,
+        penalty_applied: wrongCount === 1,
+        response_order: Date.now(),
+        is_practice: false,
+      });
+      if (answerError) console.error("Failed to save incorrect response:", answerError);
+      responseHistoryRef.current.push({ questionId: currentQuestion.id, isCorrect: false, isPractice: false });
     }
 
     // Delay to show animation/sound
@@ -513,6 +593,24 @@ export default function ExamPage() {
       onAnswer={handleAnswer}
       disabled={isSubmitting}
       wrongReason={currentWrongReason}
+      onSimilarQuestionAnswer={async (question, choiceId) => {
+        const isCorrect = question.choices.find((choice) => choice.id === choiceId)?.is_correct === true;
+        if (attemptId) {
+          const { error } = await supabase.from("attempt_answers").insert({
+            attempt_id: attemptId,
+            question_id: question.id,
+            selected_choice_id: choiceId,
+            is_correct: isCorrect,
+            wrong_count: 0,
+            penalty_applied: false,
+            response_order: Date.now(),
+            is_practice: true,
+          });
+          if (error) console.error("Failed to save practice response:", error);
+        }
+        responseHistoryRef.current.push({ questionId: question.id, isCorrect, isPractice: true });
+        return isCorrect;
+      }}
     />
   );
 }

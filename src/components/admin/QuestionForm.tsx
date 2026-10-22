@@ -33,6 +33,8 @@ interface QuestionFormProps {
     domain_id?: string | null;
     wrong_reason?: string | null;
     explanation_url?: string | null;
+    scientific_skill?: string | null;
+    scientific_concept?: string | null;
   } | null;
   onComplete: () => void;
   defaultStage?: number;
@@ -45,6 +47,8 @@ export function QuestionForm({ question, onComplete, defaultStage }: QuestionFor
   const [stageNumber, setStageNumber] = useState<number>(defaultStage || 1);
   const [wrongReason, setWrongReason] = useState("");
   const [explanationUrl, setExplanationUrl] = useState("");
+  const [scientificSkill, setScientificSkill] = useState("");
+  const [scientificConcept, setScientificConcept] = useState("");
   const [stagesList, setStagesList] = useState<{ stage_number: number; title: string }[]>([]);
   const [questionImage, setQuestionImage] = useState<File | null>(null);
   const [questionImageUrl, setQuestionImageUrl] = useState<string | null>(null);
@@ -73,6 +77,8 @@ export function QuestionForm({ question, onComplete, defaultStage }: QuestionFor
       setQuestionImageUrl(question.image_url || null);
       setWrongReason(question.wrong_reason || "");
       setExplanationUrl(question.explanation_url || "");
+      setScientificSkill(question.scientific_skill || "");
+      setScientificConcept(question.scientific_concept || "");
 
       let targetGsId = question.grade_subject_id || "";
       let derivedGradeId = "";
@@ -261,6 +267,8 @@ export function QuestionForm({ question, onComplete, defaultStage }: QuestionFor
           track_type: "nafis",
           wrong_reason: wrongReason || null,
           explanation_url: explanationUrl || null,
+          scientific_skill: scientificSkill || null,
+          scientific_concept: scientificConcept.trim() || null,
         };
 
         let { error: questionError } = await supabase
@@ -295,6 +303,8 @@ export function QuestionForm({ question, onComplete, defaultStage }: QuestionFor
           track_type: "nafis",
           wrong_reason: wrongReason || null,
           explanation_url: explanationUrl || null,
+          scientific_skill: scientificSkill || null,
+          scientific_concept: scientificConcept.trim() || null,
         };
 
         let { data: newQuestion, error: questionError } = await supabase
@@ -449,6 +459,27 @@ export function QuestionForm({ question, onComplete, defaultStage }: QuestionFor
           trackMode="nafis"
           showDomain={true}
         />
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2 rounded-xl border border-indigo-100 bg-indigo-50/40 p-4">
+        <div className="space-y-2">
+          <Label className="text-base font-medium">المهارة العلمية</Label>
+          <Select value={scientificSkill || "none"} onValueChange={(value) => setScientificSkill(value === "none" ? "" : value)}>
+            <SelectTrigger><SelectValue placeholder="اختر المهارة" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">غير مصنّف</SelectItem>
+              <SelectItem value="فهم المفاهيم العلمية">فهم المفاهيم العلمية</SelectItem>
+              <SelectItem value="الاستدلال العلمي">الاستدلال العلمي</SelectItem>
+              <SelectItem value="التطبيق">التطبيق (تطبيق المعرفة العلمية)</SelectItem>
+              <SelectItem value="قراءة الرسوم والبيانات">قراءة الرسوم والبيانات</SelectItem>
+              <SelectItem value="الفهم القرائي العلمي">الفهم القرائي العلمي</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <Label className="text-base font-medium">الموضوع أو المفهوم العلمي</Label>
+          <Input value={scientificConcept} onChange={(event) => setScientificConcept(event.target.value)} placeholder="مثال: الخاصية الأسموزية" />
+        </div>
       </div>
 
       <div className="space-y-2">

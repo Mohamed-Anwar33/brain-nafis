@@ -10,7 +10,7 @@ import {
 import {
     Trophy, Search, Users, Gamepad2, FileQuestion, Clock,
     ChevronRight, ChevronLeft, Zap, Target, Puzzle, Timer, Trash2,
-    CheckCircle2, XCircle, Sparkles, LayoutList,
+    CheckCircle2, XCircle, Sparkles, LayoutList, Key,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -22,6 +22,8 @@ interface UnifiedResult {
     game_label?: string | null;
     section_label?: string | null;
     score: number;
+    subject_bonus_points?: number;
+    subject_bonus_subject_name?: string;
     total: number;
     correct_answers: number;
     answered_count: number;
@@ -83,6 +85,13 @@ export default function AdminResults() {
                 .order("created_at", { ascending: false });
 
             if (gamesError) console.error("Error fetching games:", gamesError);
+
+            const { data: gradeSubjects } = await supabase
+                .from("study_grade_subjects")
+                .select("id, name");
+            const gradeSubjectNames = Object.fromEntries(
+                (gradeSubjects || []).map((subject) => [subject.id, subject.name])
+            ) as Record<string, string>;
 
             // Fetch correct answer counts for exams from attempt_answers
             const { data: allAnswers } = await supabase
@@ -167,6 +176,12 @@ export default function AdminResults() {
                             : typeof metadata.sections_count === "number" && typeof metadata.total_sections === "number"
                                 ? `${metadata.sections_count}/${metadata.total_sections} أقسام`
                                 : null;
+                    const subjectBonusPoints = typeof metadata.subject_bonus_points === "number"
+                        ? metadata.subject_bonus_points
+                        : 0;
+                    const bonusSubjectId = typeof metadata.subject_bonus_grade_subject_id === "string"
+                        ? metadata.subject_bonus_grade_subject_id
+                        : g.grade_subject_id;
                     
                     unified.push({
                         id: g.id,
@@ -176,6 +191,8 @@ export default function AdminResults() {
                         game_label: gameName,
                         section_label: sectionLabel,
                         score: g.score || 0,
+                        subject_bonus_points: subjectBonusPoints,
+                        subject_bonus_subject_name: bonusSubjectId ? gradeSubjectNames[bonusSubjectId] : undefined,
                         total: g.total_questions || 0,
                         correct_answers: g.correct_count || 0,
                         answered_count: g.total_questions || 0,
@@ -260,6 +277,8 @@ export default function AdminResults() {
         }
 
         switch (r.game_type) {
+            case "treasure":
+                return { label: r.game_label || "مغامرة الكنز", icon: <Key className="w-3.5 h-3.5" />, color: "bg-amber-100 text-amber-800" };
             case "central_exam":
                 return { label: r.game_label || "الاختبار المركزي الشامل", icon: <Target className="w-3.5 h-3.5" />, color: "bg-indigo-100 text-indigo-700" };
             case "wheel_science":
@@ -471,10 +490,13 @@ export default function AdminResults() {
                                                         </div>
                                                     </TableCell>
                                                     <TableCell>
-                                                        <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold ${typeInfo.color}`}>
-                                                            {typeInfo.icon}
-                                                            {typeInfo.label}
-                                                        </span>
+                                                        <div className="flex flex-col items-start gap-1">
+                                                            <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold ${typeInfo.color}`}>
+                                                                {typeInfo.icon}
+                                                                {typeInfo.label}
+                                                            </span>
+                                                            {r.subject_bonus_points ? <Badge className="border border-emerald-200 bg-emerald-50 text-[10px] font-bold text-emerald-700 hover:bg-emerald-50">+{r.subject_bonus_points} درجة في {r.subject_bonus_subject_name || "المادة"}</Badge> : null}
+                                                        </div>
                                                     </TableCell>
                                                     <TableCell>
                                                         {r.section_label ? (

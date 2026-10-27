@@ -568,7 +568,7 @@ export const treasureService = {
   },
 
   async finalizeAttempt(sessionId: string): Promise<FinalizeAttemptResponse> {
-    const { data, error } = await (supabase as any).rpc("finalize_treasure_attempt", {
+    const { data, error } = await (supabase as any).rpc("finalize_treasure_with_subject_point", {
       p_session_id: sessionId,
     });
     if (error) throw error;

@@ -3,11 +3,13 @@ import * as THREE from "three";
 import { Sparkles, ArrowLeft, Zap, Trophy, Award, FastForward, Play, Shield } from "lucide-react";
 import { treasureHalalAudio } from "@/lib/treasureAudio";
 import confetti from "canvas-confetti";
+import { TreasureAdventureMap } from "./TreasureAdventureMap";
 
 export interface StageTransitionData {
   fromStage: number; // 1, 2, 3, or 4
   toStage: number; // 2, 3, 4, or 5 (5 = Final Victory Chamber)
   newScore: number;
+  challengeCount?: number;
 }
 
 interface TreasureStageTransition3DProps {
@@ -37,11 +39,11 @@ interface TransitionThemeConfig {
 export const TRANSITION_CONFIGS: Record<number, TransitionThemeConfig> = {
   // 1 -> 2: Wind Portal to Ocean Depths
   2: {
-    badge: "🌪️ انتقال المرحلة 1 ➔ المرحلة 2",
-    title: "بوابة لؤلؤة الأعماق الأسطورية 🔮",
-    subtitle: "عبور عاصفة الرياح الكونية والغوص نحو أعماق المحيط الأثري",
-    fromName: "المرحلة الأولى: أختام الرياح",
-    toName: "المرحلة الثانية: لؤلؤة الأعماق",
+    badge: "اكتمل المستوى الأول",
+    title: "انفتح الطريق إلى أطلال الغابة",
+    subtitle: "اجتزتِ أختام المرحلة الأولى. تابعي عبر المسار إلى محطة الأطلال.",
+    fromName: "ميناء البداية",
+    toName: "أطلال الغابة",
     colorPalette: {
       fog: 0x042f2e,
       ambient: 0x115e59,
@@ -56,11 +58,11 @@ export const TRANSITION_CONFIGS: Record<number, TransitionThemeConfig> = {
   },
   // 2 -> 3: Ocean Depths to Sacred Flame Forge
   3: {
-    badge: "🌊 انتقال المرحلة 2 ➔ المرحلة 3",
-    title: "صرح شعلة المعرفة الفائقة ⚡",
-    subtitle: "اختراق خندق البلورات المشعة والصعود إلى بركان الطاقة الحيوية",
-    fromName: "المرحلة الثانية: لؤلؤة الأعماق",
-    toName: "المرحلة الثالثة: شعلة المعرفة",
+    badge: "اكتمل المستوى الثاني",
+    title: "وصلتِ إلى شلال الجزيرة",
+    subtitle: "اكتملت محطة الأطلال. واصلي على الطريق حتى الشلال.",
+    fromName: "أطلال الغابة",
+    toName: "شلال الجزيرة",
     colorPalette: {
       fog: 0x1e1b4b,
       ambient: 0x312e81,
@@ -75,11 +77,11 @@ export const TRANSITION_CONFIGS: Record<number, TransitionThemeConfig> = {
   },
   // 3 -> 4: Flame Forge to Celestial Golden Realm
   4: {
-    badge: "🔥 انتقال المرحلة 3 ➔ المرحلة 4 (الأخيرة)",
-    title: "عرش الكنز الأسطوري الأعظم 👑",
-    subtitle: "انفجار الشعلة الشمسية والارتقاء إلى قمة الهيكل الذهبي الملكي",
-    fromName: "المرحلة الثالثة: شعلة المعرفة",
-    toName: "المرحلة الرابعة: الكنز الأعظم",
+    badge: "اكتمل المستوى الثالث",
+    title: "كهف البركان أمامك",
+    subtitle: "اجتزتِ محطة الشلال. أنهي تحديات الكهف لتصلي إلى صندوق الكنز.",
+    fromName: "شلال الجزيرة",
+    toName: "كهف البركان",
     colorPalette: {
       fog: 0x451a03,
       ambient: 0x78350f,
@@ -94,11 +96,11 @@ export const TRANSITION_CONFIGS: Record<number, TransitionThemeConfig> = {
   },
   // 4 -> 5: Victory Chamber
   5: {
-    badge: "🏆 إنجاز بطولي • فتح الكنز الأسطوري",
-    title: "محراب الكنز الأعظم واستلام الشهادة 📜",
-    subtitle: "فك كافة الأختام بنجاح كامل 100/100 وفتح الصندوق الذهبي",
-    fromName: "المرحلة الرابعة: الكنز الأعظم",
-    toName: "العرش الذهبي للتميز",
+    badge: "اكتملت المستويات الأربعة",
+    title: "وصلتِ إلى صندوق الكنز!",
+    subtitle: "أتممتِ تحديات الجزيرة الأربع. افتحي الصندوق لتحصلي على درجة إضافية في المادة.",
+    fromName: "كهف البركان",
+    toName: "صندوق الكنز",
     colorPalette: {
       fog: 0x1c1917,
       ambient: 0x44403c,
@@ -396,9 +398,9 @@ export function TreasureStageTransition3D({
             <span>{config.badge}</span>
           </div>
 
-          <div className="px-3 py-1.5 rounded-full bg-amber-500/20 backdrop-blur-md border border-amber-400/40 text-amber-300 font-bold text-xs flex items-center gap-1.5">
+          <div className="px-3 py-1.5 rounded-full bg-slate-950/60 backdrop-blur-md border border-amber-200/30 text-amber-100 font-bold text-xs flex items-center gap-1.5">
             <Trophy className="w-3.5 h-3.5 text-amber-400" />
-            <span>رصيد الكنز: {transitionData.newScore} / 100</span>
+            <span>نتيجة المغامرة: {transitionData.newScore} / 100</span>
           </div>
         </div>
 
@@ -414,7 +416,7 @@ export function TreasureStageTransition3D({
       </div>
 
       {/* 4. Center Cinematic Stage Presentation Card */}
-      <div className="relative z-20 flex flex-col items-center justify-center p-4 text-center max-w-2xl mx-auto space-y-3 pointer-events-none">
+      <div className="relative z-20 flex w-full max-w-3xl flex-col items-center justify-center gap-3 p-3 text-center pointer-events-auto">
         {/* Stage Leap Indicator */}
         <div className="inline-flex items-center gap-2 px-5 py-1 rounded-full bg-gradient-to-r from-amber-400/20 via-yellow-400/30 to-amber-500/20 border-2 border-amber-400/60 backdrop-blur-md text-amber-200 font-black text-xs sm:text-sm shadow-2xl animate-pulse">
           <span>{config.fromName}</span>
@@ -432,10 +434,21 @@ export function TreasureStageTransition3D({
           {config.subtitle}
         </p>
 
+        <div className="w-full max-w-2xl rounded-2xl border border-white/25 bg-slate-950/70 p-2 shadow-[0_24px_70px_rgba(0,0,0,.45)] backdrop-blur-md">
+          <TreasureAdventureMap
+            challengeCount={transitionData.challengeCount}
+            currentStage={Math.min(4, transitionData.toStage)}
+            completedStages={transitionData.fromStage}
+            movingFromStage={transitionData.fromStage}
+            compact
+            showTreasure={transitionData.toStage === 5}
+          />
+        </div>
+
         {/* 3D Warp Speed Meter */}
         <div className="pt-2 flex items-center gap-2 text-[11px] sm:text-xs font-mono font-black text-amber-300/80">
           <Zap className="w-3.5 h-3.5 text-yellow-400 animate-bounce" />
-          <span>انتقال ثلاثي الأبعاد نشط • WARP VORTEX 3D</span>
+          <span>يتحرك المستكشف إلى المستوى التالي</span>
         </div>
       </div>
 
@@ -455,7 +468,7 @@ export function TreasureStageTransition3D({
           onClick={handleFinish}
           className={`pointer-events-auto py-3.5 sm:py-4 px-8 sm:px-12 rounded-full border-2 border-white/40 bg-gradient-to-r ${config.accentGradient} text-stone-950 font-black text-sm sm:text-base shadow-[0_8px_25px_rgba(0,0,0,0.6)] hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer group`}
         >
-          <span>دخول {config.toName} الآن</span>
+          <span>{transitionData.toStage <= 4 ? `ابدئي ${config.toName}` : "افتحي صندوق الكنز"}</span>
           <ArrowLeft className="w-5 h-5 text-stone-950 group-hover:-translate-x-1 transition-transform" />
         </button>
 

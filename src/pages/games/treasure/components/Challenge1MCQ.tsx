@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { CheckCircle2, XCircle, Loader2, Sparkles, Key, HelpCircle, PlayCircle } from "lucide-react";
 import { ClientChallengeItem } from "@/types/treasure";
 import { audioManager } from "@/lib/audio";
@@ -35,8 +35,29 @@ export function Challenge1MCQ({
     explanation_url?: string | null;
   } | null>(null);
   const [showExplanationModal, setShowExplanationModal] = useState(false);
+  const [loadedImages, setLoadedImages] = useState<Record<string, boolean>>({});
 
   const choices = challenge.content?.choices || [];
+  const questionImages = [challenge.image_url, ...choices.map((choice) => choice.image_url)].filter((url): url is string => Boolean(url));
+
+  useEffect(() => {
+    let cancelled = false;
+    questionImages.forEach((url) => {
+      const image = new Image();
+      image.decoding = "async";
+      image.onload = () => {
+        if (!cancelled) setLoadedImages((loaded) => ({ ...loaded, [url]: true }));
+      };
+      image.onerror = () => {
+        if (!cancelled) setLoadedImages((loaded) => ({ ...loaded, [url]: true }));
+      };
+      image.src = url;
+      if (image.complete && image.naturalWidth > 0) {
+        setLoadedImages((loaded) => ({ ...loaded, [url]: true }));
+      }
+    });
+    return () => { cancelled = true; };
+  }, [challenge.step, questionImages.join("|")]);
 
   const handleChoiceClick = async (choiceId: string) => {
     // Block if currently checking, already solved, or if this choice is already known to be wrong
@@ -97,12 +118,18 @@ export function Challenge1MCQ({
 
         {/* Question Image (if present) */}
         {challenge.image_url && (
-          <div className="mb-4 flex justify-center">
-            <div className="max-h-56 sm:max-h-64 rounded-2xl overflow-hidden border-2 border-slate-200 shadow-sm bg-slate-50 p-2 relative">
+          <div className="mb-4 flex min-h-28 justify-center">
+            <div className="relative flex min-h-28 max-h-56 min-w-40 items-center justify-center overflow-hidden rounded-2xl border-2 border-slate-200 bg-slate-50 p-2 shadow-sm sm:max-h-64">
+              {!loadedImages[challenge.image_url] && <div className="absolute inset-2 animate-pulse rounded-xl bg-slate-200" aria-label="جاري تحميل صورة السؤال" />}
               <img
                 src={challenge.image_url}
                 alt="Question Visual"
-                className="max-h-52 sm:max-h-60 w-auto object-contain rounded-xl"
+                loading="eager"
+                decoding="async"
+                fetchPriority="high"
+                onLoad={() => setLoadedImages((loaded) => ({ ...loaded, [challenge.image_url!]: true }))}
+                onError={() => setLoadedImages((loaded) => ({ ...loaded, [challenge.image_url!]: true }))}
+                className={`max-h-52 w-auto rounded-xl object-contain transition-opacity duration-200 sm:max-h-60 ${loadedImages[challenge.image_url] ? "opacity-100" : "opacity-0"}`}
               />
             </div>
           </div>
@@ -194,7 +221,10 @@ export function Challenge1MCQ({
                   <img
                     src={choice.image_url}
                     alt={choice.text}
-                    className="w-10 h-10 object-contain rounded-lg border border-slate-200 bg-white p-0.5 shrink-0"
+                    loading="eager"
+                    decoding="async"
+                    fetchPriority="high"
+                    className="h-10 w-10 shrink-0 rounded-lg border border-slate-200 bg-white p-0.5 object-contain"
                   />
                 )}
               </div>

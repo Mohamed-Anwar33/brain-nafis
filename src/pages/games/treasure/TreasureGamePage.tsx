@@ -104,6 +104,24 @@ export default function TreasureGamePage() {
   const [treasurePointAwarded, setTreasurePointAwarded] = useState(false);
   const [treasurePointError, setTreasurePointError] = useState("");
   const [isRetryingTreasurePoint, setIsRetryingTreasurePoint] = useState(false);
+  const [isFinalizing, setIsFinalizing] = useState(false);
+
+  useEffect(() => {
+    const challenge = sessionData?.challenges.find((item) => item.step === currentChallengeStep);
+    if (!challenge) return;
+    const urls = [
+      challenge.image_url,
+      ...(challenge.content?.choices || []).map((choice) => choice.image_url),
+      ...((challenge.content as any)?.items || []).map((item: { imageUrl?: string; image_url?: string }) => item.imageUrl || item.image_url),
+    ].filter((url): url is string => Boolean(url));
+    const images = urls.map((url) => {
+      const image = new Image();
+      image.decoding = "async";
+      image.src = url;
+      return image;
+    });
+    return () => images.forEach((image) => { image.onload = null; image.onerror = null; });
+  }, [sessionData, currentChallengeStep]);
 
   // Split the adventure's authored questions across four stages without adding or removing questions.
   const totalChallengeCount = sessionData?.challenges.length || DEFAULT_TREASURE_12_CHALLENGES.length;
@@ -449,6 +467,7 @@ export default function TreasureGamePage() {
       }
     } else {
       // The server keeps the score from the existing question and retry rules.
+      setIsFinalizing(true);
       void handleFinalizeAttempt(sessionData?.session_id);
     }
   };
@@ -483,6 +502,7 @@ export default function TreasureGamePage() {
     fallbackScore?: number,
     fallbackChallenges?: any[]
   ) => {
+    setIsFinalizing(true);
     const sId = overrideSessionId || sessionData?.session_id || "session_final";
     const score = fallbackScore ?? accumulatedScore;
 
@@ -491,7 +511,17 @@ export default function TreasureGamePage() {
     setTreasurePointAwarded(false);
     try {
       if (sessionData?.session_id && !sessionData.session_id.startsWith("session_")) {
-        finalized = await treasureService.finalizeAttempt(sessionData.session_id);
+        let timeoutId = 0;
+        try {
+          finalized = await Promise.race([
+            treasureService.finalizeAttempt(sessionData.session_id),
+            new Promise<never>((_, reject) => {
+              timeoutId = window.setTimeout(() => reject(new Error("انتهت مهلة الاتصال بالخادم")), 12000);
+            }),
+          ]);
+        } finally {
+          window.clearTimeout(timeoutId);
+        }
         const pointAwarded = finalized.subject_point_awarded === true && finalized.subject_point === 1;
         setTreasurePointAwarded(pointAwarded);
         if (!pointAwarded) setTreasurePointError("لم يؤكد الخادم تسجيل الدرجة الإضافية. أعيدي المحاولة من شاشة الكنز.");
@@ -517,6 +547,7 @@ export default function TreasureGamePage() {
       challenges_snapshot: fallbackChallenges || sessionData?.challenges || DEFAULT_TREASURE_12_CHALLENGES,
     });
     setCurrentPhase("completed");
+    setIsFinalizing(false);
     treasureHalalAudio.playChestVictory();
 
     // Launch Confetti Celebration
@@ -901,6 +932,16 @@ export default function TreasureGamePage() {
           transitionData={activeTransition}
           onComplete={handleTransitionComplete}
         />
+      )}
+
+      {isFinalizing && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-[#071d26]/90 p-6 text-center backdrop-blur-md" dir="rtl" role="status" aria-live="polite">
+          <div className="max-w-sm rounded-3xl border border-amber-100/25 bg-[#102c30] p-8 shadow-2xl">
+            <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-4 border-amber-200/25 border-t-amber-300" />
+            <h2 className="text-xl font-black text-white">نفتح صندوق الكنز</h2>
+            <p className="mt-2 text-sm leading-6 text-white/70">نحفظ نتيجتك والدرجة الإضافية…</p>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -105,7 +105,7 @@ export function LockUnlockOverlay({
           <span>تابعي إلى اللغز {nextQuestion}</span>
           <ArrowLeft className="h-5 w-5" />
         </button>
-        <p className="relative mt-3 text-[10px] font-bold text-white/40">المسار لا يتقدم حتى تختاري المتابعة</p>
+        <p className="relative mt-3 text-[10px] font-bold text-white/55">إجابة صحيحة! تابعي إلى اللغز التالي</p>
       </div>
     </div>
   );

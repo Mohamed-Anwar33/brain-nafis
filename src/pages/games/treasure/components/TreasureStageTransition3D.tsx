@@ -1,6 +1,5 @@
-import React, { useEffect, useRef, useState, useCallback } from "react";
-import * as THREE from "three";
-import { Sparkles, ArrowLeft, Zap, Trophy, Award, FastForward, Play, Shield } from "lucide-react";
+import React, { useRef, useState, useCallback } from "react";
+import { Sparkles, ArrowLeft, Zap, Trophy, Award, Play, Shield } from "lucide-react";
 import { treasureHalalAudio } from "@/lib/treasureAudio";
 import confetti from "canvas-confetti";
 import { TreasureAdventureMap } from "./TreasureAdventureMap";
@@ -119,9 +118,6 @@ export function TreasureStageTransition3D({
   transitionData,
   onComplete,
 }: TreasureStageTransition3DProps) {
-  const mountRef = useRef<HTMLDivElement | null>(null);
-  const [progress, setProgress] = useState(0); // 0 to 100
-  const [secondsRemaining, setSecondsRemaining] = useState(4);
   const config = TRANSITION_CONFIGS[transitionData.toStage] || TRANSITION_CONFIGS[2];
   const hasFinishedRef = useRef(false);
 
@@ -143,251 +139,16 @@ export function TreasureStageTransition3D({
     onComplete();
   }, [onComplete]);
 
-  // Three.js 3D Procedural Warp Scene
-  useEffect(() => {
-    const container = mountRef.current;
-    if (!container) return;
-
-    let animFrameId: number;
-    let renderer: THREE.WebGLRenderer | null = null;
-
-    try {
-      // 1. Scene & Camera
-      const scene = new THREE.Scene();
-      scene.fog = new THREE.FogExp2(config.colorPalette.fog, 0.018);
-
-      const width = container.clientWidth || window.innerWidth;
-      const height = container.clientHeight || window.innerHeight;
-
-      const camera = new THREE.PerspectiveCamera(65, width / height, 0.1, 1000);
-      camera.position.set(0, 0, 80);
-
-      // 2. High-Performance Renderer
-      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: "high-performance" });
-      renderer.setSize(width, height);
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-      renderer.setClearColor(config.colorPalette.fog);
-      container.appendChild(renderer.domElement);
-
-      // 3. Dynamic Lighting
-      const ambientLight = new THREE.AmbientLight(config.colorPalette.ambient, 1.8);
-      scene.add(ambientLight);
-
-      const pointLight1 = new THREE.PointLight(config.colorPalette.lightPrimary, 3.5, 120);
-      pointLight1.position.set(0, 5, 40);
-      scene.add(pointLight1);
-
-      const pointLight2 = new THREE.PointLight(config.colorPalette.lightSecondary, 3.0, 100);
-      pointLight2.position.set(0, -5, 0);
-      scene.add(pointLight2);
-
-      // 4. Procedural 3D Warp Environment based on warpType
-      const warpObjectsGroup = new THREE.Group();
-      scene.add(warpObjectsGroup);
-
-      // Rings tunnel
-      const rings: THREE.Mesh[] = [];
-      const numRings = 9;
-      for (let i = 0; i < numRings; i++) {
-        const ringGeo = new THREE.TorusGeometry(8 + (i % 3) * 1.5, 0.35, 16, 48);
-        const ringMat = new THREE.MeshStandardMaterial({
-          color: config.colorPalette.ringColor,
-          emissive: config.colorPalette.lightPrimary,
-          emissiveIntensity: 0.8,
-          roughness: 0.2,
-          metalness: 0.8,
-        });
-        const ring = new THREE.Mesh(ringGeo, ringMat);
-        ring.position.z = 60 - i * 20;
-        ring.rotation.z = (i * Math.PI) / 4;
-        warpObjectsGroup.add(ring);
-        rings.push(ring);
-      }
-
-      // Floating floating artifacts & crystals depending on theme
-      const floatingMeshes: THREE.Mesh[] = [];
-      const numArtifacts = 24;
-
-      for (let i = 0; i < numArtifacts; i++) {
-        let geom: THREE.BufferGeometry;
-        if (config.warpType === "wind") {
-          // Sleek wind crystal shards
-          geom = new THREE.ConeGeometry(1.2, 3.8, 5);
-        } else if (config.warpType === "ocean") {
-          // Bioluminescent ocean polyhedra
-          geom = new THREE.OctahedronGeometry(1.6);
-        } else if (config.warpType === "flame") {
-          // Angular volcanic obsidian asteroids
-          geom = new THREE.DodecahedronGeometry(1.8);
-        } else {
-          // Royal celestial star crystals & gems
-          geom = new THREE.IcosahedronGeometry(1.7);
-        }
-
-        const mat = new THREE.MeshStandardMaterial({
-          color: i % 2 === 0 ? config.colorPalette.particlePrimary : config.colorPalette.particleSecondary,
-          emissive: config.colorPalette.lightPrimary,
-          emissiveIntensity: 0.65,
-          roughness: 0.1,
-          metalness: 0.9,
-          wireframe: i % 3 === 0,
-        });
-
-        const mesh = new THREE.Mesh(geom, mat);
-        const angle = (i / numArtifacts) * Math.PI * 2;
-        const radius = 12 + (i % 4) * 3;
-        mesh.position.x = Math.cos(angle) * radius;
-        mesh.position.y = Math.sin(angle) * radius;
-        mesh.position.z = 60 - (i / numArtifacts) * 160;
-        mesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, 0);
-
-        warpObjectsGroup.add(mesh);
-        floatingMeshes.push(mesh);
-      }
-
-      // High-speed Warp Tunnel Particles (Starfield / Vortex streaks)
-      const particleCount = 1400;
-      const particleGeo = new THREE.BufferGeometry();
-      const posArray = new Float32Array(particleCount * 3);
-      const velArray = new Float32Array(particleCount);
-
-      for (let i = 0; i < particleCount; i++) {
-        const i3 = i * 3;
-        const r = 2 + Math.random() * 26;
-        const theta = Math.random() * Math.PI * 2;
-        posArray[i3] = Math.cos(theta) * r;
-        posArray[i3 + 1] = Math.sin(theta) * r;
-        posArray[i3 + 2] = -120 + Math.random() * 240;
-        velArray[i] = 1.2 + Math.random() * 2.8;
-      }
-
-      particleGeo.setAttribute("position", new THREE.BufferAttribute(posArray, 3));
-
-      // Particle texture/material
-      const particleMat = new THREE.PointsMaterial({
-        size: 0.95,
-        color: config.colorPalette.particlePrimary,
-        transparent: true,
-        opacity: 0.85,
-        blending: THREE.AdditiveBlending,
-      });
-
-      const particleSystem = new THREE.Points(particleGeo, particleMat);
-      scene.add(particleSystem);
-
-      // Play thematic audio on enter
-      try {
-        treasureHalalAudio.playKeyFound();
-        treasureHalalAudio.playParchmentOpen();
-      } catch (e) {}
-
-      // 5. Animation Loop with Camera Spline Travel
-      const startTime = performance.now();
-      const totalDuration = 4200; // 4.2 seconds of adrenaline 3D travel
-
-      const animate = (time: number) => {
-        const elapsed = time - startTime;
-        const t = Math.min(1, elapsed / totalDuration);
-
-        // Update React Progress states smoothly
-        setProgress(Math.round(t * 100));
-        setSecondsRemaining(Math.max(0, Math.ceil((totalDuration - elapsed) / 1000)));
-
-        // Camera flight: zooms from z=80 forward down to z=-90 with dynamic spiral banking
-        camera.position.z = 80 - t * 160;
-        camera.position.x = Math.sin(t * Math.PI * 3) * 3.5;
-        camera.position.y = Math.cos(t * Math.PI * 2.5) * 2.2;
-        camera.rotation.z = Math.sin(t * Math.PI * 2) * 0.45;
-
-        // FOV warp stretch
-        camera.fov = 65 + Math.sin(t * Math.PI) * 26;
-        camera.updateProjectionMatrix();
-
-        // Rotate rings & pulse
-        rings.forEach((ring, idx) => {
-          ring.rotation.z += 0.02 + idx * 0.005;
-          ring.rotation.x += 0.01;
-        });
-
-        // Rotate floating crystals
-        floatingMeshes.forEach((mesh, idx) => {
-          mesh.rotation.x += 0.03;
-          mesh.rotation.y += 0.02;
-          // Float toward camera
-          mesh.position.z += 0.25;
-          if (mesh.position.z > camera.position.z + 10) {
-            mesh.position.z -= 160;
-          }
-        });
-
-        // Update particle streaming
-        const positions = particleGeo.attributes.position.array as Float32Array;
-        for (let i = 0; i < particleCount; i++) {
-          const i3 = i * 3;
-          positions[i3 + 2] += velArray[i] * 1.6;
-          // Spiral vortex motion
-          const curX = positions[i3];
-          const curY = positions[i3 + 1];
-          const ang = 0.015;
-          positions[i3] = curX * Math.cos(ang) - curY * Math.sin(ang);
-          positions[i3 + 1] = curX * Math.sin(ang) + curY * Math.cos(ang);
-
-          if (positions[i3 + 2] > camera.position.z + 10) {
-            positions[i3 + 2] = camera.position.z - 120;
-          }
-        }
-        particleGeo.attributes.position.needsUpdate = true;
-
-        if (renderer) {
-          renderer.render(scene, camera);
-        }
-
-        if (t < 1) {
-          animFrameId = requestAnimationFrame(animate);
-        } else {
-          handleFinish();
-        }
-      };
-
-      animFrameId = requestAnimationFrame(animate);
-
-      // Handle Resize
-      const handleResize = () => {
-        if (!container || !renderer) return;
-        const w = container.clientWidth;
-        const h = container.clientHeight;
-        camera.aspect = w / h;
-        camera.updateProjectionMatrix();
-        renderer.setSize(w, h);
-      };
-      window.addEventListener("resize", handleResize);
-
-      return () => {
-        window.removeEventListener("resize", handleResize);
-        cancelAnimationFrame(animFrameId);
-        if (renderer && renderer.domElement && container.contains(renderer.domElement)) {
-          container.removeChild(renderer.domElement);
-          renderer.dispose();
-        }
-      };
-    } catch (err) {
-      console.warn("WebGL 3D stage transition fallback active:", err);
-      // Fallback timer if WebGL fails on low-end device
-      const timer = setTimeout(handleFinish, 3500);
-      return () => clearTimeout(timer);
-    }
-  }, [config, handleFinish]);
-
   return (
     <div
       className="fixed inset-0 z-50 w-screen h-screen overflow-hidden bg-slate-950 text-foreground flex flex-col justify-between select-none animate-in fade-in duration-300"
       dir="rtl"
     >
-      {/* 1. Full-Screen 3D WebGL Canvas Mount */}
-      <div ref={mountRef} className="absolute inset-0 w-full h-full z-0 overflow-hidden" />
+      {/* Lightweight island-night backdrop */}
+      <div className="absolute inset-0 z-0 bg-[radial-gradient(ellipse_at_50%_40%,rgba(20,92,90,.65),transparent_48%),linear-gradient(145deg,#061b23,#102e34_52%,#201d13)]" />
 
       {/* 2. Soft Ambient Cinematic Overlay */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-black/75 pointer-events-none z-10" />
+      <div className="absolute inset-0 bg-gradient-to-b from-black/35 via-transparent to-black/55 pointer-events-none z-10" />
 
       {/* 3. Top Status HUD Bar */}
       <div className="relative z-20 p-4 sm:p-6 w-full max-w-5xl mx-auto flex items-center justify-between">
@@ -404,19 +165,11 @@ export function TreasureStageTransition3D({
           </div>
         </div>
 
-        {/* Right: Quick Skip Button */}
-        <button
-          type="button"
-          onClick={handleFinish}
-          className="py-1.5 px-4 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 backdrop-blur-md border border-white/25 text-white text-xs sm:text-sm font-bold flex items-center gap-1.5 cursor-pointer transition-all shadow-lg hover:border-amber-400"
-        >
-          <span>تخطي العرض</span>
-          <FastForward className="w-3.5 h-3.5 text-amber-400" />
-        </button>
+        <div className="rounded-full border border-white/20 bg-black/40 px-4 py-1.5 text-xs font-bold text-white/75">تابعي المغامرة خطوة بخطوة</div>
       </div>
 
       {/* 4. Center Cinematic Stage Presentation Card */}
-      <div className="relative z-20 flex w-full max-w-3xl flex-col items-center justify-center gap-3 p-3 text-center pointer-events-auto">
+      <div className="relative z-20 mx-auto flex w-full max-w-3xl flex-col items-center justify-center gap-3 p-3 text-center pointer-events-auto">
         {/* Stage Leap Indicator */}
         <div className="inline-flex items-center gap-2 px-5 py-1 rounded-full bg-gradient-to-r from-amber-400/20 via-yellow-400/30 to-amber-500/20 border-2 border-amber-400/60 backdrop-blur-md text-amber-200 font-black text-xs sm:text-sm shadow-2xl animate-pulse">
           <span>{config.fromName}</span>
@@ -458,7 +211,7 @@ export function TreasureStageTransition3D({
         <div className="w-full bg-black/50 backdrop-blur-md rounded-full h-3 border-2 border-white/20 p-0.5 overflow-hidden shadow-2xl">
           <div
             className={`h-full rounded-full bg-gradient-to-r ${config.accentGradient} transition-all duration-150 shadow-[0_0_16px_rgba(245,158,11,0.8)]`}
-            style={{ width: `${progress}%` }}
+            style={{ width: `${Math.min(100, ((transitionData.toStage - 1) / 4) * 100)}%` }}
           />
         </div>
 
@@ -472,9 +225,7 @@ export function TreasureStageTransition3D({
           <ArrowLeft className="w-5 h-5 text-stone-950 group-hover:-translate-x-1 transition-transform" />
         </button>
 
-        <span className="text-[11px] text-white/60 font-bold">
-          الانتقال التلقائي خلال {secondsRemaining} ثوانٍ...
-        </span>
+        <span className="text-[11px] text-white/60 font-bold">أكملي الرحلة بالضغط على متابعة</span>
       </div>
     </div>
   );

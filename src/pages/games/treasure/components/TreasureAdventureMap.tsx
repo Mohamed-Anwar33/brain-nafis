@@ -1,22 +1,21 @@
 import { useEffect, useState } from "react";
 import { Check, Compass, Ship, Sparkles, Star } from "lucide-react";
+import { TREASURE_STAGE_COUNT } from "../data/defaultTreasureStages";
 
 const MAP_WIDTH = 1672;
 const MAP_HEIGHT = 941;
 const LEVELS = [
   { title: "ميناء البداية", shortTitle: "الميناء", x: 355, y: 632 },
   { title: "أطلال الغابة", shortTitle: "الأطلال", x: 614, y: 514 },
-  { title: "شلال الجزيرة", shortTitle: "الشلال", x: 965, y: 419 },
   { title: "كهف البركان", shortTitle: "الكهف", x: 1238, y: 268 },
 ];
 const CHEST = { x: 1434, y: 147 };
 const ROUTE_SEGMENTS = [
   [355, 632, 425, 615, 515, 520, 614, 514],
-  [614, 514, 735, 498, 850, 431, 965, 419],
-  [965, 419, 1082, 408, 1156, 307, 1238, 268],
+  [614, 514, 820, 500, 1050, 330, 1238, 268],
   [1238, 268, 1307, 235, 1371, 160, 1434, 147],
 ];
-const ROUTE = "M 355 632 C 425 615, 515 520, 614 514 C 735 498, 850 431, 965 419 C 1082 408, 1156 307, 1238 268 C 1307 235, 1371 160, 1434 147";
+const ROUTE = "M 355 632 C 425 615, 515 520, 614 514 C 820 500, 1050 330, 1238 268 C 1307 235, 1371 160, 1434 147";
 
 interface TreasureAdventureMapProps {
   challengeCount?: number;
@@ -40,11 +39,11 @@ export function TreasureAdventureMap({
   showTreasure = false,
 }: TreasureAdventureMapProps) {
   const stageCounts = (() => {
-    const base = Math.floor(challengeCount / 4);
-    const extra = challengeCount % 4;
+    const base = Math.floor(challengeCount / TREASURE_STAGE_COUNT);
+    const extra = challengeCount % TREASURE_STAGE_COUNT;
     return LEVELS.map((_, index) => base + (index < extra ? 1 : 0));
   })();
-  const activeStageIndex = Math.max(0, Math.min(3, currentStage - 1));
+  const activeStageIndex = Math.max(0, Math.min(TREASURE_STAGE_COUNT - 1, currentStage - 1));
   const activeStageCount = stageCounts[activeStageIndex] || 1;
   const stageProgress = Math.min(1, Math.max(0, completedQuestionsInStage / activeStageCount));
   const totalProgress = showTreasure ? 1 : Math.min(1, (completedStages + stageProgress) / LEVELS.length);
@@ -80,7 +79,7 @@ export function TreasureAdventureMap({
   const stageCountsLabel = stageCounts.join(" · ");
 
   return (
-    <div className={`relative w-full overflow-hidden rounded-[1.4rem] border border-[#f4d899]/70 bg-[#49b5d4] shadow-[0_22px_65px_rgba(4,18,27,.45),inset_0_1px_0_rgba(255,255,255,.28)] ${compact ? "" : "max-w-6xl"}`} dir="ltr" aria-label="خريطة مغامرة الكنز بأربع مراحل">
+    <div className={`relative w-full overflow-hidden rounded-[1.4rem] border border-[#f4d899]/70 bg-[#49b5d4] shadow-[0_22px_65px_rgba(4,18,27,.45),inset_0_1px_0_rgba(255,255,255,.28)] ${compact ? "" : "max-w-6xl"}`} dir="ltr" aria-label="خريطة مغامرة الكنز بثلاث مراحل">
       <div
         className={`relative isolate aspect-[16/9] min-w-0 overflow-hidden ${missionMode ? "min-h-[230px]" : ""}`}
         style={{
@@ -136,7 +135,7 @@ export function TreasureAdventureMap({
         </div>
 
         {!showTreasure && (
-          <div className="absolute z-30 -translate-x-1/2 -translate-y-1/2 transition-[left,top] ease-in-out" style={{ transitionDuration: "2100ms", left: `${(animatingBetweenStages ? (LEVELS[Math.max(0, Math.min(3, travelerStage - 1))]?.x ?? travelerPosition.x) : travelerPosition.x) / MAP_WIDTH * 100}%`, top: `${(animatingBetweenStages ? (LEVELS[Math.max(0, Math.min(3, travelerStage - 1))]?.y ?? travelerPosition.y) : travelerPosition.y) / MAP_HEIGHT * 100}%` }} aria-label={animatingBetweenStages ? `المستكشفة في طريقها إلى ${LEVELS[currentStage - 1]?.title || "المحطة التالية"}` : `المستكشفة على مسار المرحلة ${currentStage}`}>
+          <div className="absolute z-30 -translate-x-1/2 -translate-y-1/2 transition-[left,top] ease-in-out" style={{ transitionDuration: "2100ms", left: `${(animatingBetweenStages ? (LEVELS[Math.max(0, Math.min(TREASURE_STAGE_COUNT - 1, travelerStage - 1))]?.x ?? travelerPosition.x) : travelerPosition.x) / MAP_WIDTH * 100}%`, top: `${(animatingBetweenStages ? (LEVELS[Math.max(0, Math.min(TREASURE_STAGE_COUNT - 1, travelerStage - 1))]?.y ?? travelerPosition.y) : travelerPosition.y) / MAP_HEIGHT * 100}%` }} aria-label={animatingBetweenStages ? `المستكشفة في طريقها إلى ${LEVELS[currentStage - 1]?.title || "المحطة التالية"}` : `المستكشفة على مسار المرحلة ${currentStage}`}>
             <span className="absolute -top-5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full border border-white/65 bg-[#153949]/90 px-1.5 py-0.5 text-[7px] font-black text-white shadow-md sm:-top-6 sm:px-2 sm:text-[9px]">أنتِ هنا</span>
             <span className="relative flex h-[clamp(1.65rem,4vw,2.6rem)] w-[clamp(1.65rem,4vw,2.6rem)] items-center justify-center rounded-full border-[2.5px] border-white bg-gradient-to-br from-[#67d5ee] to-[#12649d] text-white shadow-[0_3px_12px_rgba(4,29,50,.7)] ring-4 ring-[#fff8c3]/45">
               <span className="absolute -inset-1.5 rounded-full border border-white/75 animate-ping" />
@@ -147,7 +146,7 @@ export function TreasureAdventureMap({
 
         <div className="absolute bottom-[3%] right-[3.5%] z-20 flex items-center gap-1.5 rounded-full border border-white/40 bg-[#124259]/80 px-2.5 py-1 text-[8px] font-black text-white shadow-lg backdrop-blur sm:px-3 sm:py-1.5 sm:text-[10px]">
           <Compass className="h-3 w-3 text-[#ffe07b] sm:h-3.5 sm:w-3.5" />
-          {completedStages} من 4 محطات
+          {completedStages} من {TREASURE_STAGE_COUNT} محطات
           <Sparkles className="h-3 w-3 text-[#ffe07b] sm:h-3.5 sm:w-3.5" />
           <span className="hidden sm:inline">{stageCountsLabel} أسئلة</span>
         </div>

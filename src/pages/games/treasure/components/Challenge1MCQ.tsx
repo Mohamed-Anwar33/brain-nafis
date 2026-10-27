@@ -5,6 +5,7 @@ import { audioManager } from "@/lib/audio";
 import { treasureHalalAudio } from "@/lib/treasureAudio";
 import { ExplanationModal } from "@/components/exam/ExplanationModal";
 import { Card } from "@/components/ui/card";
+import { TREASURE_STAGE_COUNT } from "../data/defaultTreasureStages";
 
 interface Challenge1MCQProps {
   challenge: ClientChallengeItem;
@@ -21,9 +22,9 @@ export function Challenge1MCQ({
   challenge,
   onSubmitAnswer,
   isSubmitting,
-  stageNumber = Math.min(4, Math.floor((challenge.step - 1) / 3) + 1),
-  questionNumber = ((challenge.step - 1) % 3) + 1,
-  questionsInStage = 3,
+  stageNumber = Math.min(TREASURE_STAGE_COUNT, Math.ceil(challenge.step / 4)),
+  questionNumber = ((challenge.step - 1) % 4) + 1,
+  questionsInStage = 4,
 }: Challenge1MCQProps) {
   const [selectedChoiceId, setSelectedChoiceId] = useState<string | null>(null);
   const [isChecking, setIsChecking] = useState(false);

@@ -5,7 +5,7 @@ import { audioManager } from "@/lib/audio";
 import { treasureHalalAudio } from "@/lib/treasureAudio";
 
 interface TreasureScratchCardProps {
-  stageNumber: number; // 1, 2, 3, or 4
+  stageNumber: number; // 1, 2, or 3
   stageTitle?: string;
   pointsAwarded: number; // 25
   totalAccumulatedScore: number; // 25, 50, 75, or 100
@@ -44,7 +44,7 @@ const STAGE_DETAILS: Record<
     color: "from-emerald-400 via-teal-400 to-emerald-600",
   },
   4: {
-    title: "المرحلة الرابعة: الكنز الأسطوري الأعظم",
+    title: "المرحلة الثالثة: كهف البركان",
     artifactName: "صندوق الكنز الذهبي المكتمل 👑",
     icon: "👑",
     clue: "مبروك يا بطل! حققت العلامة الكاملة 100/100 واستحققت وسام وشهادة التميز!",
@@ -204,7 +204,7 @@ export function TreasureScratchCard({
         <div className="space-y-1">
           <div className="inline-flex items-center gap-1.5 px-4 py-1 rounded-full bg-gradient-to-r from-amber-500 to-yellow-500 text-stone-950 font-black text-xs sm:text-sm shadow-md">
             <Sparkles className="w-4 h-4 text-stone-950" />
-            <span>بطاقة كشف الكنز الأثري • المرحلة {stageNumber} من 4</span>
+            <span>بطاقة كشف الكنز الأثري • المرحلة {stageNumber} من 3</span>
           </div>
           <h3 className="text-lg sm:text-xl font-black text-[#451a03] pt-1">
             {stageTitle || stageInfo.title}
@@ -292,12 +292,12 @@ export function TreasureScratchCard({
               type="button"
               onClick={onCompleted}
               className={`w-full py-3.5 px-6 rounded-2xl border-b-4 active:border-b-0 active:translate-y-1 text-white font-black text-base shadow-xl transition-all flex items-center justify-center gap-2.5 cursor-pointer animate-pulse ${
-                stageNumber >= 4
+                stageNumber >= 3
                   ? "bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 border-emerald-700 shadow-emerald-500/30"
                   : "bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 border-amber-700 shadow-amber-500/30"
               }`}
             >
-              {stageNumber >= 4 ? (
+              {stageNumber >= 3 ? (
                 <>
                   <Award className="w-5 h-5 text-yellow-300" />
                   <span>فتح غرفة الكنز واستلام الشهادة (100/100) 🏆📜</span>

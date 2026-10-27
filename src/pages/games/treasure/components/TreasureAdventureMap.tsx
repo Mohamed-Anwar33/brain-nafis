@@ -5,17 +5,17 @@ import { TREASURE_STAGE_COUNT } from "../data/defaultTreasureStages";
 const MAP_WIDTH = 1672;
 const MAP_HEIGHT = 941;
 const LEVELS = [
-  { title: "ميناء البداية", shortTitle: "الميناء", x: 355, y: 632 },
-  { title: "أطلال الغابة", shortTitle: "الأطلال", x: 614, y: 514 },
-  { title: "كهف البركان", shortTitle: "الكهف", x: 1238, y: 268 },
+  { title: "ميناء البداية", shortTitle: "الميناء", x: 338, y: 646 },
+  { title: "أطلال الغابة", shortTitle: "الأطلال", x: 600, y: 520 },
+  { title: "كهف البركان", shortTitle: "الكهف", x: 1210, y: 278 },
 ];
-const CHEST = { x: 1434, y: 147 };
+const CHEST = { x: 1470, y: 154 };
 const ROUTE_SEGMENTS = [
-  [355, 632, 425, 615, 515, 520, 614, 514],
-  [614, 514, 820, 500, 1050, 330, 1238, 268],
-  [1238, 268, 1307, 235, 1371, 160, 1434, 147],
+  [338, 646, 420, 620, 520, 535, 600, 520],
+  [600, 520, 815, 505, 1030, 355, 1210, 278],
+  [1210, 278, 1290, 240, 1400, 155, 1470, 154],
 ];
-const ROUTE = "M 355 632 C 425 615, 515 520, 614 514 C 820 500, 1050 330, 1238 268 C 1307 235, 1371 160, 1434 147";
+const ROUTE = "M 338 646 C 420 620, 520 535, 600 520 C 815 505, 1030 355, 1210 278 C 1290 240, 1400 155, 1470 154";
 
 interface TreasureAdventureMapProps {
   challengeCount?: number;
@@ -83,14 +83,14 @@ export function TreasureAdventureMap({
       <div
         className={`relative isolate aspect-[16/9] min-w-0 overflow-hidden ${missionMode ? "min-h-[230px]" : ""}`}
         style={{
-          backgroundImage: "linear-gradient(180deg,rgba(255,255,255,.04),rgba(8,37,46,.06)),url('/images/treasure-adventure-island.jpg')",
+          backgroundImage: "linear-gradient(180deg,rgba(255,255,255,.04),rgba(8,37,46,.06)),url('/images/treasure-adventure-island-three-stages.jpg')",
           backgroundPosition: "center",
           backgroundSize: "100% 100%",
         }}
       >
         <div className="absolute left-[3.5%] top-[4.5%] z-20 w-[37%] -rotate-1 rounded-lg border-2 border-[#76441e] bg-gradient-to-b from-[#f6d49a] via-[#dba267] to-[#bc7942] px-2.5 py-1.5 text-center shadow-[0_5px_0_#713f20,0_8px_18px_rgba(48,30,18,.38)] sm:w-[32%] sm:px-4 sm:py-2" dir="rtl">
           <div className="text-[11px] font-black leading-tight text-[#472715] sm:text-base">مغامرة الكنز</div>
-          <div className="mt-0.5 text-[7px] font-bold leading-tight text-[#56331f]/85 sm:text-[10px]">أجيبي عن الألغاز وتقدمي في الرحلة</div>
+          <div className="mt-0.5 text-[7px] font-bold leading-tight text-[#56331f]/85 sm:text-[10px]">أجب عن الألغاز وتقدّم في الرحلة</div>
         </div>
 
         <div className="pointer-events-none absolute inset-0 z-[5]" aria-hidden="true">
@@ -135,8 +135,8 @@ export function TreasureAdventureMap({
         </div>
 
         {!showTreasure && (
-          <div className="absolute z-30 -translate-x-1/2 -translate-y-1/2 transition-[left,top] ease-in-out" style={{ transitionDuration: "2100ms", left: `${(animatingBetweenStages ? (LEVELS[Math.max(0, Math.min(TREASURE_STAGE_COUNT - 1, travelerStage - 1))]?.x ?? travelerPosition.x) : travelerPosition.x) / MAP_WIDTH * 100}%`, top: `${(animatingBetweenStages ? (LEVELS[Math.max(0, Math.min(TREASURE_STAGE_COUNT - 1, travelerStage - 1))]?.y ?? travelerPosition.y) : travelerPosition.y) / MAP_HEIGHT * 100}%` }} aria-label={animatingBetweenStages ? `المستكشفة في طريقها إلى ${LEVELS[currentStage - 1]?.title || "المحطة التالية"}` : `المستكشفة على مسار المرحلة ${currentStage}`}>
-            <span className="absolute -top-5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full border border-white/65 bg-[#153949]/90 px-1.5 py-0.5 text-[7px] font-black text-white shadow-md sm:-top-6 sm:px-2 sm:text-[9px]">أنتِ هنا</span>
+          <div className="absolute z-30 -translate-x-1/2 -translate-y-1/2 transition-[left,top] ease-in-out" style={{ transitionDuration: "2100ms", left: `${(animatingBetweenStages ? (LEVELS[Math.max(0, Math.min(TREASURE_STAGE_COUNT - 1, travelerStage - 1))]?.x ?? travelerPosition.x) : travelerPosition.x) / MAP_WIDTH * 100}%`, top: `${(animatingBetweenStages ? (LEVELS[Math.max(0, Math.min(TREASURE_STAGE_COUNT - 1, travelerStage - 1))]?.y ?? travelerPosition.y) : travelerPosition.y) / MAP_HEIGHT * 100}%` }} aria-label={animatingBetweenStages ? `المستكشف في طريقه إلى ${LEVELS[currentStage - 1]?.title || "المحطة التالية"}` : `المستكشف على مسار المرحلة ${currentStage}`}>
+            <span className="absolute -top-5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full border border-white/65 bg-[#153949]/90 px-1.5 py-0.5 text-[7px] font-black text-white shadow-md sm:-top-6 sm:px-2 sm:text-[9px]">أنت هنا</span>
             <span className="relative flex h-[clamp(1.65rem,4vw,2.6rem)] w-[clamp(1.65rem,4vw,2.6rem)] items-center justify-center rounded-full border-[2.5px] border-white bg-gradient-to-br from-[#67d5ee] to-[#12649d] text-white shadow-[0_3px_12px_rgba(4,29,50,.7)] ring-4 ring-[#fff8c3]/45">
               <span className="absolute -inset-1.5 rounded-full border border-white/75 animate-ping" />
               <Ship className="relative z-10 h-[62%] w-[62%] drop-shadow" />

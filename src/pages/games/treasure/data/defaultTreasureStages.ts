@@ -22,6 +22,16 @@ export const getTreasureStageRanges = (questionCount: number) => {
   });
 };
 
+export const getTreasureStepPoints = (totalSteps: number, step: number, attemptsTaken: number) => {
+  if (totalSteps <= 0 || step < 1 || step > totalSteps) return 0;
+
+  const stepBase = Math.floor(100 / totalSteps);
+  const stepMaximum = step === totalSteps ? 100 - stepBase * (totalSteps - 1) : stepBase;
+  if (attemptsTaken <= 1) return stepMaximum;
+  if (attemptsTaken === 2) return Math.max(1, Math.round(stepMaximum * 0.85));
+  return Math.max(1, Math.round(stepMaximum * 0.65));
+};
+
 export const TREASURE_STAGES: StageDefinition[] = [
   {
     stageNumber: 1,
@@ -40,7 +50,7 @@ export const TREASURE_STAGES: StageDefinition[] = [
   {
     stageNumber: 3,
     stageTitle: "المرحلة الثالثة: كهف البركان",
-    stageSubtitle: "أنهي التحديات الأخيرة وافتحي الطريق إلى صندوق الكنز",
+    stageSubtitle: "أنه التحديات الأخيرة وافتح الطريق إلى صندوق الكنز",
     themeColor: "from-emerald-500 to-teal-600",
     targetAccumulatedScore: 100,
   },

@@ -137,6 +137,12 @@ describe("Treasure Adventure - Scoring & Business Rules Engine", () => {
     expect(getTreasureStageRanges(3).map((range) => range.questionCount)).toEqual([1, 1, 1]);
     expect(getTreasureStageRanges(3).map((range) => range.stageNumber)).toEqual([1, 2, 3]);
 
+    const { getTreasureStepPoints } = await import("../pages/games/treasure/data/defaultTreasureStages");
+    expect(Array.from({ length: 12 }, (_, index) => getTreasureStepPoints(12, index + 1, 1)).reduce((sum, points) => sum + points, 0)).toBe(100);
+    expect([1, 2, 3].map((step) => getTreasureStepPoints(3, step, 1))).toEqual([33, 33, 34]);
+    expect(getTreasureStepPoints(12, 1, 2)).toBe(7);
+    expect(getTreasureStepPoints(12, 1, 3)).toBe(5);
+
     // Verify all 12 solutions exist
     for (let step = 1; step <= 12; step++) {
       expect(TREASURE_SOLUTIONS[step]).toBeDefined();

@@ -75,13 +75,13 @@ export function CinematicBriefingScroll({
             <div className="min-w-0">
               <div className="text-xs font-black text-amber-100 sm:text-sm">رسالة الرحلة</div>
               <p className="mt-1 line-clamp-2 text-[11px] font-medium leading-5 text-white/75 sm:text-xs">
-                {storyClue || "اعبري الجزيرة، أجيبي عن تحديات كل مستوى، واتبعي الطريق حتى صندوق الكنز."}
+                {storyClue || "اعبر الجزيرة، أجب عن تحديات المراحل الثلاث، واتبع الطريق حتى صندوق الكنز."}
               </p>
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-2">
             <div className="hidden items-center gap-1.5 rounded-xl border border-sky-200/20 bg-sky-300/10 px-3 py-2 text-[10px] font-bold text-sky-100 md:flex">
-              <Anchor className="h-3.5 w-3.5" /> ابدئي من الميناء
+              <Anchor className="h-3.5 w-3.5" /> ابدأ من الميناء
             </div>
             <button
               type="button"
@@ -90,7 +90,7 @@ export function CinematicBriefingScroll({
               className="group flex w-full items-center justify-center gap-2 rounded-xl border border-amber-100/40 bg-gradient-to-b from-amber-300 via-amber-500 to-orange-600 px-5 py-3 text-sm font-black text-amber-950 shadow-[0_5px_0_#713f12,0_10px_26px_rgba(245,158,11,.22)] transition duration-200 hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0.5 active:shadow-none disabled:cursor-wait disabled:opacity-75 sm:w-auto sm:min-w-52"
             >
               {isLaunching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Compass className="h-4 w-4 transition-transform group-hover:rotate-45" />}
-              {isLaunching ? "جاري تجهيز الرحلة" : "ابدئي مغامرة الكنز"}
+              {isLaunching ? "جاري تجهيز الرحلة" : "ابدأ مغامرة الكنز"}
               {!isLaunching && <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" />}
             </button>
           </div>

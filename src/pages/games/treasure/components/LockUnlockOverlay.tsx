@@ -78,7 +78,7 @@ export function LockUnlockOverlay({
         <div className="relative space-y-2">
           <h3 className="text-2xl font-black text-white sm:text-3xl">انفتح الطريق!</h3>
           <p className="mx-auto max-w-sm text-sm font-medium leading-relaxed text-sky-100/75 sm:text-base">
-            اجتزتِ اللغز {questionInStage}، وتحركت السفينة إلى نقطة جديدة. بقي {Math.max(0, questionsInStage - questionInStage)} من ألغاز هذه المرحلة قبل فتح المحطة التالية.
+            اجتزت اللغز {questionInStage}، وتحركت السفينة إلى نقطة جديدة. بقي {Math.max(0, questionsInStage - questionInStage)} من ألغاز هذه المرحلة قبل فتح المحطة التالية.
           </p>
         </div>
 
@@ -102,10 +102,10 @@ export function LockUnlockOverlay({
           onClick={onAdvance}
           className="relative mt-7 flex w-full items-center justify-center gap-2.5 rounded-2xl border border-amber-100/40 bg-gradient-to-b from-amber-300 via-amber-500 to-orange-600 px-6 py-3.5 text-sm font-black text-amber-950 shadow-[0_6px_0_#713f12,0_15px_34px_rgba(245,158,11,.2)] transition hover:-translate-y-0.5 hover:brightness-110 active:translate-y-1 active:shadow-none sm:text-base"
         >
-          <span>تابعي إلى اللغز {nextQuestion}</span>
+          <span>تابع إلى اللغز {nextQuestion}</span>
           <ArrowLeft className="h-5 w-5" />
         </button>
-        <p className="relative mt-3 text-[10px] font-bold text-white/55">إجابة صحيحة! تابعي إلى اللغز التالي</p>
+        <p className="relative mt-3 text-[10px] font-bold text-white/55">إجابة صحيحة! تابع إلى اللغز التالي</p>
       </div>
     </div>
   );

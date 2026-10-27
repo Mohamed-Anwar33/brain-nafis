@@ -41,7 +41,7 @@ export const TRANSITION_CONFIGS: Record<number, TransitionThemeConfig> = {
   2: {
     badge: "اكتمل المستوى الأول",
     title: "انفتح الطريق إلى أطلال الغابة",
-    subtitle: "اجتزتِ أختام المرحلة الأولى. تابعي عبر المسار إلى محطة الأطلال.",
+    subtitle: "اجتزت أختام المرحلة الأولى. تابع عبر المسار إلى محطة الأطلال.",
     fromName: "ميناء البداية",
     toName: "أطلال الغابة",
     colorPalette: {
@@ -59,7 +59,7 @@ export const TRANSITION_CONFIGS: Record<number, TransitionThemeConfig> = {
   // 2 -> 3: Forest Ruins to Volcano Cave
   3: {
     badge: "اكتمل المستوى الثاني",
-    title: "وصلتِ إلى كهف البركان",
+    title: "وصلت إلى كهف البركان",
     subtitle: "اكتملت محطة الأطلال. أنهي تحديات الكهف الأخيرة للوصول إلى الصندوق.",
     fromName: "أطلال الغابة",
     toName: "كهف البركان",
@@ -78,8 +78,8 @@ export const TRANSITION_CONFIGS: Record<number, TransitionThemeConfig> = {
   // 3 -> treasure chest
   4: {
     badge: "اكتمل المستوى الثالث",
-    title: "وصلتِ إلى صندوق الكنز!",
-    subtitle: "أتممتِ تحديات المراحل الثلاث. افتحي الصندوق لتحصلي على درجة إضافية في المادة.",
+    title: "وصلت إلى صندوق الكنز!",
+    subtitle: "أتممت تحديات المراحل الثلاث. افتح الصندوق لتحصل على درجة إضافية في المادة.",
     fromName: "كهف البركان",
     toName: "صندوق الكنز",
     colorPalette: {
@@ -147,7 +147,7 @@ export function TreasureStageTransition3D({
           </div>
         </div>
 
-        <div className="rounded-full border border-white/20 bg-black/40 px-4 py-1.5 text-xs font-bold text-white/75">تابعي المغامرة خطوة بخطوة</div>
+        <div className="rounded-full border border-white/20 bg-black/40 px-4 py-1.5 text-xs font-bold text-white/75">تابع المغامرة خطوة بخطوة</div>
       </div>
 
       {/* 4. Center Cinematic Stage Presentation Card */}
@@ -183,7 +183,7 @@ export function TreasureStageTransition3D({
         {/* 3D Warp Speed Meter */}
         <div className="pt-2 flex items-center gap-2 text-[11px] sm:text-xs font-mono font-black text-amber-300/80">
           <Zap className="w-3.5 h-3.5 text-yellow-400 animate-bounce" />
-          <span>يتحرك المستكشف إلى المستوى التالي</span>
+          <span>يتحرك المستكشف إلى المرحلة التالية</span>
         </div>
       </div>
 
@@ -203,11 +203,11 @@ export function TreasureStageTransition3D({
           onClick={handleFinish}
           className={`pointer-events-auto py-3.5 sm:py-4 px-8 sm:px-12 rounded-full border-2 border-white/40 bg-gradient-to-r ${config.accentGradient} text-stone-950 font-black text-sm sm:text-base shadow-[0_8px_25px_rgba(0,0,0,0.6)] hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer group`}
         >
-          <span>{transitionData.toStage <= TREASURE_STAGE_COUNT ? `ابدئي ${config.toName}` : "افتحي صندوق الكنز"}</span>
+          <span>{transitionData.toStage <= TREASURE_STAGE_COUNT ? `ابدأ ${config.toName}` : "افتح صندوق الكنز"}</span>
           <ArrowLeft className="w-5 h-5 text-stone-950 group-hover:-translate-x-1 transition-transform" />
         </button>
 
-        <span className="text-[11px] text-white/60 font-bold">أكملي الرحلة بالضغط على متابعة</span>
+        <span className="text-[11px] text-white/60 font-bold">أكمل الرحلة بالضغط على متابعة</span>
       </div>
     </div>
   );

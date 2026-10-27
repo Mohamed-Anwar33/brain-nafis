@@ -22,6 +22,7 @@ import {
   TREASURE_STAGE_COUNT,
   TREASURE_SOLUTIONS,
   getTreasureStageRanges,
+  getTreasureStepPoints,
 } from "./data/defaultTreasureStages";
 import { ExplanationModal } from "@/components/exam/ExplanationModal";
 import { CertificateModal } from "@/components/exam/CertificateModal";
@@ -90,6 +91,7 @@ export default function TreasureGamePage() {
 
   // Three challenge stages, followed directly by the treasure chest.
   const [accumulatedScore, setAccumulatedScore] = useState<number>(0);
+  const [localStepAttempts, setLocalStepAttempts] = useState<Record<number, number>>({});
   const [activeTransition, setActiveTransition] = useState<StageTransitionData | null>(null);
   const [treasurePointAwarded, setTreasurePointAwarded] = useState(false);
   const [treasurePointError, setTreasurePointError] = useState("");
@@ -199,6 +201,10 @@ export default function TreasureGamePage() {
     try {
       setLoading(true);
       setFinalResult(null);
+      setAccumulatedScore(0);
+      setLocalStepAttempts({});
+      setKeyFound(false);
+      setActiveTransition(null);
       setTreasurePointAwarded(false);
       setTreasurePointError("");
       setIsRetryingTreasurePoint(false);
@@ -245,7 +251,7 @@ export default function TreasureGamePage() {
         adventure_title: resSession?.adventure_title || "جزيرة الكنز الأسطوري - أسرار العلوم",
         story_clue:
           resSession?.story_clue ||
-          "ابحث عن المفتاح الأثري في أنحاء الجزيرة، ثم اجتازي تحديات المراحل الثلاث وافتحي صندوق الكنز.",
+          "ابحث عن المفتاح الأثري في أنحاء الجزيرة، ثم اجتز تحديات المراحل الثلاث وافتح صندوق الكنز.",
         environment_config: resSession?.environment_config || {
           theme: "ancient_ruins",
           key_node: "statue",
@@ -262,6 +268,7 @@ export default function TreasureGamePage() {
       setCurrentPhase(fallbackSession.current_phase);
       setCurrentChallengeStep(fallbackSession.current_challenge_step);
       setAccumulatedScore(fallbackSession.accumulated_score);
+      setLocalStepAttempts({});
       setTreasurePointAwarded(false);
       setKeyFound(["key_found", "portal", "challenges", "treasure", "completed"].includes(fallbackSession.current_phase));
       setFinalResult(null);
@@ -273,7 +280,7 @@ export default function TreasureGamePage() {
         session_id: "session_local_" + Date.now(),
         adventure_id: "adv_default",
         adventure_title: "جزيرة الكنز الأسطوري - أسرار العلوم",
-        story_clue: "ابحث عن المفتاح الأثري، ثم اجتازي تحديات المراحل الثلاث وافتحي صندوق الكنز.",
+        story_clue: "ابحث عن المفتاح الأثري، ثم اجتز تحديات المراحل الثلاث وافتح صندوق الكنز.",
         environment_config: {
           theme: "ancient_ruins",
           key_node: "statue",
@@ -289,6 +296,7 @@ export default function TreasureGamePage() {
       setCurrentPhase("briefing");
       setCurrentChallengeStep(1);
       setAccumulatedScore(0);
+      setLocalStepAttempts({});
       setTreasurePointAwarded(false);
     } finally {
       setLoading(false);
@@ -349,6 +357,8 @@ export default function TreasureGamePage() {
       const isRemoteSession = !sessionData.session_id.startsWith("session_");
       let serverResult: SubmitStepResponse | undefined;
       let isCorrect = false;
+      let fallbackAttemptsTaken = 1;
+      let fallbackPointsEarned = 0;
       if (isRemoteSession) {
         serverResult = await treasureService.submitStep(
           sessionData.session_id,
@@ -359,6 +369,11 @@ export default function TreasureGamePage() {
         isCorrect = serverResult.is_correct;
       } else {
         // The local fallback keeps the same answer controls, using its built-in answer key.
+        fallbackAttemptsTaken = (localStepAttempts[currentChallengeStep] || 0) + 1;
+        setLocalStepAttempts((previous) => ({
+          ...previous,
+          [currentChallengeStep]: fallbackAttemptsTaken,
+        }));
         const currentSol = TREASURE_SOLUTIONS[currentChallengeStep];
         if (answerPayload.selected_choice_id) {
           isCorrect = currentSol ? answerPayload.selected_choice_id === currentSol.correct_choice_id : true;
@@ -368,6 +383,13 @@ export default function TreasureGamePage() {
             : true;
         } else {
           isCorrect = true;
+        }
+        if (isCorrect) {
+          fallbackPointsEarned = getTreasureStepPoints(
+            totalChallengeCount,
+            currentChallengeStep,
+            fallbackAttemptsTaken,
+          );
         }
       }
 
@@ -383,10 +405,10 @@ export default function TreasureGamePage() {
         }
         if (!questionWasCompleted) {
           toast.error("إجابة غير صحيحة، راجعي التوجيه وحاولي مجددًا", { className: "!border-[#c56f65]/55 !bg-[#102630] !text-[#f8e9d8] !shadow-xl" });
-          return serverResult || {
+          return {
             is_correct: false,
-            points_earned: 0,
-            attempts_taken: 1,
+            points_earned: serverResult?.points_earned || 0,
+            attempts_taken: serverResult?.attempts_taken || fallbackAttemptsTaken,
             current_challenge_step: currentChallengeStep,
             current_phase: "challenges",
             explanation: { wrong_reason: activeChallenge?.wrong_reason || undefined },
@@ -395,10 +417,10 @@ export default function TreasureGamePage() {
       }
 
       // Keep the existing scoring and retry rules authoritative; stages only group completed questions.
-      const acceptedResult = serverResult || {
-        is_correct: true,
-        points_earned: 0,
-        attempts_taken: 1,
+      const acceptedResult: SubmitStepResponse = serverResult || {
+        is_correct: isCorrect,
+        points_earned: fallbackPointsEarned,
+        attempts_taken: fallbackAttemptsTaken,
         current_challenge_step: currentChallengeStep + 1,
         current_phase: "challenges" as GameplayPhase,
       };
@@ -469,7 +491,7 @@ export default function TreasureGamePage() {
     } else {
       // The server keeps the score from the existing question and retry rules.
       setIsFinalizing(true);
-      void handleFinalizeAttempt(sessionData?.session_id);
+      void handleFinalizeAttempt(sessionData?.session_id, accumulatedScore);
     }
   };
 
@@ -487,7 +509,7 @@ export default function TreasureGamePage() {
       } else {
         setTreasurePointError("تعذر تسجيل الدرجة الإضافية الآن.");
       }
-      if (!saved) toast.error("ما زال تسجيل الدرجة متعذرًا. أعيدي المحاولة بعد قليل.");
+      if (!saved) toast.error("ما زال تسجيل الدرجة متعذرًا. أعد المحاولة بعد قليل.");
     } catch (error) {
       console.error("Could not retry the treasure subject point:", error);
       setTreasurePointError("تعذر الاتصال لحفظ الدرجة الإضافية.");
@@ -525,7 +547,7 @@ export default function TreasureGamePage() {
         }
         const pointAwarded = finalized.subject_point_awarded === true && finalized.subject_point === 1;
         setTreasurePointAwarded(pointAwarded);
-        if (!pointAwarded) setTreasurePointError("لم يؤكد الخادم تسجيل الدرجة الإضافية. أعيدي المحاولة من شاشة الكنز.");
+        if (!pointAwarded) setTreasurePointError("لم يؤكد الخادم تسجيل الدرجة الإضافية. أعد المحاولة من شاشة الكنز.");
       } else {
         setTreasurePointError("لا يمكن تسجيل درجة المادة دون اتصال بقاعدة البيانات.");
       }
@@ -778,7 +800,7 @@ export default function TreasureGamePage() {
                         {currentStageMission?.stageTitle || `المرحلة ${currentStage}`}
                       </h2>
                       <p className="mt-0.5 line-clamp-1 text-[9px] font-medium leading-relaxed text-white/65 sm:mt-1 sm:text-xs sm:leading-relaxed">
-                        {currentStageMission?.stageSubtitle || "أجيبي عن تحديات المحطة لفتح الطريق التالي."}
+                        {currentStageMission?.stageSubtitle || "أجب عن تحديات المحطة لفتح الطريق التالي."}
                       </p>
                     </div>
                   </div>
@@ -810,7 +832,7 @@ export default function TreasureGamePage() {
 
                 <div className="hidden items-center gap-2 px-1 text-[9px] font-bold text-sky-100/65 sm:flex sm:text-[10px]">
                   <Compass className="h-3.5 w-3.5 shrink-0 text-[#bddbc8]" />
-                  كل إجابة مكتملة تحرّك المستكشفة إلى نقطة جديدة على الخريطة.
+                  كل إجابة مكتملة تحرّك المستكشف إلى نقطة جديدة على الخريطة.
                 </div>
               </aside>
 

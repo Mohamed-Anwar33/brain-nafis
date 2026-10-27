@@ -872,7 +872,7 @@ export default function CentralExamPlay() {
           })}
         </div>
 
-        {(currentWrongReason || currentQuestion.explanation_url) && (
+        {isAnswered && (currentWrongReason || currentQuestion.explanation_url) && (
           <Card className="mb-8 border-amber-200 bg-amber-50/90 p-5 shadow-lg shadow-amber-100/50 space-y-3">
             <div className="flex items-center justify-between flex-wrap gap-2">
               <div className="flex items-center gap-2 text-amber-800 font-black text-sm">

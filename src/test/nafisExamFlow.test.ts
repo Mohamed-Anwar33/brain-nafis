@@ -7,6 +7,8 @@ const database = vi.hoisted(() => ({
   questions: Array.from({ length: 48 }, (_, i) => ({
     id: `question-${i}`, stage_number: Math.floor(i / 12) + 1,
     created_at: "2026-01-01", text: `Question ${i}`, choices: [],
+    scientific_skill: "تحليل البيانات", scientific_concept: "القوة والحركة",
+    grade_subject_id: "grade-physics", domain_id: "physics",
   })),
   attempts: 0,
 }));
@@ -62,5 +64,11 @@ describe("starting a quick quiz again", () => {
     expect(second.questions).toEqual(first.questions);
     expect(first.questions).toHaveLength(40);
     expect(second.questions.filter((q: any) => q.stage_number === 1)).toHaveLength(10);
+    expect(second.questions[0]).toMatchObject({
+      scientific_skill: "تحليل البيانات",
+      scientific_concept: "القوة والحركة",
+      grade_subject_id: "grade-physics",
+      domain_id: "physics",
+    });
   });
 });

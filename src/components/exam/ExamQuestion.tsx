@@ -10,6 +10,7 @@ import { audioManager } from "@/lib/audio";
 import { canChooseAnswerAfterWrongAnswer } from "@/lib/nafis-quick-quiz";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { hasQuestionExplanationMedia } from "@/lib/question-explanation";
 
 type SimilarQuestion = ExamQuestionType;
 type SimilarQuestionRow = Omit<SimilarQuestion, "choices" | "order_index"> & {
@@ -49,6 +50,7 @@ export function ExamQuestion({
   const [showSimilarQuestion, setShowSimilarQuestion] = useState(false);
   const [similarState, setSimilarState] = useState<"loading" | "ready" | "correct" | "wrong" | "empty" | null>(null);
   const [similarChoiceId, setSimilarChoiceId] = useState<string | null>(null);
+  const [showSimilarExplanation, setShowSimilarExplanation] = useState(false);
 
   // Gamification States
   const [streak, setStreak] = useState(0);
@@ -66,6 +68,7 @@ export function ExamQuestion({
     setShowSimilarQuestion(false);
     setSimilarState(null);
     setSimilarChoiceId(null);
+    setShowSimilarExplanation(false);
   }, [question.id]);
 
   const handleChoiceClick = async (choice: Choice) => {
@@ -168,7 +171,7 @@ export function ExamQuestion({
     }
   };
   const hasExplanationVideo = Boolean(
-    question.explanation_url || wrongReason?.includes("http"),
+    hasQuestionExplanationMedia({ explanation_url: question.explanation_url, wrong_reason: wrongReason || question.wrong_reason }),
   );
   const isWrongAnswerBlocked = !canChooseAnswerAfterWrongAnswer(
     answerState === "wrong",
@@ -358,6 +361,11 @@ export function ExamQuestion({
               <div className="space-y-3">
                 <h3 className="font-black text-indigo-950">سؤال تدريب على {similarQuestion.scientific_skill}</h3>
                 <p className="font-bold leading-relaxed">{similarQuestion.text}</p>
+                {hasQuestionExplanationMedia(similarQuestion) && (
+                  <Button type="button" variant="outline" onClick={() => setShowSimilarExplanation(true)}>
+                    <PlayCircle className="ml-2 h-4 w-4" /> شاهد شرح هذا السؤال
+                  </Button>
+                )}
                 {similarQuestion.image_url && <img src={similarQuestion.image_url} alt="صورة السؤال التدريبي" className="max-h-48 rounded-xl object-contain" />}
                 <div className="grid gap-2">
                   {similarQuestion.choices.map((choice) => (
@@ -380,6 +388,16 @@ export function ExamQuestion({
           wrongReason={wrongReason || question.wrong_reason}
           explanationUrl={question.explanation_url}
         />
+
+        {similarQuestion && (
+          <ExplanationModal
+            isOpen={showSimilarExplanation}
+            onClose={() => setShowSimilarExplanation(false)}
+            questionText={similarQuestion.text}
+            wrongReason={similarQuestion.wrong_reason}
+            explanationUrl={similarQuestion.explanation_url}
+          />
+        )}
       </main>
     </div>
   );

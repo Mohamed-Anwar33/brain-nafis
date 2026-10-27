@@ -102,6 +102,10 @@ export async function startNafisStagesRound({
       image_url: question.image_url,
       wrong_reason: question.wrong_reason,
       explanation_url: question.explanation_url,
+      scientific_skill: question.scientific_skill,
+      scientific_concept: question.scientific_concept,
+      grade_subject_id: question.grade_subject_id,
+      domain_id: question.domain_id,
       stage_number: question.stage_number ?? 1,
       order_index: index,
       choices: (question.choices || []).map((choice: any) => ({

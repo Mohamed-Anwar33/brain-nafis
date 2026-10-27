@@ -19,7 +19,9 @@ import {
 import {
   DEFAULT_TREASURE_12_CHALLENGES,
   TREASURE_STAGES,
+  TREASURE_STAGE_COUNT,
   TREASURE_SOLUTIONS,
+  getTreasureStageRanges,
 } from "./data/defaultTreasureStages";
 import { ExplanationModal } from "@/components/exam/ExplanationModal";
 import { CertificateModal } from "@/components/exam/CertificateModal";
@@ -71,18 +73,6 @@ const TreasureWorld3D = lazy(() =>
   }))
 );
 
-const getTreasureStageRanges = (questionCount: number) => {
-  const baseCount = Math.floor(questionCount / 4);
-  const extraQuestions = questionCount % 4;
-  let nextStep = 1;
-  return Array.from({ length: 4 }, (_, index) => {
-    const count = baseCount + (index < extraQuestions ? 1 : 0);
-    const range = { stageNumber: index + 1, startStep: nextStep, endStep: nextStep + count - 1, questionCount: count };
-    nextStep += count;
-    return range;
-  });
-};
-
 export default function TreasureGamePage() {
   const { adventureId } = useParams<{ adventureId?: string }>();
   const navigate = useNavigate();
@@ -98,7 +88,7 @@ export default function TreasureGamePage() {
   const [keyFound, setKeyFound] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // 4 Stages Progression State
+  // Three challenge stages, followed directly by the treasure chest.
   const [accumulatedScore, setAccumulatedScore] = useState<number>(0);
   const [activeTransition, setActiveTransition] = useState<StageTransitionData | null>(null);
   const [treasurePointAwarded, setTreasurePointAwarded] = useState(false);
@@ -123,7 +113,7 @@ export default function TreasureGamePage() {
     return () => images.forEach((image) => { image.onload = null; image.onerror = null; });
   }, [sessionData, currentChallengeStep]);
 
-  // Split the adventure's authored questions across four stages without adding or removing questions.
+  // Split the adventure's authored questions across three stages without adding or removing questions.
   const totalChallengeCount = sessionData?.challenges.length || DEFAULT_TREASURE_12_CHALLENGES.length;
   const stageRanges = getTreasureStageRanges(totalChallengeCount);
   const currentStageRange = stageRanges.find((range) => range.questionCount > 0
@@ -204,7 +194,7 @@ export default function TreasureGamePage() {
     };
   }, []);
 
-  // Initialize Session: Always ensure 4 stages × 3 questions (12 questions total)
+  // Initialize the authored adventure questions and distribute them across three stages.
   const initGameSession = async () => {
     try {
       setLoading(true);
@@ -255,7 +245,7 @@ export default function TreasureGamePage() {
         adventure_title: resSession?.adventure_title || "جزيرة الكنز الأسطوري - أسرار العلوم",
         story_clue:
           resSession?.story_clue ||
-          "ابحث عن المفتاح الأثري في أنحاء الجزيرة، ثم أجب عن الألغاز وافتح الطريق إلى صندوق الكنز عبر أربع مراحل.",
+          "ابحث عن المفتاح الأثري في أنحاء الجزيرة، ثم اجتازي تحديات المراحل الثلاث وافتحي صندوق الكنز.",
         environment_config: resSession?.environment_config || {
           theme: "ancient_ruins",
           key_node: "statue",
@@ -283,7 +273,7 @@ export default function TreasureGamePage() {
         session_id: "session_local_" + Date.now(),
         adventure_id: "adv_default",
         adventure_title: "جزيرة الكنز الأسطوري - أسرار العلوم",
-        story_clue: "ابحث عن المفتاح الأثري، ثم أجب عن الألغاز وافتح الطريق إلى صندوق الكنز عبر أربع مراحل.",
+        story_clue: "ابحث عن المفتاح الأثري، ثم اجتازي تحديات المراحل الثلاث وافتحي صندوق الكنز.",
         environment_config: {
           theme: "ancient_ruins",
           key_node: "statue",
@@ -420,7 +410,15 @@ export default function TreasureGamePage() {
       const pointsForTransition = acceptedResult.points_earned || 0;
 
       if (isStageMilestone) {
-        setActiveTransition({ fromStage: stageNum, toStage: stageNum + 1, newScore: newTotalScore, challengeCount: totalChallengeCount });
+        const nextNonEmptyStage = stageRanges.find(
+          (range) => range.stageNumber > stageNum && range.questionCount > 0
+        );
+        setActiveTransition({
+          fromStage: stageNum,
+          toStage: nextNonEmptyStage?.stageNumber ?? TREASURE_STAGE_COUNT + 1,
+          newScore: newTotalScore,
+          challengeCount: totalChallengeCount,
+        });
       } else {
         setUnlockedLockInfo({
           step: currentChallengeStep,
@@ -449,21 +447,24 @@ export default function TreasureGamePage() {
     setCurrentChallengeStep(nextStep);
   };
 
-  // Complete the 3D Stage Transition
+  // Complete the stage transition and open the chest after the third stage.
   const handleTransitionComplete = () => {
     if (!activeTransition) return;
     const { toStage } = activeTransition;
     setActiveTransition(null);
 
-    if (toStage <= 4) {
-      const nextRange = stageRanges[toStage - 1];
-      if (nextRange.questionCount > 0) {
+    if (toStage <= TREASURE_STAGE_COUNT) {
+      const nextRange = stageRanges.find((range) => range.stageNumber === toStage && range.questionCount > 0);
+      if (nextRange) {
         setCurrentChallengeStep(nextRange.startStep);
         treasureHalalAudio.playStoneGateRumble();
       } else {
-        const newTotalScore = toStage * 25;
-        setAccumulatedScore(newTotalScore);
-        setActiveTransition({ fromStage: toStage, toStage: toStage + 1, newScore: newTotalScore, challengeCount: totalChallengeCount });
+        const nextNonEmptyStage = stageRanges.find((range) => range.stageNumber > toStage && range.questionCount > 0);
+        if (nextNonEmptyStage) {
+          setActiveTransition({ fromStage: toStage - 1, toStage: nextNonEmptyStage.stageNumber, newScore: accumulatedScore, challengeCount: totalChallengeCount });
+        } else {
+          setActiveTransition({ fromStage: toStage - 1, toStage: TREASURE_STAGE_COUNT + 1, newScore: accumulatedScore, challengeCount: totalChallengeCount });
+        }
       }
     } else {
       // The server keeps the score from the existing question and retry rules.
@@ -621,7 +622,7 @@ export default function TreasureGamePage() {
             {/* Stage Badge */}
             <div className="h-9 sm:h-10 px-3 rounded-xl border border-[#e8cf94]/35 bg-[#e4bd6c]/15 text-[#f5e7c4] font-black text-xs sm:text-sm flex items-center gap-1.5">
               <Trophy className="w-4 h-4 text-[#eccb7e]" />
-              <span>المرحلة {currentStage} من 4</span>
+              <span>المرحلة {currentStage} من {TREASURE_STAGE_COUNT}</span>
             </div>
 
             {/* Score Badge */}
@@ -646,7 +647,7 @@ export default function TreasureGamePage() {
               <h1 className="font-black text-xs sm:text-base text-[#f5e7c4] truncate font-sans">
                 جزيرة الكنز الأسطوري
                 <span className="font-bold text-[#b7d0c7]/75 mr-2 text-xs">
-                  • أربع مراحل حتى الصندوق الذهبي
+                  • ثلاث مراحل حتى الصندوق الذهبي
                 </span>
               </h1>
             </div>
@@ -731,7 +732,7 @@ export default function TreasureGamePage() {
                   </span>
                   <span className="text-[10px] sm:text-xs text-[#ccdbd4]/75 font-bold flex items-center gap-1 mt-0.5">
                     <MapPin className="w-3 h-3 text-[#b9d6c7]" />
-                    <span>المستوى {currentStage} من 4 · اللغز {questionInStage} من {currentStageRange.questionCount}</span>
+                    <span>المستوى {currentStage} من {TREASURE_STAGE_COUNT} · اللغز {questionInStage} من {currentStageRange.questionCount}</span>
                   </span>
                 </div>
               </div>

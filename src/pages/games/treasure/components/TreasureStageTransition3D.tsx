@@ -3,10 +3,11 @@ import { Sparkles, ArrowLeft, Zap, Trophy, Award, Play, Shield } from "lucide-re
 import { treasureHalalAudio } from "@/lib/treasureAudio";
 import confetti from "canvas-confetti";
 import { TreasureAdventureMap } from "./TreasureAdventureMap";
+import { TREASURE_STAGE_COUNT } from "../data/defaultTreasureStages";
 
 export interface StageTransitionData {
-  fromStage: number; // 1, 2, 3, or 4
-  toStage: number; // 2, 3, 4, or 5 (5 = Final Victory Chamber)
+  fromStage: number; // 1, 2, or 3
+  toStage: number; // 2, 3, or 4 (4 = Treasure Chest)
   newScore: number;
   challengeCount?: number;
 }
@@ -55,13 +56,13 @@ export const TRANSITION_CONFIGS: Record<number, TransitionThemeConfig> = {
     warpType: "wind",
     accentGradient: "from-teal-400 via-cyan-400 to-emerald-500",
   },
-  // 2 -> 3: Ocean Depths to Sacred Flame Forge
+  // 2 -> 3: Forest Ruins to Volcano Cave
   3: {
     badge: "اكتمل المستوى الثاني",
-    title: "وصلتِ إلى شلال الجزيرة",
-    subtitle: "اكتملت محطة الأطلال. واصلي على الطريق حتى الشلال.",
+    title: "وصلتِ إلى كهف البركان",
+    subtitle: "اكتملت محطة الأطلال. أنهي تحديات الكهف الأخيرة للوصول إلى الصندوق.",
     fromName: "أطلال الغابة",
-    toName: "شلال الجزيرة",
+    toName: "كهف البركان",
     colorPalette: {
       fog: 0x1e1b4b,
       ambient: 0x312e81,
@@ -74,30 +75,11 @@ export const TRANSITION_CONFIGS: Record<number, TransitionThemeConfig> = {
     warpType: "ocean",
     accentGradient: "from-indigo-400 via-purple-400 to-sky-500",
   },
-  // 3 -> 4: Flame Forge to Celestial Golden Realm
+  // 3 -> treasure chest
   4: {
     badge: "اكتمل المستوى الثالث",
-    title: "كهف البركان أمامك",
-    subtitle: "اجتزتِ محطة الشلال. أنهي تحديات الكهف لتصلي إلى صندوق الكنز.",
-    fromName: "شلال الجزيرة",
-    toName: "كهف البركان",
-    colorPalette: {
-      fog: 0x451a03,
-      ambient: 0x78350f,
-      lightPrimary: 0xf59e0b,
-      lightSecondary: 0xef4444,
-      particlePrimary: 0xfbbf24,
-      particleSecondary: 0xf97316,
-      ringColor: 0xfef08a,
-    },
-    warpType: "flame",
-    accentGradient: "from-amber-400 via-yellow-400 to-orange-500",
-  },
-  // 4 -> 5: Victory Chamber
-  5: {
-    badge: "اكتملت المستويات الأربعة",
     title: "وصلتِ إلى صندوق الكنز!",
-    subtitle: "أتممتِ تحديات الجزيرة الأربع. افتحي الصندوق لتحصلي على درجة إضافية في المادة.",
+    subtitle: "أتممتِ تحديات المراحل الثلاث. افتحي الصندوق لتحصلي على درجة إضافية في المادة.",
     fromName: "كهف البركان",
     toName: "صندوق الكنز",
     colorPalette: {
@@ -190,11 +172,11 @@ export function TreasureStageTransition3D({
         <div className="w-full max-w-2xl rounded-2xl border border-white/25 bg-slate-950/70 p-2 shadow-[0_24px_70px_rgba(0,0,0,.45)] backdrop-blur-md">
           <TreasureAdventureMap
             challengeCount={transitionData.challengeCount}
-            currentStage={Math.min(4, transitionData.toStage)}
+            currentStage={Math.min(TREASURE_STAGE_COUNT, transitionData.toStage)}
             completedStages={transitionData.fromStage}
             movingFromStage={transitionData.fromStage}
             compact
-            showTreasure={transitionData.toStage === 5}
+            showTreasure={transitionData.toStage === TREASURE_STAGE_COUNT + 1}
           />
         </div>
 
@@ -211,7 +193,7 @@ export function TreasureStageTransition3D({
         <div className="w-full bg-black/50 backdrop-blur-md rounded-full h-3 border-2 border-white/20 p-0.5 overflow-hidden shadow-2xl">
           <div
             className={`h-full rounded-full bg-gradient-to-r ${config.accentGradient} transition-all duration-150 shadow-[0_0_16px_rgba(245,158,11,0.8)]`}
-            style={{ width: `${Math.min(100, ((transitionData.toStage - 1) / 4) * 100)}%` }}
+            style={{ width: `${Math.min(100, ((transitionData.toStage - 1) / TREASURE_STAGE_COUNT) * 100)}%` }}
           />
         </div>
 
@@ -221,7 +203,7 @@ export function TreasureStageTransition3D({
           onClick={handleFinish}
           className={`pointer-events-auto py-3.5 sm:py-4 px-8 sm:px-12 rounded-full border-2 border-white/40 bg-gradient-to-r ${config.accentGradient} text-stone-950 font-black text-sm sm:text-base shadow-[0_8px_25px_rgba(0,0,0,0.6)] hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer group`}
         >
-          <span>{transitionData.toStage <= 4 ? `ابدئي ${config.toName}` : "افتحي صندوق الكنز"}</span>
+          <span>{transitionData.toStage <= TREASURE_STAGE_COUNT ? `ابدئي ${config.toName}` : "افتحي صندوق الكنز"}</span>
           <ArrowLeft className="w-5 h-5 text-stone-950 group-hover:-translate-x-1 transition-transform" />
         </button>
 

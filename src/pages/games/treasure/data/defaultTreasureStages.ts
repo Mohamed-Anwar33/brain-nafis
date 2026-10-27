@@ -8,39 +8,46 @@ export interface StageDefinition {
   targetAccumulatedScore: number;
 }
 
+export const TREASURE_STAGE_COUNT = 3;
+
+export const getTreasureStageRanges = (questionCount: number) => {
+  const baseCount = Math.floor(questionCount / TREASURE_STAGE_COUNT);
+  const extraQuestions = questionCount % TREASURE_STAGE_COUNT;
+  let nextStep = 1;
+  return Array.from({ length: TREASURE_STAGE_COUNT }, (_, index) => {
+    const count = baseCount + (index < extraQuestions ? 1 : 0);
+    const range = { stageNumber: index + 1, startStep: nextStep, endStep: nextStep + count - 1, questionCount: count };
+    nextStep += count;
+    return range;
+  });
+};
+
 export const TREASURE_STAGES: StageDefinition[] = [
   {
     stageNumber: 1,
     stageTitle: "المرحلة الأولى: أختام بوابة الرياح",
     stageSubtitle: "فك أختام المادة وخصائصها الأساسية",
     themeColor: "from-amber-500 to-yellow-500",
-    targetAccumulatedScore: 25,
+    targetAccumulatedScore: 33,
   },
   {
     stageNumber: 2,
     stageTitle: "المرحلة الثانية: لؤلؤة الأعماق",
     stageSubtitle: "كشف أسرار الطاقة وتحولاتها في الطبيعة",
     themeColor: "from-sky-500 to-blue-600",
-    targetAccumulatedScore: 50,
+    targetAccumulatedScore: 66,
   },
   {
     stageNumber: 3,
-    stageTitle: "المرحلة الثالثة: شعلة المعرفة الفائقة",
-    stageSubtitle: "الخلية والعمليات الحيوية للكائنات الحية",
+    stageTitle: "المرحلة الثالثة: كهف البركان",
+    stageSubtitle: "أنهي التحديات الأخيرة وافتحي الطريق إلى صندوق الكنز",
     themeColor: "from-emerald-500 to-teal-600",
-    targetAccumulatedScore: 75,
-  },
-  {
-    stageNumber: 4,
-    stageTitle: "المرحلة الرابعة: الكنز الأسطوري الأعظم",
-    stageSubtitle: "قوى الكون والفضاء والظواهر الطبيعية الكبرى",
-    themeColor: "from-amber-400 to-amber-600",
     targetAccumulatedScore: 100,
   },
 ];
 
 export const DEFAULT_TREASURE_12_CHALLENGES: ClientChallengeItem[] = [
-  // ================= STAGE 1 (Questions 1, 2, 3) =================
+  // ================= STAGE 1 (Questions 1-4) =================
   {
     step: 1,
     challenge_type: "mcq",
@@ -84,7 +91,7 @@ export const DEFAULT_TREASURE_12_CHALLENGES: ClientChallengeItem[] = [
     },
   },
 
-  // ================= STAGE 2 (Questions 4, 5, 6) =================
+  // ================= STAGE 2 (Questions 5-8) =================
   {
     step: 4,
     challenge_type: "mcq",
@@ -129,7 +136,7 @@ export const DEFAULT_TREASURE_12_CHALLENGES: ClientChallengeItem[] = [
     },
   },
 
-  // ================= STAGE 3 (Questions 7, 8, 9) =================
+  // ================= STAGE 3 (Questions 9-12) =================
   {
     step: 7,
     challenge_type: "mcq",
@@ -174,7 +181,6 @@ export const DEFAULT_TREASURE_12_CHALLENGES: ClientChallengeItem[] = [
     },
   },
 
-  // ================= STAGE 4 (Questions 10, 11, 12) =================
   {
     step: 10,
     challenge_type: "mcq",

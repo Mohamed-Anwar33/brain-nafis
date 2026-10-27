@@ -121,32 +121,21 @@ describe("Treasure Adventure - Scoring & Business Rules Engine", () => {
     expect(validateScope("central_exam", "gs-123", "dom-456")).toBe(true);
   });
 
-  it("verifies 4-stage Treasure Game structure (3 questions each, 25 pts per stage, 100 total)", async () => {
-    const { DEFAULT_TREASURE_12_CHALLENGES, TREASURE_STAGES, TREASURE_SOLUTIONS } = await import(
+  it("splits treasure questions across three stages and then opens the chest", async () => {
+    const { DEFAULT_TREASURE_12_CHALLENGES, TREASURE_STAGES, TREASURE_SOLUTIONS, TREASURE_STAGE_COUNT, getTreasureStageRanges } = await import(
       "../pages/games/treasure/data/defaultTreasureStages"
     );
 
-    // Exactly 4 stages
-    expect(TREASURE_STAGES.length).toBe(4);
-    expect(TREASURE_STAGES[0].targetAccumulatedScore).toBe(25);
-    expect(TREASURE_STAGES[1].targetAccumulatedScore).toBe(50);
-    expect(TREASURE_STAGES[2].targetAccumulatedScore).toBe(75);
-    expect(TREASURE_STAGES[3].targetAccumulatedScore).toBe(100);
+    expect(TREASURE_STAGE_COUNT).toBe(3);
+    expect(TREASURE_STAGES.length).toBe(3);
+    expect(TREASURE_STAGES.map((stage) => stage.targetAccumulatedScore)).toEqual([33, 66, 100]);
 
     // Exactly 12 challenges
     expect(DEFAULT_TREASURE_12_CHALLENGES.length).toBe(12);
 
-    // Verify each stage has exactly 3 questions
-    for (let stage = 1; stage <= 4; stage++) {
-      const stageQuestions = DEFAULT_TREASURE_12_CHALLENGES.filter(
-        (ch) => Math.floor((ch.step - 1) / 3) + 1 === stage
-      );
-      expect(stageQuestions.length).toBe(3);
-
-      // Verify milestone step: 3, 6, 9, 12
-      const milestoneStep = stage * 3;
-      expect(milestoneStep % 3).toBe(0);
-    }
+    expect(getTreasureStageRanges(12).map((range) => range.questionCount)).toEqual([4, 4, 4]);
+    expect(getTreasureStageRanges(3).map((range) => range.questionCount)).toEqual([1, 1, 1]);
+    expect(getTreasureStageRanges(3).map((range) => range.stageNumber)).toEqual([1, 2, 3]);
 
     // Verify all 12 solutions exist
     for (let step = 1; step <= 12; step++) {
@@ -154,34 +143,18 @@ describe("Treasure Adventure - Scoring & Business Rules Engine", () => {
     }
   });
 
-  it("verifies distinct, world-class 3D stage transitions for all 4 stages and victory", async () => {
+  it("has three stage transitions with the final transition going to the treasure chest", async () => {
     const { TRANSITION_CONFIGS } = await import(
       "../pages/games/treasure/components/TreasureStageTransition3D"
     );
 
-    // Transitions exist for stages: 2 (1->2), 3 (2->3), 4 (3->4), and 5 (4->Victory)
+    // Transitions exist for stages: 2 (1->2), 3 (2->3), and 4 (3->chest)
     expect(TRANSITION_CONFIGS[2]).toBeDefined();
     expect(TRANSITION_CONFIGS[3]).toBeDefined();
     expect(TRANSITION_CONFIGS[4]).toBeDefined();
-    expect(TRANSITION_CONFIGS[5]).toBeDefined();
-
-    // Verify all 4 transitions have strictly distinct warp types
-    const warpTypes = [
-      TRANSITION_CONFIGS[2].warpType,
-      TRANSITION_CONFIGS[3].warpType,
-      TRANSITION_CONFIGS[4].warpType,
-      TRANSITION_CONFIGS[5].warpType,
-    ];
-    const uniqueWarpTypes = new Set(warpTypes);
-    expect(uniqueWarpTypes.size).toBe(4);
-    expect(warpTypes).toEqual(["wind", "ocean", "flame", "celestial"]);
-
-    // Verify all 4 transitions have distinct titles and color palettes
-    const titles = [2, 3, 4, 5].map((st) => TRANSITION_CONFIGS[st].title);
-    expect(new Set(titles).size).toBe(4);
-
-    const fogs = [2, 3, 4, 5].map((st) => TRANSITION_CONFIGS[st].colorPalette.fog);
-    expect(new Set(fogs).size).toBe(4);
+    expect(TRANSITION_CONFIGS[5]).toBeUndefined();
+    expect(TRANSITION_CONFIGS[4].toName).toBe("صندوق الكنز");
+    expect(TRANSITION_CONFIGS[3].toName).toBe("كهف البركان");
   });
 });
 

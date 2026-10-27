@@ -93,6 +93,9 @@ export default function CentralExamPlay() {
   const questionsWithErrorsRef = useRef<Set<string>>(new Set());
   const [wrongAttempts, setWrongAttempts] = useState(0);
   const [currentWrongReason, setCurrentWrongReason] = useState<string | null>(null);
+  const [similarQuestion, setSimilarQuestion] = useState<CentralExamQuestion | null>(null);
+  const [similarQuestionState, setSimilarQuestionState] = useState<"idle" | "loading" | "ready" | "empty" | "correct" | "wrong">("idle");
+  const [similarChoiceId, setSimilarChoiceId] = useState<string | null>(null);
 
   const handleExit = () => {
     setExitDialogOpen(true);
@@ -199,6 +202,9 @@ export default function CentralExamPlay() {
     } else {
       // ❌ WRONG - play sound, track error, DON'T advance, allow retry
       setHasWrongAnswer(true);
+      setSimilarQuestion(null);
+      setSimilarQuestionState("idle");
+      setSimilarChoiceId(null);
       setStreak(0);
       audioManager.playWrong();
       setCurrentWrongReason(currentQuestion.wrong_reason || null);
@@ -228,6 +234,9 @@ export default function CentralExamPlay() {
       setIsAnswered(false);
       setHasWrongAnswer(false);
       setCurrentWrongReason(null);
+      setSimilarQuestion(null);
+      setSimilarQuestionState("idle");
+      setSimilarChoiceId(null);
     } else {
       // Final question reached:
       // True correct count = total questions minus questions that had errors
@@ -257,6 +266,9 @@ export default function CentralExamPlay() {
     setSelectedChoice(null);
     setIsAnswered(false);
     setHasWrongAnswer(false);
+    setSimilarQuestion(null);
+    setSimilarQuestionState("idle");
+    setSimilarChoiceId(null);
     setScore(0);
     setIsFinished(false);
     setLoading(true);
@@ -267,6 +279,50 @@ export default function CentralExamPlay() {
     setCurrentWrongReason(null);
     startTime.current = Date.now();
     fetchQuestions();
+  };
+
+  const loadSimilarQuestion = async () => {
+    const currentQuestion = questions[currentIndex];
+    if (!currentQuestion) return;
+    if (!currentQuestion.grade_subject_id && !currentQuestion.domain_id) {
+      setSimilarQuestionState("empty");
+      return;
+    }
+    setSimilarQuestionState("loading");
+
+    try {
+      let query = supabase
+        .from("central_exam_questions")
+        .select("*, choices:central_exam_choices(*)")
+        .eq("active", true)
+        .eq("track_type", "central")
+        .neq("id", currentQuestion.id);
+      if (currentQuestion.grade_subject_id) query = query.eq("grade_subject_id", currentQuestion.grade_subject_id);
+      if (currentQuestion.domain_id) query = query.eq("domain_id", currentQuestion.domain_id);
+
+      const { data, error } = await query.limit(30);
+      if (error) throw error;
+      const candidates = ((data || []) as CentralExamQuestion[]).filter(
+        (candidate) => Array.isArray(candidate.choices) && candidate.choices.length >= 2,
+      );
+      if (!candidates.length) {
+        setSimilarQuestionState("empty");
+        return;
+      }
+      const candidate = candidates[Math.floor(Math.random() * candidates.length)];
+      setSimilarQuestion(candidate);
+      setSimilarQuestionState("ready");
+    } catch (error) {
+      console.error("Failed to load a similar central exam question:", error);
+      setSimilarQuestionState("empty");
+    }
+  };
+
+  const answerSimilarQuestion = (choiceId: string) => {
+    if (!similarQuestion || similarQuestionState === "correct") return;
+    setSimilarChoiceId(choiceId);
+    const choice = similarQuestion.choices?.find((item) => item.id === choiceId);
+    setSimilarQuestionState(choice?.is_correct ? "correct" : "wrong");
   };
 
   const saveAttempt = async (finalScore: number) => {
@@ -876,8 +932,9 @@ export default function CentralExamPlay() {
           })}
         </div>
 
-        {hasWrongAnswer && (currentWrongReason || currentQuestion.explanation_url) && (
-          <Card className="mb-8 border-amber-200 bg-amber-50/90 p-5 shadow-lg shadow-amber-100/50 space-y-3">
+        {hasWrongAnswer && (
+          <div className="mb-8 space-y-4">
+          {(currentWrongReason || currentQuestion.explanation_url) && <Card className="border-amber-200 bg-amber-50/90 p-5 shadow-lg shadow-amber-100/50 space-y-3">
             <div className="flex items-center justify-between flex-wrap gap-2">
               <div className="flex items-center gap-2 text-amber-800 font-black text-sm">
                 <HelpCircle className="w-5 h-5 text-amber-600" />
@@ -897,18 +954,41 @@ export default function CentralExamPlay() {
                 {currentWrongReason}
               </p>
             )}
-            <div className="pt-2 flex items-center justify-end">
-              <Button
-                type="button"
-                onClick={() => handleNextQuestion(score)}
-                variant="outline"
-                className="border-amber-400 text-amber-900 bg-white hover:bg-amber-100 font-bold px-4 py-1.5 rounded-xl shadow-sm text-xs sm:text-sm flex items-center gap-2"
-              >
-                <span>الانتقال للسؤال التالي</span>
-                <ArrowLeft className="w-4 h-4" />
-              </Button>
+          </Card>}
+
+          <Card className="border-indigo-200 bg-indigo-50/70 p-5 space-y-3">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div className="text-indigo-950 font-black">تدريب بسؤال مشابه</div>
+              {similarQuestionState === "idle" && (
+                <Button type="button" onClick={() => void loadSimilarQuestion()}>اعرض السؤال المشابه</Button>
+              )}
             </div>
+            {similarQuestionState === "loading" && <p className="text-sm font-bold text-indigo-800">جارٍ تجهيز سؤال مشابه...</p>}
+            {similarQuestionState === "empty" && <p className="text-sm font-bold text-slate-700">لا يوجد سؤال مشابه متاح حاليًا لهذه المادة والمجال.</p>}
+            {similarQuestion && (similarQuestionState === "ready" || similarQuestionState === "wrong" || similarQuestionState === "correct") && (
+              <div className="space-y-3">
+                <p className="font-bold leading-relaxed text-slate-900">{similarQuestion.text}</p>
+                {similarQuestion.image_url && <img src={similarQuestion.image_url} alt="صورة السؤال المشابه" className="max-h-48 rounded-xl object-contain" />}
+                <div className="grid gap-2">
+                  {(similarQuestion.choices || []).map((choice) => (
+                    <Button
+                      key={choice.id}
+                      type="button"
+                      variant="outline"
+                      disabled={similarQuestionState === "correct"}
+                      onClick={() => answerSimilarQuestion(choice.id)}
+                      className="h-auto min-h-11 justify-start whitespace-normal text-right"
+                    >
+                      {choice.text}
+                    </Button>
+                  ))}
+                </div>
+                {similarQuestionState === "wrong" && <p className="text-sm font-bold text-rose-700">إجابة غير صحيحة، حاول مرة أخرى.</p>}
+                {similarQuestionState === "correct" && <p className="text-sm font-bold text-emerald-700">إجابة صحيحة، أحسنت!</p>}
+              </div>
+            )}
           </Card>
+          </div>
         )}
 
         <ExplanationModal

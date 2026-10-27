@@ -88,25 +88,25 @@ export function Challenge3Hotspot({
   return (
     <div className="space-y-2.5 sm:space-y-3.5 max-w-xl mx-auto select-none">
       {/* 📜 Cartouche Scroll Question Box - Ancient Map Feel */}
-      <div className="relative rounded-xl sm:rounded-2xl p-3 sm:p-4 bg-gradient-to-b from-[#2a1a0f] via-[#1c120a] to-[#140c07] border-2 border-amber-600/60 shadow-[0_10px_25px_rgba(0,0,0,0.8),inset_0_1px_1px_rgba(251,191,36,0.3)] text-center space-y-1.5 sm:space-y-2 overflow-hidden">
+      <div className="relative rounded-xl sm:rounded-2xl p-3 sm:p-4 bg-gradient-to-br from-[#fbf7eb] to-[#eee5ce] border border-[#d5c59b] shadow-[0_10px_25px_rgba(0,0,0,.2),inset_0_1px_1px_rgba(255,255,255,.75)] text-center space-y-1.5 sm:space-y-2 overflow-hidden">
         {/* Subtle antique parchment grain texture & seal */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,#d9770615,transparent_70%)] pointer-events-none" />
-        <div className="absolute top-1.5 left-2 text-amber-500/30 text-xs font-serif select-none pointer-events-none">📜 🧭</div>
-        <div className="absolute top-1.5 right-2 text-amber-500/30 text-xs font-serif select-none pointer-events-none">⚓ 📜</div>
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(197,157,81,.12),transparent_70%)] pointer-events-none" />
+        <div className="absolute top-1.5 left-2 text-[#987d4e]/45 text-xs font-serif select-none pointer-events-none">✦</div>
+        <div className="absolute top-1.5 right-2 text-[#987d4e]/45 text-xs font-serif select-none pointer-events-none">✦</div>
 
-        <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-amber-500/15 border border-amber-400/40 text-amber-300 text-[10px] sm:text-[11px] font-black tracking-wide shadow-inner">
-          <Sparkles className="w-3.5 h-3.5 text-amber-400 animate-spin [animation-duration:10s]" />
-          <span>تَنْشِيطُ النَّوَاةِ البَصَرِيَّةِ لِلخَرِيطَةِ الأَثَرِيَّةِ</span>
-          <Sparkles className="w-3.5 h-3.5 text-amber-400 animate-spin [animation-duration:10s]" />
+        <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-[#1a5a60]/8 border border-[#668f82]/30 text-[#47766c] text-[10px] sm:text-[11px] font-black tracking-wide shadow-inner">
+          <Sparkles className="w-3.5 h-3.5 text-[#b68d49]" />
+          <span>تحدي تحديد الموقع</span>
+          <Sparkles className="w-3.5 h-3.5 text-[#b68d49]" />
         </div>
 
-        <h3 className="text-sm sm:text-base md:text-lg font-black text-amber-100 leading-relaxed drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)] font-sans px-1">
+        <h3 className="text-sm sm:text-base md:text-lg font-black text-[#18383e] leading-relaxed font-sans px-1">
           {challenge.prompt}
         </h3>
 
-        <p className="text-[10px] sm:text-xs text-amber-200/70 font-medium flex items-center justify-center gap-1.5">
+        <p className="text-[10px] sm:text-xs text-[#5f7068] font-medium flex items-center justify-center gap-1.5">
           <Crosshair className="w-3.5 h-3.5 text-amber-400" />
-          <span>المس أو انقر بدقة فوق النواة في مركز المخطط العلمي</span>
+          <span>اضغطي على الموضع الذي يجيب عن السؤال</span>
         </p>
       </div>
 
@@ -121,7 +121,7 @@ export function Challenge3Hotspot({
               handlePointerInteraction(t.clientX, t.clientY);
             }
           }}
-          className="relative w-full h-52 sm:h-64 bg-stone-950/95 rounded-xl sm:rounded-2xl overflow-hidden border-2 sm:border-3 border-amber-500/60 shadow-[0_10px_30px_rgba(0,0,0,0.8)] cursor-crosshair select-none flex items-center justify-center p-1"
+          className="relative w-full h-52 sm:h-64 bg-[#102d37] rounded-xl sm:rounded-2xl overflow-hidden border-2 border-[#d1b779]/75 shadow-[0_10px_30px_rgba(0,0,0,.28)] cursor-crosshair select-none flex items-center justify-center p-1"
         >
           {imageUrl && !imageError ? (
             <img
@@ -249,17 +249,16 @@ export function Challenge3Hotspot({
         {clickedCoords ? (
           <div className="text-center text-[10px] sm:text-xs text-emerald-300 font-black pt-1.5 flex items-center justify-center gap-1.5 animate-in fade-in">
             <Target className="w-3.5 h-3.5 text-emerald-400" />
-            <span>تم توجيه الإحداثيات ({clickedCoords.x}%، {clickedCoords.y}%)! اضغط لتأكيد الإجابة ⚡</span>
+            <span>تم تحديد الموقع. اضغطي لتأكيد إجابتك.</span>
           </div>
         ) : (
           <div className="text-center text-[10px] sm:text-xs text-amber-300/80 pt-1 font-bold flex items-center justify-center gap-1">
-            <span>🎯</span>
-            <span>انقر فوق النواة في مركز الذرة (المحددة بالإطار الذهبي)</span>
+            <span>حددي الموقع الذي يشير إليه السؤال.</span>
           </div>
         )}
       </div>
 
-      {/* Grand Altar Activation Mechanism Button (زر تأكيد الإجابة) */}
+      {/* Confirm the existing hotspot interaction */}
       <div className="pt-1 flex justify-center">
         <button
           type="button"
@@ -267,29 +266,22 @@ export function Challenge3Hotspot({
           disabled={!clickedCoords || isSubmitting}
           className={`relative overflow-hidden w-full py-3 sm:py-3.5 px-6 rounded-xl sm:rounded-2xl font-black text-sm sm:text-base transition-all duration-200 flex items-center justify-center gap-2 select-none shadow-md ${
             clickedCoords && !isSubmitting
-              ? "border-3 border-[#fef08a] bg-gradient-to-r from-[#d97706] via-[#f59e0b] to-[#d97706] text-[#451a03] shadow-[0_5px_0_#78350f,0_10px_25px_rgba(245,158,11,0.6)] hover:brightness-105 active:translate-y-1 active:shadow-[0_1px_0_#78350f] cursor-pointer group animate-pulse"
-              : "border-2 border-amber-600/60 bg-gradient-to-r from-amber-100 to-amber-200/90 text-[#78350f] shadow-sm cursor-not-allowed opacity-80"
+              ? "border border-[#b58b46] bg-gradient-to-b from-[#e5c779] to-[#c5984e] text-[#263e3a] shadow-md shadow-[#72542e]/20 hover:brightness-105 active:translate-y-px cursor-pointer group"
+              : "border border-slate-200 bg-slate-100 text-slate-400 shadow-none cursor-not-allowed opacity-80"
           }`}
         >
-          {clickedCoords && !isSubmitting && (
-            <div className="absolute inset-x-0 top-0 h-[45%] bg-gradient-to-b from-white/70 to-transparent pointer-events-none rounded-t-xl" />
-          )}
-
           {isSubmitting ? (
             <>
               <Loader2 className="w-5 h-5 sm:w-6 sm:h-6 animate-spin text-[#451a03]" />
-              <span>جاري توجيه الطاقة وفك القفل...</span>
+              <span>جارٍ التحقق من الإجابة…</span>
             </>
           ) : clickedCoords ? (
             <>
-              <Key className="w-5 h-5 text-[#451a03] group-hover:rotate-12 transition-transform" />
-              <span>✦ تَأْكِيدُ الإِجَابَةِ وَفَتْحُ القُفْلِ ✦</span>
-              <Zap className="w-5 h-5 text-[#451a03]" />
+              <span>تحققي من الإجابة</span>
             </>
           ) : (
             <>
-              <Key className="w-4 h-4 text-[#78350f]" />
-              <span>تَأْكِيدُ الإِجَابَةِ (انقر فوق النواة المركزية أولاً 🎯)</span>
+              <span>حددي موقعاً أولاً</span>
             </>
           )}
         </button>

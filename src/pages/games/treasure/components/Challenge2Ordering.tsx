@@ -66,10 +66,10 @@ function SortableItemCard({
     <div
       ref={setNodeRef}
       style={style}
-      className={`py-2.5 sm:py-3 px-3 sm:px-4 bg-gradient-to-r from-[#2a1308]/95 via-[#3b1d0c]/90 to-[#2a1308]/95 rounded-xl sm:rounded-2xl border-2 transition-all select-none shadow-md flex items-center justify-between gap-2.5 text-amber-100 ${
+      className={`py-2.5 sm:py-3 px-3 sm:px-4 bg-gradient-to-br from-[#fbf7eb] to-[#eee5ce] rounded-xl sm:rounded-2xl border transition-all select-none shadow-[0_5px_16px_rgba(4,22,28,.14)] flex items-center justify-between gap-2.5 text-[#203c40] ${
         isDragging
-          ? "border-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.5)] scale-[1.02] ring-2 ring-yellow-400/50 bg-[#451a03]"
-          : "border-amber-500/40 hover:border-amber-400/80 hover:bg-[#381a0b]"
+          ? "border-[#d0a952] shadow-[0_0_20px_rgba(214,177,100,.35)] scale-[1.02] ring-2 ring-[#d0a952]/35"
+          : "border-[#cfc29f] hover:border-[#b28b48] hover:shadow-lg"
       }`}
     >
       <div className="flex items-center gap-2.5 min-w-0 flex-1">
@@ -77,7 +77,7 @@ function SortableItemCard({
         <div
           {...attributes}
           {...listeners}
-          className="cursor-grab active:cursor-grabbing p-1 sm:p-1.5 rounded-lg hover:bg-amber-500/20 text-amber-400/80 hover:text-amber-300 touch-none shrink-0"
+          className="cursor-grab active:cursor-grabbing p-1 sm:p-1.5 rounded-lg hover:bg-[#caa45c]/15 text-[#63837b] hover:text-[#9a7137] touch-none shrink-0"
           title="اسحب للترتيب"
         >
           <GripVertical className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -88,7 +88,7 @@ function SortableItemCard({
           {index + 1}
         </div>
 
-        <span className="font-black text-xs sm:text-sm md:text-base text-amber-100 leading-snug truncate">
+        <span className="font-black text-xs sm:text-sm md:text-base text-[#203c40] leading-snug truncate">
           {item.text}
         </span>
       </div>
@@ -98,7 +98,7 @@ function SortableItemCard({
           <img
             src={item.imageUrl}
             alt={item.text}
-            className="w-7 h-7 sm:w-8 sm:h-8 object-contain rounded-lg border border-amber-400/40 bg-black/40 p-0.5"
+            className="w-7 h-7 sm:w-8 sm:h-8 object-contain rounded-lg border border-[#d1c49e] bg-white/70 p-0.5"
           />
         )}
 
@@ -110,7 +110,7 @@ function SortableItemCard({
             size="icon"
             disabled={isFirst || disabled}
             onClick={onMoveUp}
-            className="h-7 w-7 sm:h-8 sm:w-8 rounded-lg hover:bg-amber-500/20 text-amber-300 hover:text-amber-100 disabled:opacity-30"
+            className="h-7 w-7 sm:h-8 sm:w-8 rounded-lg hover:bg-[#1b5b5d]/10 text-[#477d76] hover:text-[#183f45] disabled:opacity-30"
             title="تحريك لأعلى"
           >
             <ArrowUp className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
@@ -121,7 +121,7 @@ function SortableItemCard({
             size="icon"
             disabled={isLast || disabled}
             onClick={onMoveDown}
-            className="h-7 w-7 sm:h-8 sm:w-8 rounded-lg hover:bg-amber-500/20 text-amber-300 hover:text-amber-100 disabled:opacity-30"
+            className="h-7 w-7 sm:h-8 sm:w-8 rounded-lg hover:bg-[#1b5b5d]/10 text-[#477d76] hover:text-[#183f45] disabled:opacity-30"
             title="تحريك لأسفل"
           >
             <ArrowDown className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
@@ -185,23 +185,23 @@ export function Challenge2Ordering({
   return (
     <div className="space-y-4 sm:space-y-5 max-w-xl mx-auto select-none">
       {/* 📜 Cartouche Scroll Question Box - Ancient Map Feel */}
-      <div className="relative rounded-2xl p-4 sm:p-5 bg-gradient-to-b from-[#2a1a0f] via-[#1c120a] to-[#140c07] border-2 border-amber-600/60 shadow-[0_12px_30px_rgba(0,0,0,0.8),inset_0_1px_1px_rgba(251,191,36,0.3)] text-center space-y-2.5 overflow-hidden">
+      <div className="relative rounded-2xl p-4 sm:p-5 bg-gradient-to-br from-[#fbf7eb] to-[#eee5ce] border border-[#d5c59b] shadow-[0_12px_30px_rgba(0,0,0,.22),inset_0_1px_1px_rgba(255,255,255,.75)] text-center space-y-2.5 overflow-hidden">
         {/* Subtle antique parchment grain texture & seal */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,#d9770615,transparent_70%)] pointer-events-none" />
-        <div className="absolute top-1.5 left-2 text-amber-500/30 text-xs font-serif select-none pointer-events-none">📜 🧭</div>
-        <div className="absolute top-1.5 right-2 text-amber-500/30 text-xs font-serif select-none pointer-events-none">⚓ 📜</div>
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(197,157,81,.12),transparent_70%)] pointer-events-none" />
+        <div className="absolute top-1.5 left-2 text-[#987d4e]/45 text-xs font-serif select-none pointer-events-none">✦</div>
+        <div className="absolute top-1.5 right-2 text-[#987d4e]/45 text-xs font-serif select-none pointer-events-none">✦</div>
 
-        <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-amber-500/15 border border-amber-400/40 text-amber-300 text-[11px] font-black tracking-wide shadow-inner">
-          <Sparkles className="w-3.5 h-3.5 text-amber-400 animate-spin [animation-duration:10s]" />
-          <span>تَسَلْسُلُ مَسَارَاتِ الخَرِيطَةِ الأَثَرِيَّةِ</span>
-          <Sparkles className="w-3.5 h-3.5 text-amber-400 animate-spin [animation-duration:10s]" />
+        <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-[#1a5a60]/8 border border-[#668f82]/30 text-[#47766c] text-[11px] font-black tracking-wide shadow-inner">
+          <Sparkles className="w-3.5 h-3.5 text-[#b68d49]" />
+          <span>تحدي الترتيب</span>
+          <Sparkles className="w-3.5 h-3.5 text-[#b68d49]" />
         </div>
 
-        <h3 className="text-base sm:text-lg md:text-xl font-black text-amber-100 leading-relaxed drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)] font-sans px-2">
+        <h3 className="text-base sm:text-lg md:text-xl font-black text-[#18383e] leading-relaxed font-sans px-2">
           {challenge.prompt}
         </h3>
 
-        <p className="text-[11px] sm:text-xs text-amber-200/70 font-medium flex items-center justify-center gap-1.5">
+        <p className="text-[11px] sm:text-xs text-[#5f7068] font-medium flex items-center justify-center gap-1.5">
           <span>💡</span>
           <span>اسحب الألواح أو استخدم الأسهم لترتيبها بالتسلسل الصحيح من البداية إلى النهاية</span>
         </p>
@@ -235,7 +235,7 @@ export function Challenge2Ordering({
         </DndContext>
       </div>
 
-      {/* Grand Altar Activation Mechanism Button */}
+      {/* Confirm the existing ordering interaction */}
       <div className="pt-2 flex justify-center">
         <button
           type="button"
@@ -243,22 +243,18 @@ export function Challenge2Ordering({
           disabled={isSubmitting || items.length === 0}
           className={`relative overflow-hidden w-full py-3.5 sm:py-4 px-6 rounded-2xl sm:rounded-3xl font-black text-base sm:text-lg transition-all duration-200 flex items-center justify-center gap-2.5 select-none ${
             !isSubmitting && items.length > 0
-              ? "border-3 border-[#fef08a] bg-gradient-to-r from-[#d97706] via-[#f59e0b] to-[#d97706] text-[#451a03] shadow-[0_8px_0_#78350f,0_0_35px_rgba(245,158,11,0.7)] hover:brightness-110 active:translate-y-1 active:shadow-[0_2px_0_#78350f] cursor-pointer group animate-pulse"
-              : "border-2 border-stone-700 bg-stone-900/80 text-stone-500 shadow-none cursor-not-allowed opacity-60"
+            ? "border border-[#b58b46] bg-gradient-to-b from-[#e5c779] to-[#c5984e] text-[#263e3a] shadow-md shadow-[#72542e]/20 hover:brightness-105 active:translate-y-px cursor-pointer group"
+              : "border border-slate-200 bg-slate-100 text-slate-400 shadow-none cursor-not-allowed opacity-80"
           }`}
         >
-          <div className="absolute inset-x-0 top-0 h-[45%] bg-gradient-to-b from-white/70 to-transparent pointer-events-none rounded-t-2xl" />
-
           {isSubmitting ? (
             <>
               <Loader2 className="w-5 h-5 sm:w-6 sm:h-6 animate-spin text-stone-950" />
-              <span>جاري توجيه مسار الطاقة وفك القفل...</span>
+              <span>جارٍ التحقق من الترتيب…</span>
             </>
           ) : (
             <>
-              <Key className="w-5 h-5 sm:w-6 sm:h-6 text-[#451a03] group-hover:rotate-12 transition-transform" />
-              <span>✦ تَأْكِيدُ تَرْتِيبِ المَسَارِ وَفَتْحُ القُفْلِ ✦</span>
-              <Zap className="w-5 h-5 sm:w-6 sm:h-6 text-[#451a03]" />
+              <span>تحققي من الترتيب</span>
             </>
           )}
         </button>

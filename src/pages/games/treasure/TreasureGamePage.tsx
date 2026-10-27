@@ -11,7 +11,7 @@ import { Challenge3Hotspot } from "./components/Challenge3Hotspot";
 import { LockUnlockOverlay } from "./components/LockUnlockOverlay";
 import { TreasureChamber } from "./components/TreasureChamber";
 import { CinematicBriefingScroll } from "./components/CinematicBriefingScroll";
-import { TreasureScratchCard } from "./components/TreasureScratchCard";
+import { TreasureAdventureMap } from "./components/TreasureAdventureMap";
 import {
   TreasureStageTransition3D,
   StageTransitionData,
@@ -71,6 +71,18 @@ const TreasureWorld3D = lazy(() =>
   }))
 );
 
+const getTreasureStageRanges = (questionCount: number) => {
+  const baseCount = Math.floor(questionCount / 4);
+  const extraQuestions = questionCount % 4;
+  let nextStep = 1;
+  return Array.from({ length: 4 }, (_, index) => {
+    const count = baseCount + (index < extraQuestions ? 1 : 0);
+    const range = { stageNumber: index + 1, startStep: nextStep, endStep: nextStep + count - 1, questionCount: count };
+    nextStep += count;
+    return range;
+  });
+};
+
 export default function TreasureGamePage() {
   const { adventureId } = useParams<{ adventureId?: string }>();
   const navigate = useNavigate();
@@ -88,12 +100,20 @@ export default function TreasureGamePage() {
 
   // 4 Stages Progression State
   const [accumulatedScore, setAccumulatedScore] = useState<number>(0);
-  const [activeScratchCardStage, setActiveScratchCardStage] = useState<number | null>(null);
   const [activeTransition, setActiveTransition] = useState<StageTransitionData | null>(null);
+  const [treasurePointAwarded, setTreasurePointAwarded] = useState(false);
+  const [treasurePointError, setTreasurePointError] = useState("");
+  const [isRetryingTreasurePoint, setIsRetryingTreasurePoint] = useState(false);
 
-  // Current Stage Helpers
-  const currentStage = Math.min(4, Math.max(1, Math.floor((currentChallengeStep - 1) / 3) + 1));
-  const questionInStage = ((currentChallengeStep - 1) % 3) + 1;
+  // Split the adventure's authored questions across four stages without adding or removing questions.
+  const totalChallengeCount = sessionData?.challenges.length || DEFAULT_TREASURE_12_CHALLENGES.length;
+  const stageRanges = getTreasureStageRanges(totalChallengeCount);
+  const currentStageRange = stageRanges.find((range) => range.questionCount > 0
+    && currentChallengeStep >= range.startStep && currentChallengeStep <= range.endStep) || stageRanges[0];
+  const currentStage = currentStageRange.stageNumber;
+  const questionInStage = Math.max(1, currentChallengeStep - currentStageRange.startStep + 1);
+  const completedQuestionsInStage = Math.max(0, currentChallengeStep - currentStageRange.startStep);
+  const currentStageMission = TREASURE_STAGES[currentStage - 1];
 
   // Cinematic Lock Unlocking Overlay state
   const [unlockedLockInfo, setUnlockedLockInfo] = useState<{
@@ -170,6 +190,10 @@ export default function TreasureGamePage() {
   const initGameSession = async () => {
     try {
       setLoading(true);
+      setFinalResult(null);
+      setTreasurePointAwarded(false);
+      setTreasurePointError("");
+      setIsRetryingTreasurePoint(false);
 
       let targetAdventureId = adventureId;
       let activeAdv = null;
@@ -201,37 +225,37 @@ export default function TreasureGamePage() {
         }
       }
 
-      // Always guarantee full 12 questions (4 stages × 3 questions)
-      const sessionChallenges =
-        resSession?.challenges && resSession.challenges.length >= 12
-          ? resSession.challenges
-          : DEFAULT_TREASURE_12_CHALLENGES;
+      // Keep every question configured for the adventure; use defaults only when no content exists.
+      const sessionChallenges = resSession?.challenges?.length
+        ? resSession.challenges
+        : DEFAULT_TREASURE_12_CHALLENGES;
 
       const fallbackSession: StartTreasureSessionResponse = {
-        resumed: false,
+        resumed: resSession?.resumed ?? false,
         session_id: resSession?.session_id || "session_adv_" + Date.now(),
         adventure_id: resSession?.adventure_id || targetAdventureId || "adv_treasure_island",
         adventure_title: resSession?.adventure_title || "جزيرة الكنز الأسطوري - أسرار العلوم",
         story_clue:
           resSession?.story_clue ||
-          "ابحث عن المفتاح الأثري في أنحاء الجزيرة لحل الألغاز الـ12 وفتح البوابة الأسطورية عبر 4 مراحل مشوقة",
+          "ابحث عن المفتاح الأثري في أنحاء الجزيرة، ثم أجب عن الألغاز وافتح الطريق إلى صندوق الكنز عبر أربع مراحل.",
         environment_config: resSession?.environment_config || {
           theme: "ancient_ruins",
           key_node: "statue",
           time_limit_seconds: 600,
         },
-        current_phase: "briefing",
-        current_challenge_step: 1,
-        accumulated_score: 0,
-        started_at: new Date().toISOString(),
+        current_phase: resSession?.current_phase || "briefing",
+        current_challenge_step: resSession?.current_challenge_step || 1,
+        accumulated_score: resSession?.accumulated_score || 0,
+        started_at: resSession?.started_at || new Date().toISOString(),
         challenges: sessionChallenges,
       };
 
       setSessionData(fallbackSession);
       setCurrentPhase(fallbackSession.current_phase);
-      setCurrentChallengeStep(1);
-      setAccumulatedScore(0);
-      setKeyFound(false);
+      setCurrentChallengeStep(fallbackSession.current_challenge_step);
+      setAccumulatedScore(fallbackSession.accumulated_score);
+      setTreasurePointAwarded(false);
+      setKeyFound(["key_found", "portal", "challenges", "treasure", "completed"].includes(fallbackSession.current_phase));
       setFinalResult(null);
     } catch (err: any) {
       console.error("Failed to start treasure session:", err);
@@ -241,7 +265,7 @@ export default function TreasureGamePage() {
         session_id: "session_local_" + Date.now(),
         adventure_id: "adv_default",
         adventure_title: "جزيرة الكنز الأسطوري - أسرار العلوم",
-        story_clue: "ابحث عن المفتاح الأثري لفك أختام البوابة الأسطورية عبر 4 مراحل مشوقة",
+        story_clue: "ابحث عن المفتاح الأثري، ثم أجب عن الألغاز وافتح الطريق إلى صندوق الكنز عبر أربع مراحل.",
         environment_config: {
           theme: "ancient_ruins",
           key_node: "statue",
@@ -257,6 +281,7 @@ export default function TreasureGamePage() {
       setCurrentPhase("briefing");
       setCurrentChallengeStep(1);
       setAccumulatedScore(0);
+      setTreasurePointAwarded(false);
     } finally {
       setLoading(false);
     }
@@ -277,7 +302,6 @@ export default function TreasureGamePage() {
     if (!isMuted) {
       treasureHalalAudio.startAmbience();
     }
-    toast.success("🧭 بدأت رحلة الاستكشاف! ابحث عن المفتاح الأثري في الجزيرة");
 
     if (sessionData.session_id && !sessionData.session_id.startsWith("session_")) {
       treasureService.advancePhase(sessionData.session_id, "exploration").catch(() => {});
@@ -289,7 +313,6 @@ export default function TreasureGamePage() {
     setKeyFound(true);
     setCurrentPhase("key_found");
     treasureHalalAudio.playKeyFound();
-    toast.success("🗝️ عثرت على المفتاح السري للبوابة الأثرية!");
 
     if (sessionData.session_id && !sessionData.session_id.startsWith("session_")) {
       treasureService.advancePhase(sessionData.session_id, "key_found").catch(() => {});
@@ -300,7 +323,6 @@ export default function TreasureGamePage() {
     if (!sessionData) return;
     setCurrentPhase("challenges");
     treasureHalalAudio.playStoneGateRumble();
-    toast.success("⛩️ اقتربت من البوابة الحجرية! استعد لفك أختام المرحلة الأولى");
 
     if (sessionData.session_id && !sessionData.session_id.startsWith("session_")) {
       treasureService.advancePhase(sessionData.session_id, "portal").catch(() => {});
@@ -316,57 +338,34 @@ export default function TreasureGamePage() {
       setIsSubmitting(true);
       setShowPedagogicalHint(false);
 
-      // Verify answer locally using solution dictionary
-      const currentSol = TREASURE_SOLUTIONS[currentChallengeStep];
+      const isRemoteSession = !sessionData.session_id.startsWith("session_");
+      let serverResult: SubmitStepResponse | undefined;
       let isCorrect = false;
-
-      if (answerPayload.selected_choice_id) {
-        isCorrect = currentSol ? answerPayload.selected_choice_id === currentSol.correct_choice_id : true;
-      } else if (answerPayload.submitted_order) {
-        isCorrect =
-          currentSol && currentSol.correct_order
+      if (isRemoteSession) {
+        serverResult = await treasureService.submitStep(
+          sessionData.session_id,
+          crypto.randomUUID(),
+          currentChallengeStep,
+          answerPayload,
+        );
+        isCorrect = serverResult.is_correct;
+      } else {
+        // The local fallback keeps the same answer controls, using its built-in answer key.
+        const currentSol = TREASURE_SOLUTIONS[currentChallengeStep];
+        if (answerPayload.selected_choice_id) {
+          isCorrect = currentSol ? answerPayload.selected_choice_id === currentSol.correct_choice_id : true;
+        } else if (answerPayload.submitted_order) {
+          isCorrect = currentSol?.correct_order
             ? JSON.stringify(answerPayload.submitted_order) === JSON.stringify(currentSol.correct_order)
             : true;
-      } else {
-        isCorrect = true;
+        } else {
+          isCorrect = true;
+        }
       }
 
-      // If server connected, submit in background
-      if (sessionData.session_id && !sessionData.session_id.startsWith("session_")) {
-        treasureService
-          .submitStep(sessionData.session_id, crypto.randomUUID(), currentChallengeStep, answerPayload)
-          .catch((e) => console.warn("Background server submitStep:", e));
-      }
-
+      const questionWasCompleted = isCorrect || Boolean(isRemoteSession && serverResult?.exhausted_attempts);
       if (isCorrect) {
         if (!isMuted) audioManager.playCorrect();
-
-        const isStageMilestone = currentChallengeStep % 3 === 0;
-        const stageNum = Math.min(4, Math.floor((currentChallengeStep - 1) / 3) + 1);
-
-        if (isStageMilestone) {
-          // 🎉 Stage complete! Show interactive scratch card awarding +25 points
-          toast.success(`أحسنت! أكملت المرحلة ${stageNum} بنجاح! اكشط بطاقة الكنز 🪙`);
-          setActiveScratchCardStage(stageNum);
-        } else {
-          // Standard lock unlock in stage
-          toast.success(`إجابة صحيحة ومبهرة! تم فك القفل الأثري 🎉`);
-          setUnlockedLockInfo({
-            step: currentChallengeStep,
-            points: 10,
-            nextStep: currentChallengeStep + 1,
-            nextPhase: "challenges",
-            isFinal: false,
-          });
-        }
-
-        return {
-          is_correct: true,
-          points_earned: isStageMilestone ? 25 : 10,
-          attempts_taken: 1,
-          current_challenge_step: currentChallengeStep + 1,
-          current_phase: "challenges",
-        };
       } else {
         if (!isMuted) audioManager.playWrong();
         const activeChallenge = sessionData.challenges.find((c) => c.step === currentChallengeStep);
@@ -374,18 +373,47 @@ export default function TreasureGamePage() {
           setWrongReason(activeChallenge.wrong_reason);
           setExplanationOpen(true);
         }
-        toast.error("إجابة غير صحيحة، راجع التوجيه وحاول مجددًا!");
-        return {
-          is_correct: false,
-          points_earned: 0,
-          attempts_taken: 1,
-          current_challenge_step: currentChallengeStep,
-          current_phase: "challenges",
-          explanation: {
-            wrong_reason: activeChallenge?.wrong_reason || undefined,
-          },
-        };
+        if (!questionWasCompleted) {
+          toast.error("إجابة غير صحيحة، راجعي التوجيه وحاولي مجددًا", { className: "!border-[#c56f65]/55 !bg-[#102630] !text-[#f8e9d8] !shadow-xl" });
+          return serverResult || {
+            is_correct: false,
+            points_earned: 0,
+            attempts_taken: 1,
+            current_challenge_step: currentChallengeStep,
+            current_phase: "challenges",
+            explanation: { wrong_reason: activeChallenge?.wrong_reason || undefined },
+          };
+        }
       }
+
+      // Keep the existing scoring and retry rules authoritative; stages only group completed questions.
+      const acceptedResult = serverResult || {
+        is_correct: true,
+        points_earned: 0,
+        attempts_taken: 1,
+        current_challenge_step: currentChallengeStep + 1,
+        current_phase: "challenges" as GameplayPhase,
+      };
+      const newTotalScore = accumulatedScore + (acceptedResult.points_earned || 0);
+      setAccumulatedScore(newTotalScore);
+      const nextStep = acceptedResult.current_challenge_step;
+      const isStageMilestone = currentChallengeStep >= currentStageRange.endStep;
+      const stageNum = currentStage;
+      const pointsForTransition = acceptedResult.points_earned || 0;
+
+      if (isStageMilestone) {
+        setActiveTransition({ fromStage: stageNum, toStage: stageNum + 1, newScore: newTotalScore, challengeCount: totalChallengeCount });
+      } else {
+        setUnlockedLockInfo({
+          step: currentChallengeStep,
+          points: pointsForTransition,
+          nextStep,
+          nextPhase: "challenges",
+          isFinal: false,
+        });
+      }
+
+      return acceptedResult;
     } catch (err: any) {
       console.warn("Challenge submission caught error:", err);
       toast.error(err.message || "فشل إرسال الإجابة");
@@ -403,21 +431,6 @@ export default function TreasureGamePage() {
     setCurrentChallengeStep(nextStep);
   };
 
-  // Advance after completing the scratch card (question 3 of each stage)
-  const handleScratchCardCompleted = () => {
-    const stageFinished = activeScratchCardStage || currentStage;
-    const newTotalScore = stageFinished * 25;
-    setAccumulatedScore(newTotalScore);
-    setActiveScratchCardStage(null);
-
-    // Launch Cinematic 3D Stage Transition!
-    setActiveTransition({
-      fromStage: stageFinished,
-      toStage: stageFinished + 1,
-      newScore: newTotalScore,
-    });
-  };
-
   // Complete the 3D Stage Transition
   const handleTransitionComplete = () => {
     if (!activeTransition) return;
@@ -425,13 +438,42 @@ export default function TreasureGamePage() {
     setActiveTransition(null);
 
     if (toStage <= 4) {
-      const nextStep = (toStage - 1) * 3 + 1;
-      setCurrentChallengeStep(nextStep);
-      treasureHalalAudio.playStoneGateRumble();
-      toast.success(`🎉 بدأت المرحلة ${toStage} من 4 بنجاح! أختام جديدة بانتظارك 🗝️`);
+      const nextRange = stageRanges[toStage - 1];
+      if (nextRange.questionCount > 0) {
+        setCurrentChallengeStep(nextRange.startStep);
+        treasureHalalAudio.playStoneGateRumble();
+      } else {
+        const newTotalScore = toStage * 25;
+        setAccumulatedScore(newTotalScore);
+        setActiveTransition({ fromStage: toStage, toStage: toStage + 1, newScore: newTotalScore, challengeCount: totalChallengeCount });
+      }
     } else {
-      // Stage 4 Complete: 100/100 Victory!
-      handleFinalizeAttempt(sessionData?.session_id, 100);
+      // The server keeps the score from the existing question and retry rules.
+      void handleFinalizeAttempt(sessionData?.session_id);
+    }
+  };
+
+  const handleRetryTreasurePoint = async () => {
+    const sessionId = finalResult?.session_id;
+    if (!sessionId || sessionId.startsWith("session_")) return;
+    setIsRetryingTreasurePoint(true);
+    try {
+      // This RPC is idempotent: it safely retries both finalization and the one-point award.
+      const retryResult = await treasureService.finalizeAttempt(sessionId);
+      const saved = retryResult.subject_point_awarded === true && retryResult.subject_point === 1;
+      if (saved) {
+        setTreasurePointAwarded(true);
+        setTreasurePointError("");
+      } else {
+        setTreasurePointError("تعذر تسجيل الدرجة الإضافية الآن.");
+      }
+      if (!saved) toast.error("ما زال تسجيل الدرجة متعذرًا. أعيدي المحاولة بعد قليل.");
+    } catch (error) {
+      console.error("Could not retry the treasure subject point:", error);
+      setTreasurePointError("تعذر الاتصال لحفظ الدرجة الإضافية.");
+      toast.error("تعذر الاتصال لحفظ الدرجة الإضافية.");
+    } finally {
+      setIsRetryingTreasurePoint(false);
     }
   };
 
@@ -442,25 +484,36 @@ export default function TreasureGamePage() {
     fallbackChallenges?: any[]
   ) => {
     const sId = overrideSessionId || sessionData?.session_id || "session_final";
-    const score = fallbackScore ?? 100;
+    const score = fallbackScore ?? accumulatedScore;
 
+    let finalized: FinalizeAttemptResponse | null = null;
+    setTreasurePointError("");
+    setTreasurePointAwarded(false);
     try {
       if (sessionData?.session_id && !sessionData.session_id.startsWith("session_")) {
-        await treasureService.finalizeAttempt(sessionData.session_id).catch(() => {});
+        finalized = await treasureService.finalizeAttempt(sessionData.session_id);
+        const pointAwarded = finalized.subject_point_awarded === true && finalized.subject_point === 1;
+        setTreasurePointAwarded(pointAwarded);
+        if (!pointAwarded) setTreasurePointError("لم يؤكد الخادم تسجيل الدرجة الإضافية. أعيدي المحاولة من شاشة الكنز.");
+      } else {
+        setTreasurePointError("لا يمكن تسجيل درجة المادة دون اتصال بقاعدة البيانات.");
       }
-    } catch (_) {}
+    } catch (error) {
+      console.error("Could not award the treasure subject point:", error);
+      setTreasurePointError("تعذر تسجيل الدرجة الإضافية. يمكنك إعادة المحاولة من شاشة الكنز.");
+    }
 
     setAccumulatedScore(score);
     setFinalResult({
       success: true,
-      attempt_id: sId,
+      attempt_id: finalized?.attempt_id || sId,
       session_id: sId,
-      final_score: 100,
-      base_score: 100,
-      is_passed: true,
-      is_certificate_eligible: true,
-      speed_bonus: 0,
-      duration_seconds: 120,
+      final_score: finalized?.final_score ?? score,
+      base_score: finalized?.base_score ?? score,
+      is_passed: finalized?.is_passed ?? score >= 60,
+      is_certificate_eligible: finalized?.is_certificate_eligible ?? score >= 80,
+      speed_bonus: finalized?.speed_bonus ?? 0,
+      duration_seconds: finalized?.duration_seconds ?? 120,
       challenges_snapshot: fallbackChallenges || sessionData?.challenges || DEFAULT_TREASURE_12_CHALLENGES,
     });
     setCurrentPhase("completed");
@@ -495,7 +548,7 @@ export default function TreasureGamePage() {
   ) || DEFAULT_TREASURE_12_CHALLENGES[0];
 
   return (
-    <div className="fixed inset-0 w-screen h-screen overflow-hidden bg-slate-950 text-foreground select-none flex flex-col justify-between" dir="rtl">
+    <div className="fixed inset-0 w-full h-dvh overflow-hidden bg-slate-950 text-foreground select-none flex flex-col justify-between" dir="rtl">
       {/* 1. Full-Screen Interactive 3D World Scene Layer */}
       <div className="absolute inset-0 w-full h-full z-0 overflow-hidden select-none">
         <Suspense
@@ -520,36 +573,36 @@ export default function TreasureGamePage() {
       </div>
 
       {/* 2. Sleek Adventure Explorer Command Bar with Stage & Score Badges */}
-      <div className="relative z-30 p-2 sm:p-4 w-full max-w-5xl mx-auto pointer-events-none">
-        <div className="pointer-events-auto bg-gradient-to-r from-[#2c1407]/95 via-[#1a0c04]/95 to-[#2c1407]/95 backdrop-blur-md border-2 border-[#b45309]/80 p-2 sm:p-2.5 rounded-full shadow-[0_8px_30px_rgba(0,0,0,0.6),0_0_0_1px_rgba(245,158,11,0.25)] flex items-center justify-between gap-2 sm:gap-3">
+      <div className={`${currentPhase === "challenges" ? "hidden" : "relative"} z-30 p-2 sm:p-4 w-full max-w-6xl mx-auto pointer-events-none`}>
+        <div className="pointer-events-auto rounded-[1.35rem] border border-[#e8cf94]/35 bg-[#0b2530]/88 p-2 shadow-[0_12px_34px_rgba(3,18,25,.38),inset_0_1px_0_rgba(255,255,255,.1)] backdrop-blur-xl flex items-center justify-between gap-2 sm:gap-3">
           {/* Left Controls: Sound & Badges */}
           <div className="flex items-center gap-1.5 sm:gap-2">
             {/* Sound Toggle */}
             <button
               type="button"
               onClick={toggleSound}
-              className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gradient-to-b from-[#b45309] to-[#78350f] border-2 border-amber-400 text-amber-100 flex items-center justify-center shadow-[0_3px_0_#451a03] hover:brightness-110 active:translate-y-0.5 active:shadow-none transition-all cursor-pointer"
+              className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl border border-[#dec58d]/35 bg-white/[0.06] text-[#f0d99f] flex items-center justify-center shadow-sm hover:bg-white/10 active:scale-95 transition-all cursor-pointer"
               title={isMuted ? "تشغيل الصوت" : "كتم الصوت"}
             >
               {isMuted ? <VolumeX className="w-4 h-4 sm:w-5 sm:h-5 text-amber-200" /> : <Volume2 className="w-4 h-4 sm:w-5 sm:h-5 text-amber-200" />}
             </button>
 
             {/* Stage Badge */}
-            <div className="h-9 sm:h-10 px-3 rounded-full bg-gradient-to-b from-amber-400 via-amber-500 to-amber-600 border-2 border-amber-300 text-stone-950 font-black text-xs sm:text-sm shadow-[0_3px_0_#78350f] flex items-center gap-1.5">
-              <Trophy className="w-4 h-4 text-stone-950" />
+            <div className="h-9 sm:h-10 px-3 rounded-xl border border-[#e8cf94]/35 bg-[#e4bd6c]/15 text-[#f5e7c4] font-black text-xs sm:text-sm flex items-center gap-1.5">
+              <Trophy className="w-4 h-4 text-[#eccb7e]" />
               <span>المرحلة {currentStage} من 4</span>
             </div>
 
             {/* Score Badge */}
-            <div className="h-9 sm:h-10 px-3 rounded-full bg-gradient-to-b from-yellow-300 via-yellow-400 to-amber-500 border-2 border-white text-[#451a03] font-black text-xs sm:text-sm shadow-[0_3px_0_#78350f] flex items-center gap-1.5">
-              <Sparkles className="w-4 h-4 text-[#451a03]" />
-              <span>{accumulatedScore} / 100 نقطة</span>
+            <div className="h-9 sm:h-10 px-3 rounded-xl border border-white/15 bg-white/[0.07] text-[#f3e8cb] font-black text-xs sm:text-sm flex items-center gap-1.5">
+              <Sparkles className="w-4 h-4 text-[#eccb7e]" />
+              <span dir="ltr">{accumulatedScore} / 100 نقطة</span>
             </div>
 
             {/* Key Status Badge */}
             {keyFound && (
-              <div className="h-9 sm:h-10 px-3 rounded-full bg-gradient-to-b from-emerald-400 to-emerald-600 border-2 border-emerald-300 text-stone-950 font-black text-xs sm:text-sm shadow-[0_3px_0_#064e3b] flex items-center gap-1.5 animate-bounce">
-                <Key className="w-4 h-4 text-stone-950" />
+              <div className="h-9 sm:h-10 px-3 rounded-xl border border-[#b7dcc3]/25 bg-[#6ab38a]/15 text-[#d2ead8] font-black text-xs sm:text-sm flex items-center gap-1.5">
+                <Key className="w-4 h-4 text-[#b6dcae]" />
                 <span className="hidden sm:inline">المفتاح معك!</span>
               </div>
             )}
@@ -558,11 +611,11 @@ export default function TreasureGamePage() {
           {/* Center Title */}
           <div className="text-center min-w-0 flex-1 px-2 hidden sm:block">
             <div className="inline-flex items-center gap-1.5 max-w-full">
-              <Compass className="w-4 h-4 text-amber-400 shrink-0 animate-spin [animation-duration:14s]" />
-              <h1 className="font-black text-xs sm:text-base text-amber-200 truncate drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] font-sans">
+              <Compass className="w-4 h-4 text-[#eccb7e] shrink-0" />
+              <h1 className="font-black text-xs sm:text-base text-[#f5e7c4] truncate font-sans">
                 جزيرة الكنز الأسطوري
-                <span className="font-bold text-amber-400/80 mr-2 text-xs">
-                  • 4 مراحل وشهادة التميز
+                <span className="font-bold text-[#b7d0c7]/75 mr-2 text-xs">
+                  • أربع مراحل حتى الصندوق الذهبي
                 </span>
               </h1>
             </div>
@@ -573,7 +626,7 @@ export default function TreasureGamePage() {
             <button
               type="button"
               onClick={() => navigate("/student/games")}
-              className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gradient-to-b from-rose-600 to-rose-800 border-2 border-rose-400 text-white flex items-center justify-center shadow-[0_3px_0_#4c0519] hover:brightness-110 active:translate-y-0.5 active:shadow-none transition-all cursor-pointer shrink-0"
+              className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl border border-white/15 bg-white/[0.06] text-[#f3e8cb] flex items-center justify-center hover:bg-white/10 active:scale-95 transition-all cursor-pointer shrink-0"
               title="العودة لمركز الألعاب"
             >
               <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
@@ -588,6 +641,7 @@ export default function TreasureGamePage() {
         <CinematicBriefingScroll
           adventureTitle={sessionData?.adventure_title}
           storyClue={sessionData?.story_clue}
+          challengeCount={totalChallengeCount}
           trackType={selectionContext?.trackType}
           studentName={studentName}
           isMuted={isMuted}
@@ -603,14 +657,14 @@ export default function TreasureGamePage() {
             <button
               type="button"
               onClick={handleInspectKey}
-              className="relative overflow-hidden py-3.5 sm:py-4 px-8 sm:px-12 rounded-full border-3 border-[#fef08a] bg-gradient-to-b from-[#fbbf24] via-[#f59e0b] to-[#d97706] text-[#451a03] font-black text-base sm:text-lg shadow-[0_8px_0_#78350f,0_10px_25px_rgba(245,158,11,0.5)] hover:brightness-110 active:translate-y-1.5 active:shadow-none transition-all flex items-center justify-center gap-2.5 cursor-pointer group animate-pulse"
+              className="relative overflow-hidden py-3.5 sm:py-4 px-8 sm:px-12 rounded-2xl border border-[#fff0c2]/65 bg-gradient-to-b from-[#f2d58f] via-[#d7a94f] to-[#ad743a] text-[#253c38] font-black text-base sm:text-lg shadow-[0_5px_0_#754b2d,0_12px_35px_rgba(9,27,28,.42)] hover:-translate-y-0.5 hover:brightness-105 active:translate-y-1 active:shadow-none transition-all flex items-center justify-center gap-2.5 cursor-pointer group"
             >
-              <div className="absolute inset-x-0 top-0 h-[45%] bg-gradient-to-b from-white/70 to-transparent pointer-events-none rounded-t-full" />
-              <Key className="w-5 h-5 sm:w-6 sm:h-6 text-[#451a03]" />
+            <div className="absolute inset-x-0 top-0 h-[45%] bg-gradient-to-b from-white/45 to-transparent pointer-events-none rounded-t-2xl" />
+            <Key className="w-5 h-5 sm:w-6 sm:h-6 text-[#62462d]" />
               <span>التقاط المفتاح السري 🗝️</span>
             </button>
-            <span className="text-[11px] sm:text-xs font-bold text-amber-200 drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] bg-black/40 px-3 py-1 rounded-full border border-amber-500/30">
-              💡 يمكنك أيضاً النقر مباشرة على المفتاح الطافي في المشهد 3D
+            <span className="text-[11px] sm:text-xs font-bold text-[#f3e6c4] drop-shadow-[0_2px_4px_rgba(0,0,0,.9)] bg-[#0b2530]/85 px-3 py-1.5 rounded-xl border border-[#e8cf94]/25 backdrop-blur-md">
+              يمكنك أيضاً النقر مباشرة على المفتاح الطافي في المشهد ثلاثي الأبعاد
             </span>
           </div>
         </div>
@@ -622,150 +676,134 @@ export default function TreasureGamePage() {
           <button
             type="button"
             onClick={handleApproachPortal}
-            className="pointer-events-auto relative overflow-hidden py-4 px-10 sm:px-14 rounded-full border-3 border-[#bae6fd] bg-gradient-to-b from-[#38bdf8] via-[#0284c7] to-[#0369a1] text-white font-black text-lg sm:text-xl shadow-[0_8px_0_#075985,0_10px_25px_rgba(2,132,199,0.5)] hover:brightness-110 active:translate-y-1.5 active:shadow-none transition-all flex items-center justify-center gap-2.5 cursor-pointer group animate-bounce"
+            className="pointer-events-auto relative overflow-hidden py-4 px-10 sm:px-14 rounded-2xl border border-[#d4eee7]/45 bg-gradient-to-b from-[#7ac5bd] via-[#398d8a] to-[#21636d] text-white font-black text-lg sm:text-xl shadow-[0_5px_0_#153f49,0_12px_35px_rgba(5,29,36,.45)] hover:-translate-y-0.5 hover:brightness-105 active:translate-y-1 active:shadow-none transition-all flex items-center justify-center gap-2.5 cursor-pointer group"
           >
-            <div className="absolute inset-x-0 top-0 h-[45%] bg-gradient-to-b from-white/70 to-transparent pointer-events-none rounded-t-full" />
+            <div className="absolute inset-x-0 top-0 h-[45%] bg-gradient-to-b from-white/45 to-transparent pointer-events-none rounded-t-2xl" />
             <DoorClosed className="w-6 h-6 text-white" />
             <span>توجه للبوابة الحجرية لبدء المرحلة الأولى ⛩️</span>
           </button>
         </div>
       )}
 
-      {/* Phase 4: Challenges Active (4-Stage Map Parchment) */}
+      {/* Phase 4: Active challenge with a persistent island mission HUD */}
       {currentPhase === "challenges" && currentChallenge && (
         <div className="relative z-20 flex-1 flex flex-col items-center justify-start sm:justify-center p-2 sm:p-4 overflow-y-auto w-full pb-16 sm:pb-8">
-          <div className="relative max-w-2xl w-full rounded-[24px] sm:rounded-[32px] p-3.5 sm:p-5 bg-gradient-to-b from-[#fefce8] via-[#fef9c3] to-[#fef08a] border-3 sm:border-4 border-[#854d0e] shadow-[0_20px_50px_rgba(0,0,0,0.55),0_0_0_4px_#fde047,inset_0_2px_12px_rgba(180,83,9,0.18)] space-y-2.5 sm:space-y-3 animate-in fade-in zoom-in-95 slide-in-from-bottom-4 duration-400 text-[#451a03]">
-            {/* Antique Watermark Compass */}
-            <Compass className="absolute -left-10 -bottom-10 w-40 h-40 text-amber-900/10 pointer-events-none rotate-12" />
-            <Compass className="absolute -right-10 -top-10 w-40 h-40 text-amber-900/10 pointer-events-none -rotate-12" />
-
-            {/* Gilded Corner Filigrees */}
-            <div className="absolute top-2 left-2 w-3.5 h-3.5 border-t-2 border-l-2 border-[#854d0e] pointer-events-none" />
-            <div className="absolute top-2 right-2 w-3.5 h-3.5 border-t-2 border-r-2 border-[#854d0e] pointer-events-none" />
-            <div className="absolute bottom-2 left-2 w-3.5 h-3.5 border-b-2 border-l-2 border-[#854d0e] pointer-events-none" />
-            <div className="absolute bottom-2 right-2 w-3.5 h-3.5 border-b-2 border-r-2 border-[#854d0e] pointer-events-none" />
-
-            {/* Ancient Map Header: Stage & Question Info */}
-            <div className="flex items-center justify-between border-b-2 border-[#b45309]/20 pb-2 sm:pb-2.5">
+          <div className="relative max-w-[1340px] w-full rounded-[24px] sm:rounded-[30px] p-3 sm:p-5 bg-[#0b2530]/92 backdrop-blur-xl border border-[#e8cf94]/30 shadow-[0_24px_80px_rgba(0,0,0,.55),inset_0_1px_0_rgba(255,255,255,.12)] space-y-3 sm:space-y-4 animate-in fade-in zoom-in-95 slide-in-from-bottom-4 duration-400 text-white">
+            <div className="flex items-center justify-between gap-3 border-b border-[#e8cf94]/15 pb-3">
               <div className="flex items-center gap-2">
-                <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-gradient-to-tr from-[#b45309] to-[#f59e0b] border-2 border-white shadow-xs flex items-center justify-center text-white shrink-0">
-                  <DoorClosed className="w-4 h-4 sm:w-5 sm:h-5" />
+                <div className="w-10 h-10 rounded-xl border border-[#e8cf94]/30 bg-[#d1a85a]/15 shadow-lg flex items-center justify-center text-[#f1d38d] shrink-0">
+                  <Compass className="w-4 h-4 sm:w-5 sm:h-5" />
                 </div>
                 <div>
-                  <span className="font-black text-xs sm:text-base md:text-lg text-[#451a03] block leading-tight font-sans">
-                    خَرِيطَةُ الأَلْغَازِ الأَثَرِيَّةِ • المرحلة {currentStage} من 4 (اللغز {questionInStage} من 3)
+                  <span className="font-black text-sm sm:text-base text-white block leading-tight">
+                    مغامرة جزيرة الكنز
                   </span>
-                  <span className="text-[9px] sm:text-[11px] text-[#78350f] font-bold flex items-center gap-1 mt-0.5">
-                    <Sparkles className="w-2.5 h-2.5 text-amber-600" />
-                    <span>فك أختام اللغز لكشف بطاقة الكنز الذهبية (+25 نقطة)</span>
+                  <span className="text-[10px] sm:text-xs text-[#ccdbd4]/75 font-bold flex items-center gap-1 mt-0.5">
+                    <MapPin className="w-3 h-3 text-[#b9d6c7]" />
+                    <span>المستوى {currentStage} من 4 · اللغز {questionInStage} من {currentStageRange.questionCount}</span>
                   </span>
                 </div>
               </div>
 
-              {/* Accumulated Score Badge */}
-              <div className="flex items-center gap-1 px-3 py-1 rounded-full bg-gradient-to-r from-amber-400 to-yellow-400 border border-amber-600 font-black text-xs text-[#451a03] shadow-xs">
-                <Trophy className="w-3.5 h-3.5 text-amber-700" />
-                <span>{accumulatedScore} / 100</span>
+              <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#d4ad63]/10 border border-[#e8cf94]/25 font-black text-xs text-[#f2e5c4] shadow-xs">
+                  <Trophy className="w-4 h-4 text-[#e9ca81]" />
+                  <span dir="ltr">{accumulatedScore} / 100</span>
+                </div>
+                <button type="button" onClick={toggleSound} className="flex h-9 w-9 items-center justify-center rounded-xl border border-[#e8cf94]/20 bg-white/5 text-[#edd79f] transition hover:bg-white/10" title={isMuted ? "تشغيل الصوت" : "كتم الصوت"}>
+                  {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+                </button>
+                <button type="button" onClick={() => navigate("/student/games")} className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/15 bg-white/5 text-white/85 transition hover:bg-white/10" title="العودة لمركز الألعاب">
+                  <ArrowRight className="h-4 w-4" />
+                </button>
               </div>
             </div>
 
-            {/* 4 Stages Progression Navigator */}
-            <div className="grid grid-cols-4 gap-1.5 sm:gap-2 py-0.5">
-              {TREASURE_STAGES.map((st) => {
-                const isStageDone = accumulatedScore >= st.targetAccumulatedScore;
-                const isCurrentStage = currentStage === st.stageNumber && !isStageDone;
-                return (
-                  <div
-                    key={st.stageNumber}
-                    className={`p-1.5 sm:p-2 rounded-xl border text-center transition-all flex flex-col items-center justify-center ${
-                      isStageDone
-                        ? "bg-emerald-500/15 border-emerald-500/50 text-emerald-900 font-bold"
-                        : isCurrentStage
-                        ? "bg-gradient-to-r from-amber-400/25 to-yellow-400/35 border-amber-500 text-amber-950 font-black shadow-xs ring-2 ring-amber-400/50 scale-[1.02]"
-                        : "bg-black/5 border-amber-900/15 text-amber-900/40 opacity-70"
-                    }`}
-                  >
-                    <div className="flex items-center gap-1 text-[10px] sm:text-xs">
-                      {isStageDone ? (
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                      ) : isCurrentStage ? (
-                        <Sparkles className="w-3.5 h-3.5 text-amber-600 animate-pulse" />
-                      ) : (
-                        <Lock className="w-3.5 h-3.5 text-amber-900/40" />
-                      )}
-                      <span>مرحلة {st.stageNumber}</span>
+            <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)] lg:gap-4">
+              <aside className="min-w-0 space-y-3">
+                <TreasureAdventureMap
+                  challengeCount={totalChallengeCount}
+                  currentStage={currentStage}
+                  completedStages={currentStage - 1}
+                  completedQuestionsInStage={completedQuestionsInStage + (unlockedLockInfo ? 1 : 0)}
+                  compact
+                  missionMode
+                />
+
+                <div className="rounded-2xl border border-[#e8cf94]/25 bg-gradient-to-l from-[#d4ad63]/10 via-[#0b2530]/80 to-[#6ab38a]/10 p-2 sm:p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-[#e8cf94]/30 bg-[#d4ad63]/10 text-[#efcd83] sm:h-10 sm:w-10">
+                      <Key className="h-4 w-4 sm:h-5 sm:w-5" />
                     </div>
-                    <span className="text-[9px] sm:text-[10px] font-bold mt-0.5">
-                      {st.targetAccumulatedScore} نقطة
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center justify-between gap-1.5">
+                        <span className="text-[9px] font-black text-[#edcf8a] sm:text-xs">المهمة الحالية · المرحلة {currentStage}</span>
+                        <span className="rounded-full border border-white/10 bg-slate-950/50 px-2 py-0.5 text-[8px] font-bold text-white/70 sm:px-2.5 sm:py-1 sm:text-[10px]">
+                          اللغز {questionInStage} من {currentStageRange.questionCount}
+                        </span>
+                      </div>
+                      <h2 className="mt-0.5 line-clamp-2 text-xs font-black leading-tight text-white sm:text-base">
+                        {currentStageMission?.stageTitle || `المرحلة ${currentStage}`}
+                      </h2>
+                      <p className="mt-0.5 line-clamp-1 text-[9px] font-medium leading-relaxed text-white/65 sm:mt-1 sm:text-xs sm:leading-relaxed">
+                        {currentStageMission?.stageSubtitle || "أجيبي عن تحديات المحطة لفتح الطريق التالي."}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-2 flex items-center gap-2 sm:mt-3" aria-label={`تقدم ألغاز المرحلة: ${completedQuestionsInStage} من ${currentStageRange.questionCount}`}>
+                    {Array.from({ length: currentStageRange.questionCount }, (_, index) => {
+                      const passed = index < completedQuestionsInStage;
+                      const active = index === completedQuestionsInStage;
+                      return (
+                        <React.Fragment key={`${currentStage}-${index}`}>
+                          {index > 0 && <div className={`h-0.5 min-w-2 flex-1 rounded-full ${passed ? "bg-[#b3d5ac]" : "bg-white/15"}`} />}
+                          <div className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-[9px] font-black transition-all duration-500 sm:h-7 sm:w-7 sm:text-[10px] ${
+                            passed
+                              ? "border-[#d6ecd0] bg-[#9fc49b] text-[#173d3a]"
+                              : active
+                              ? "scale-110 border-[#fff0c2] bg-[#e5c779] text-[#263e3a] ring-4 ring-[#e5c779]/15"
+                              : "border-white/20 bg-slate-950/60 text-white/45"
+                          }`}>
+                            {passed ? <CheckCircle2 className="h-4 w-4" /> : index + 1}
+                          </div>
+                        </React.Fragment>
+                      );
+                    })}
+                    <span className="mr-auto text-[8px] font-bold text-white/55 sm:text-[10px]">
+                      {completedQuestionsInStage} من {currentStageRange.questionCount} ألغاز مكتملة
                     </span>
                   </div>
-                );
-              })}
-            </div>
+                </div>
 
-            {/* In-Stage Question Steps Indicator */}
-            <div className="flex items-center justify-between px-1 text-[10px] sm:text-[11px] font-black text-[#78350f]">
-              <span className="flex items-center gap-1">
-                <Zap className="w-3 h-3 text-amber-600" />
-                <span>تقدمك في المرحلة {currentStage}:</span>
-              </span>
-              <div className="flex items-center gap-1.5">
-                {[1, 2, 3].map((dot) => {
-                  const isDotPassed = questionInStage > dot;
-                  const isDotCurrent = questionInStage === dot;
-                  return (
-                    <div
-                      key={dot}
-                      className={`flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold transition-all ${
-                        isDotPassed
-                          ? "bg-emerald-500 text-white shadow-xs"
-                          : isDotCurrent
-                          ? "bg-amber-500 text-stone-950 ring-2 ring-amber-300 animate-pulse font-black"
-                          : "bg-amber-900/10 text-amber-900/50"
-                      }`}
-                    >
-                      {dot === 3 ? "🪙 بطاقة الكنز" : `لغز ${dot}`}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+                <div className="hidden items-center gap-2 px-1 text-[9px] font-bold text-sky-100/65 sm:flex sm:text-[10px]">
+                  <Compass className="h-3.5 w-3.5 shrink-0 text-[#bddbc8]" />
+                  كل إجابة مكتملة تحرّك المستكشفة إلى نقطة جديدة على الخريطة.
+                </div>
+              </aside>
 
-            {/* Overall Energy Progress Bar */}
-            <div className="space-y-0.5">
-              <div className="w-full bg-[#451a03]/15 rounded-full h-2 border-2 border-[#854d0e]/30 p-0.5 overflow-hidden shadow-inner">
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-amber-500 via-yellow-400 to-emerald-500 transition-all duration-700 shadow-[0_0_12px_rgba(245,158,11,0.8)]"
-                  style={{
-                    width: `${Math.max(8, Math.round(((currentChallengeStep - 1) / 12) * 100))}%`,
-                  }}
-                />
-              </div>
-            </div>
-
-            {/* Smart Pedagogical Hint Button */}
-            <div className="pt-0.5">
+              <section className="min-w-0 rounded-2xl border border-[#e8cf94]/15 bg-[#071d26]/55 p-2.5 sm:p-3">
+                {/* Smart Pedagogical Hint Button */}
+                <div className="mb-3">
               <div className="flex items-center justify-between">
                 <button
                   type="button"
                   onClick={() => setShowPedagogicalHint((p) => !p)}
-                  className="text-[10px] sm:text-xs font-black text-[#78350f] hover:text-[#451a03] bg-amber-200/90 hover:bg-amber-300 border border-[#b45309]/50 px-3 py-0.5 sm:py-1 rounded-full flex items-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-95"
+                  className="text-[10px] sm:text-xs font-bold text-[#f0e6cd]/85 hover:text-white bg-white/5 hover:bg-white/10 border border-[#e8cf94]/20 px-3 py-1.5 rounded-full flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
                 >
-                  <Lightbulb className="w-3.5 h-3.5 text-amber-600 animate-pulse" />
-                  <span>{showPedagogicalHint ? "إغلاق التوجيه الذكي" : "💡 تلميح القبطان التربوي"}</span>
+                  <Lightbulb className="w-3.5 h-3.5 text-[#e8c678]" />
+                  <span>{showPedagogicalHint ? "إخفاء التلميح" : "عرض تلميح"}</span>
                 </button>
-                <span className="text-[10px] text-[#92400e] font-semibold">
-                  المعلمة: أ/ هيفاء السلمي
-                </span>
+                <span className="text-[10px] text-[#d2e6dc]/55 font-semibold">{currentStageMission?.stageTitle || `تحدي المستوى ${currentStage}`}</span>
               </div>
 
               {showPedagogicalHint && (
-                <div className="mt-2 bg-gradient-to-r from-amber-100 via-[#fffbeb] to-amber-100 border-2 border-[#b45309]/60 rounded-xl p-3 text-right text-xs text-[#78350f] leading-relaxed shadow-md animate-in fade-in zoom-in-95 duration-200">
-                  <div className="flex items-center gap-1.5 font-black text-[#451a03] mb-1">
-                    <BookOpen className="w-3.5 h-3.5 text-amber-700" />
-                    <span>إرشاد تفكير المستكشف:</span>
+                <div className="mt-2 bg-[#102d37]/95 border border-[#e8cf94]/25 rounded-xl p-3 text-right text-xs text-white/85 leading-relaxed shadow-lg animate-in fade-in zoom-in-95 duration-200">
+                  <div className="flex items-center gap-1.5 font-bold text-[#f2dfad] mb-1">
+                    <BookOpen className="w-3.5 h-3.5 text-[#e8c678]" />
+                    <span>تلميح:</span>
                   </div>
-                  <p className="text-[11px] sm:text-xs text-[#78350f] font-medium">
+                  <p className="text-[11px] sm:text-xs text-white/75 font-medium">
                     {currentChallenge.wrong_reason ||
                       "تمعن في المعطيات العلمية للغز، وابحث عن العلاقة المنطقية بين المفاهيم المطروحة لفك شفرة القفل بدقة."}
                   </p>
@@ -780,6 +818,9 @@ export default function TreasureGamePage() {
                 challenge={currentChallenge}
                 onSubmitAnswer={handleSubmitChallenge}
                 isSubmitting={isSubmitting}
+                stageNumber={currentStage}
+                questionNumber={questionInStage}
+                questionsInStage={currentStageRange.questionCount}
               />
             )}
             {currentChallenge.challenge_type === "ordering" && (
@@ -798,18 +839,10 @@ export default function TreasureGamePage() {
                 isSubmitting={isSubmitting}
               />
             )}
+              </section>
+            </div>
           </div>
         </div>
-      )}
-
-      {/* Phase 5: Interactive Scratch Card Modal at end of Stage 1, 2, 3, 4 */}
-      {activeScratchCardStage !== null && (
-        <TreasureScratchCard
-          stageNumber={activeScratchCardStage}
-          pointsAwarded={25}
-          totalAccumulatedScore={activeScratchCardStage * 25}
-          onCompleted={handleScratchCardCompleted}
-        />
       )}
 
       {/* Phase 6: Completed / Treasure Chamber */}
@@ -817,6 +850,10 @@ export default function TreasureGamePage() {
         <div className="fixed inset-0 z-40 flex items-center justify-center p-4 sm:p-6 bg-slate-950/70 backdrop-blur-md overflow-y-auto animate-in fade-in duration-500">
           <TreasureChamber
             finalResult={finalResult}
+            gradePointAwarded={treasurePointAwarded}
+            gradePointError={treasurePointError}
+            isRetryingGradePoint={isRetryingTreasurePoint}
+            onRetryGradePoint={() => void handleRetryTreasurePoint()}
             onOpenCertificate={() => setCertificateOpen(true)}
             onPlayAgain={initGameSession}
             onGoHome={() => navigate("/student/games")}
@@ -850,7 +887,9 @@ export default function TreasureGamePage() {
       {unlockedLockInfo && (
         <LockUnlockOverlay
           unlockedStep={unlockedLockInfo.step}
-          totalSteps={12}
+          currentStage={currentStage}
+          questionInStage={questionInStage}
+          questionsInStage={currentStageRange.questionCount}
           pointsEarned={unlockedLockInfo.points}
           onAdvance={handleAdvanceFromLockUnlock}
         />

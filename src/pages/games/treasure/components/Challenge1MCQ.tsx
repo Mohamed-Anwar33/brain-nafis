@@ -10,6 +10,9 @@ interface Challenge1MCQProps {
   challenge: ClientChallengeItem;
   onSubmitAnswer: (answerPayload: { selected_choice_id: string }) => Promise<any>;
   isSubmitting: boolean;
+  stageNumber?: number;
+  questionNumber?: number;
+  questionsInStage?: number;
 }
 
 const LETTERS = ["أ", "ب", "ج", "د"];
@@ -18,6 +21,9 @@ export function Challenge1MCQ({
   challenge,
   onSubmitAnswer,
   isSubmitting,
+  stageNumber = Math.min(4, Math.floor((challenge.step - 1) / 3) + 1),
+  questionNumber = ((challenge.step - 1) % 3) + 1,
+  questionsInStage = 3,
 }: Challenge1MCQProps) {
   const [selectedChoiceId, setSelectedChoiceId] = useState<string | null>(null);
   const [isChecking, setIsChecking] = useState(false);
@@ -83,7 +89,7 @@ export function Challenge1MCQ({
           <div className="bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-600 text-white px-4 py-1.5 rounded-full font-black text-xs sm:text-sm shadow-md shadow-amber-500/25 flex items-center gap-2">
             <Key className="w-3.5 h-3.5 text-amber-200" />
             <span>
-              المرحلة {Math.min(4, Math.floor((challenge.step - 1) / 3) + 1)}: سؤال {((challenge.step - 1) % 3) + 1} من 3
+              المرحلة {stageNumber}: سؤال {questionNumber} من {questionsInStage}
             </span>
             <Sparkles className="w-3.5 h-3.5 text-amber-200" />
           </div>

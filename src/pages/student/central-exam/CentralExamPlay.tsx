@@ -67,6 +67,7 @@ export default function CentralExamPlay() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedChoice, setSelectedChoice] = useState<string | null>(null);
   const [isAnswered, setIsAnswered] = useState(false);
+  const [hasWrongAnswer, setHasWrongAnswer] = useState(false);
   const [score, setScore] = useState(0);
   const [isFinished, setIsFinished] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -197,6 +198,7 @@ export default function CentralExamPlay() {
       
     } else {
       // ❌ WRONG - play sound, track error, DON'T advance, allow retry
+      setHasWrongAnswer(true);
       setStreak(0);
       audioManager.playWrong();
       setCurrentWrongReason(currentQuestion.wrong_reason || null);
@@ -224,6 +226,7 @@ export default function CentralExamPlay() {
       setCurrentIndex(i => i + 1);
       setSelectedChoice(null);
       setIsAnswered(false);
+      setHasWrongAnswer(false);
       setCurrentWrongReason(null);
     } else {
       // Final question reached:
@@ -253,6 +256,7 @@ export default function CentralExamPlay() {
     setCurrentIndex(0);
     setSelectedChoice(null);
     setIsAnswered(false);
+    setHasWrongAnswer(false);
     setScore(0);
     setIsFinished(false);
     setLoading(true);
@@ -872,7 +876,7 @@ export default function CentralExamPlay() {
           })}
         </div>
 
-        {isAnswered && (currentWrongReason || currentQuestion.explanation_url) && (
+        {hasWrongAnswer && (currentWrongReason || currentQuestion.explanation_url) && (
           <Card className="mb-8 border-amber-200 bg-amber-50/90 p-5 shadow-lg shadow-amber-100/50 space-y-3">
             <div className="flex items-center justify-between flex-wrap gap-2">
               <div className="flex items-center gap-2 text-amber-800 font-black text-sm">

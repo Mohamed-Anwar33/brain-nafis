@@ -381,7 +381,7 @@ export default function TreasureGamePage() {
         }
       }
 
-      const questionWasCompleted = isCorrect || Boolean(isRemoteSession && serverResult?.exhausted_attempts);
+      const questionWasCompleted = isCorrect;
       if (isCorrect) {
         if (!isMuted) audioManager.playCorrect();
       } else {

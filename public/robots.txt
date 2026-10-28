@@ -1,14 +1,33 @@
-User-agent: Googlebot
-Allow: /
-
-User-agent: Bingbot
-Allow: /
-
-User-agent: Twitterbot
-Allow: /
-
-User-agent: facebookexternalhit
-Allow: /
+# Robots.txt for Brain Science Educational Platform
+# Technical SEO: Crawl control & Sitemap definition
+# Website: https://www.brain-scince-edecutioun.com
 
 User-agent: *
 Allow: /
+
+# Disallow Private & Administrative Areas
+Disallow: /admin/
+Disallow: /admin/*
+
+# Disallow Student Dynamic Session Pages (Non-indexable user state)
+Disallow: /exam/
+Disallow: /exam/*
+Disallow: /result/
+Disallow: /result/*
+Disallow: /central-exam/play
+
+# Search Engine Crawlers
+User-agent: Googlebot
+Allow: /
+Disallow: /admin/
+Disallow: /exam/
+Disallow: /result/
+
+User-agent: Bingbot
+Allow: /
+Disallow: /admin/
+Disallow: /exam/
+Disallow: /result/
+
+# Sitemap Location
+Sitemap: https://www.brain-scince-edecutioun.com/sitemap.xml

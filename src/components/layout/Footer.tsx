@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { shouldShowFooterSections } from "@/lib/footer-visibility";
 
 const footerKeys = [
     "footer_topic_teacher_title",
@@ -43,8 +44,7 @@ export const Footer = () => {
         };
     }, []);
 
-    const isStudentExam = location.pathname.startsWith("/exam/") || location.pathname === "/central-exam/play";
-    const showFooterContent = !isStudentExam && Boolean(
+    const showFooterContent = shouldShowFooterSections(location.pathname) && Boolean(
         content.footer_topic_teacher_body.trim() || content.footer_topic_platform_body.trim(),
     );
     return (

@@ -19,6 +19,7 @@ import { getCentralExamQuestions, deleteCentralExamQuestion, CentralExamQuestion
 import { CentralExamQuestionForm } from "@/components/admin/central-exam/CentralExamQuestionForm";
 import { useAcademicCatalog } from "@/hooks/use-academic-catalog";
 import { syncDefaultCentralDomains } from "@/services/academicCatalogService";
+import { FooterSectionsEditor } from "@/components/admin/FooterSectionsEditor";
 
 export default function AdminCentralExamQuestions() {
   const { data: catalog } = useAcademicCatalog();
@@ -164,6 +165,8 @@ export default function AdminCentralExamQuestions() {
           </DialogContent>
         </Dialog>
       </div>
+
+      <FooterSectionsEditor />
 
       {/* Domain Filter Bar */}
       <div className="bg-white p-4 sm:p-5 rounded-2xl border shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-4">

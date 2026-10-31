@@ -634,7 +634,7 @@ export default function TreasureGamePage() {
   ) || DEFAULT_TREASURE_12_CHALLENGES[0];
 
   return (
-    <div className="relative w-full h-dvh min-h-[100dvh] overflow-hidden bg-slate-950 text-foreground select-none flex flex-col justify-between" dir="rtl">
+    <div className="fixed inset-0 w-full h-dvh overflow-hidden bg-slate-950 text-foreground select-none flex flex-col justify-between" dir="rtl">
       {/* 1. Full-Screen Interactive 3D World Scene Layer */}
       <div className="absolute inset-0 w-full h-full z-0 overflow-hidden select-none">
         <Suspense

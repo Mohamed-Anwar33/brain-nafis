@@ -3,6 +3,7 @@ import { ArrowDown, ArrowUp, BookOpenCheck, LoaderCircle, Minus, Target, Trendin
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
+import { mergeSkillPerformances } from "@/lib/central-exam-skill-analysis";
 
 interface SkillAnalysisModalProps {
   isOpen: boolean;
@@ -24,6 +25,12 @@ interface SkillAnswerRow {
   answered_at: string | null;
   scientific_skill?: string | null;
   questions: { scientific_skill: string | null } | null;
+}
+
+interface GameAttemptRow {
+  id: string;
+  created_at: string;
+  metadata: { skill_analysis?: SkillScore[] | null } | null;
 }
 
 const getAnswerSkill = (answer: SkillAnswerRow) =>
@@ -120,11 +127,6 @@ export function SkillAnalysisModal({ isOpen, onClose, studentName }: SkillAnalys
           rows.push(...page);
           if (page.length < 500) break;
         }
-        if (!rows.length) {
-          if (!cancelled) setAttempts([]);
-          return;
-        }
-
         const answerRows: SkillAnswerRow[] = [];
         for (let offset = 0; offset < rows.length; offset += 100) {
           const attemptIds = rows.slice(offset, offset + 100).map((row) => row.id);
@@ -137,6 +139,20 @@ export function SkillAnalysisModal({ isOpen, onClose, studentName }: SkillAnalys
           answerRows.push(...((answerPage || []) as unknown as SkillAnswerRow[]));
         }
 
+        const { data: { user } } = await supabase.auth.getUser();
+        let centralAttempts: GameAttemptRow[] = [];
+        if (user) {
+          const { data: gameRows, error: gameError } = await supabase
+            .from("game_attempts")
+            .select("id,created_at,metadata")
+            .eq("user_id", user.id)
+            .eq("game_type", "central_exam")
+            .order("created_at", { ascending: false });
+          if (gameError) throw gameError;
+          centralAttempts = ((gameRows || []) as unknown as GameAttemptRow[])
+            .filter((row) => Array.isArray(row.metadata?.skill_analysis) && row.metadata.skill_analysis.length > 0);
+        }
+
         const byAttempt = new Map<string, SkillAnswerRow[]>();
         for (const answer of answerRows) {
           const list = byAttempt.get(answer.attempt_id) || [];
@@ -144,8 +160,23 @@ export function SkillAnalysisModal({ isOpen, onClose, studentName }: SkillAnalys
           byAttempt.set(answer.attempt_id, list);
         }
         if (!cancelled) {
-          setAttempts(rows.slice(0, 2).map((row) => ({ id: row.id, skills: summarizeAttemptAnswers(byAttempt.get(row.id) || []) })));
-          setSkillHistory(summarizeSkillHistory(answerRows));
+          const questionAttempts = rows.map((row) => ({
+            id: row.id,
+            finished_at: row.finished_at,
+            skills: summarizeAttemptAnswers(byAttempt.get(row.id) || []),
+          }));
+          const gameSkillAttempts = centralAttempts.map((row) => ({
+            id: row.id,
+            finished_at: row.created_at,
+            skills: row.metadata?.skill_analysis || [],
+          }));
+          const latestAttempts = [...questionAttempts, ...gameSkillAttempts]
+            .sort((a, b) => Date.parse(b.finished_at || "") - Date.parse(a.finished_at || ""));
+          setAttempts(latestAttempts.slice(0, 2));
+          setSkillHistory(mergeSkillPerformances(
+            summarizeSkillHistory(answerRows),
+            ...centralAttempts.map((row) => row.metadata?.skill_analysis || []),
+          ));
         }
       } catch (error) {
         console.error("Could not load student skill analysis:", error);

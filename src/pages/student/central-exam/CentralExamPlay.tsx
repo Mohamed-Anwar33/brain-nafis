@@ -60,6 +60,7 @@ import { getScopedPayload } from "@/lib/selection-scope";
 import { StreakCounter } from "@/components/gamification/StreakCounter";
 import { FloatingXp } from "@/components/gamification/FloatingXp";
 import { SoundToggle } from "@/components/ui/SoundToggle";
+import { buildCentralExamSkillAnalysis } from "@/lib/central-exam-skill-analysis";
 
 export default function CentralExamPlay() {
   const navigate = useNavigate();
@@ -284,7 +285,7 @@ export default function CentralExamPlay() {
   const loadSimilarQuestion = async () => {
     const currentQuestion = questions[currentIndex];
     if (!currentQuestion) return;
-    if (!currentQuestion.grade_subject_id && !currentQuestion.domain_id) {
+    if (!currentQuestion.scientific_skill?.trim()) {
       setSimilarQuestionState("empty");
       return;
     }
@@ -296,6 +297,7 @@ export default function CentralExamPlay() {
         .select("*, choices:central_exam_choices(*)")
         .eq("active", true)
         .eq("track_type", "central")
+        .eq("scientific_skill", currentQuestion.scientific_skill.trim())
         .neq("id", currentQuestion.id);
       if (currentQuestion.grade_subject_id) query = query.eq("grade_subject_id", currentQuestion.grade_subject_id);
       if (currentQuestion.domain_id) query = query.eq("domain_id", currentQuestion.domain_id);
@@ -335,6 +337,7 @@ export default function CentralExamPlay() {
         const correctCount = finalScore;
         const percentage = totalCount > 0 ? Math.round((correctCount / totalCount) * 100) : 0;
         const resolvedStudentName = studentName || "طالب";
+        const skillAnalysis = buildCentralExamSkillAnalysis(questions, questionsWithErrorsRef.current);
         
         const { data: attemptData, error: insertError } = await supabase.from("game_attempts").insert({
           user_id: user.id,
@@ -351,6 +354,7 @@ export default function CentralExamPlay() {
             exam_type: "central_exam",
             wrong_attempts: wrongCount,
             total_wrong_clicks: wrongAttempts,
+            skill_analysis: skillAnalysis,
             strict_mode: true,
             selection_context: getSelectionDisplayText(selectionContext)
           }

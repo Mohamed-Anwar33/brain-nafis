@@ -2,6 +2,7 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { Trophy, Award, RotateCcw, Home, Zap } from "lucide-react";
 import { FinalizeAttemptResponse } from "@/types/treasure";
+import { getTreasureResultFeedback } from "../treasureResultFeedback";
 
 interface TreasureChamberProps {
   finalResult: FinalizeAttemptResponse;
@@ -27,7 +28,17 @@ export function TreasureChamber({
   const durationMins = Math.floor(finalResult.duration_seconds / 60);
   const durationSecs = finalResult.duration_seconds % 60;
   const isPassed = finalResult.is_passed;
-  const earnedPerfectScore = finalResult.subject_point_eligible === true;
+  const {
+    earnedPerfectScore,
+    hasPerfectRun,
+    resultTitle,
+    resultMessage,
+  } = getTreasureResultFeedback({
+    finalScore: finalResult.final_score,
+    durationSeconds: finalResult.duration_seconds,
+    isPassed,
+    subjectPointEligible: finalResult.subject_point_eligible === true,
+  });
 
   return (
     <div
@@ -48,20 +59,10 @@ export function TreasureChamber({
 
       {/* 2. Clear Title */}
       <h2 className="text-2xl sm:text-3xl font-black text-slate-900 mb-2">
-        {earnedPerfectScore
-          ? "مبروك! أتممتِ جميع التحديات بامتياز 🎉"
-          : finalResult.final_score === 100
-            ? "نتيجة كاملة! بقي شرط المكافأة الذهبية 🌟"
-            : isPassed
-              ? "أحسنتِ! أنهيتِ مغامرة الكنز 🌟"
-              : "انتهت المغامرة"}
+        {resultTitle}
       </h2>
       <p className="text-sm text-slate-600 mb-6 max-w-sm mx-auto leading-relaxed font-bold">
-        {earnedPerfectScore
-          ? "أجبتِ إجابة صحيحة عن جميع التحديات، وأنهيتِ المغامرة في أقل من ٥ دقائق. تستحقين درجة إضافية في المادة!"
-          : finalResult.final_score === 100
-            ? "أحرزتِ ١٠٠ نقطة! لتحصلي على الدرجة الإضافية، أجيبي عن كل التحديات إجابة صحيحة وأنهي المغامرة في أقل من ٥ دقائق."
-            : "لم يحالفك الحظ هذه المرة، لا تيأسي! راجعي التحديات وحاولي مجددًا؛ قد تكون محاولتك القادمة هي الفوز."}
+        {resultMessage}
       </p>
 
       {gradePointAwarded && earnedPerfectScore && (
@@ -89,7 +90,7 @@ export function TreasureChamber({
       {/* 3. Clean Modern Score Card */}
       <div className={`bg-gradient-to-b rounded-3xl p-5 mb-6 text-center space-y-4 shadow-sm border-2 ${earnedPerfectScore ? "from-emerald-50 to-white border-emerald-200" : "from-amber-50/60 to-white border-amber-200/80"}`}>
         <div>
-          <span className="text-xs text-amber-800 font-black block mb-1">الدرجة النهائية المستحقة 🏆</span>
+          <span className="text-xs text-amber-800 font-black block mb-1">نتيجتك النهائية 🏆</span>
           <div className="flex items-baseline justify-center gap-1.5 font-sans">
             <span className="text-5xl sm:text-6xl font-black text-amber-600 tracking-tight">
               {finalResult.final_score}
@@ -113,7 +114,7 @@ export function TreasureChamber({
           </div>
           <div className="space-y-0.5">
             <span className="text-[11px] text-slate-500 font-bold block">الوقت المستغرق</span>
-            <span className={`text-base font-black font-mono ${earnedPerfectScore ? "text-emerald-700" : "text-slate-800"}`}>
+            <span className={`text-base font-black font-mono ${hasPerfectRun ? "text-emerald-700" : "text-slate-800"}`}>
               {durationMins.toString().padStart(2, "0")}:{durationSecs.toString().padStart(2, "0")}
             </span>
           </div>

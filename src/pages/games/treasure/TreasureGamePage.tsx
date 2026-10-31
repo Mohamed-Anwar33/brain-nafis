@@ -585,13 +585,16 @@ export default function TreasureGamePage() {
 
     // Launch Confetti Celebration
     const isRewardWin = finalized?.subject_point_eligible === true && finalized.subject_point_awarded === true;
-    confetti({
-      particleCount: isRewardWin ? 360 : 180,
-      spread: isRewardWin ? 150 : 100,
-      startVelocity: isRewardWin ? 55 : 42,
-      origin: { y: 0.55 },
-      colors: isRewardWin ? ["#fbbf24", "#34d399", "#60a5fa", "#f472b6", "#ffffff"] : undefined,
-    });
+    const completedSuccessfully = finalized?.is_passed ?? score >= 60;
+    if (isRewardWin || completedSuccessfully) {
+      confetti({
+        particleCount: isRewardWin ? 360 : 60,
+        spread: isRewardWin ? 150 : 75,
+        startVelocity: isRewardWin ? 55 : 28,
+        origin: { y: 0.55 },
+        colors: isRewardWin ? ["#fbbf24", "#34d399", "#60a5fa", "#f472b6", "#ffffff"] : ["#60a5fa", "#34d399", "#ffffff"],
+      });
+    }
     if (isRewardWin) {
       window.setTimeout(() => confetti({
         particleCount: 130,

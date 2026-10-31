@@ -44,6 +44,7 @@ export default function ScientificActivities() {
   const showLab = activityType !== "reading";
   const [readings, setReadings] = useState<Reading[]>([]);
   const [labs, setLabs] = useState<Lab[]>([]);
+  const [selectedDomainName, setSelectedDomainName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [readingAnswers, setReadingAnswers] = useState<Record<string, string>>({});
   const [readingResults, setReadingResults] = useState<Record<string, boolean>>({});
@@ -62,6 +63,9 @@ export default function ScientificActivities() {
       const context = getStoredSelectionContext();
       const domainId = requestedDomainId || context?.domainId || null;
       const gradeSubjectId = requestedGradeSubjectId || context?.gradeSubjectId || null;
+      const domainNamePromise = domainId && context?.domainId !== domainId
+        ? supabase.from("central_domains").select("name").eq("id", domainId).maybeSingle()
+        : Promise.resolve({ data: context?.domainName ? { name: context.domainName } : null });
       let readingQuery = supabase.from("scientific_readings").select("*,questions:scientific_reading_questions(*)").eq("active", true);
       let labQuery = supabase.from("virtual_lab_activities").select("*").eq("active", true);
       if (domainId) {
@@ -71,10 +75,12 @@ export default function ScientificActivities() {
         readingQuery = readingQuery.eq("grade_subject_id", gradeSubjectId);
         labQuery = labQuery.eq("grade_subject_id", gradeSubjectId);
       }
-      const [{ data: readingData, error: readingError }, { data: labData, error: labError }] = await Promise.all([
+      const [{ data: readingData, error: readingError }, { data: labData, error: labError }, { data: domainData }] = await Promise.all([
         readingQuery.order("created_at", { ascending: false }),
         labQuery.order("created_at", { ascending: false }),
+        domainNamePromise,
       ]);
+      setSelectedDomainName(domainData?.name || null);
       if (readingError) console.error("Could not load readings:", readingError);
       if (labError) console.error("Could not load virtual labs:", labError);
       const inScope = (item: { domain_id?: string | null; grade_subject_id?: string | null }) =>
@@ -180,7 +186,7 @@ export default function ScientificActivities() {
   if (loading) return <div className="flex min-h-[60vh] items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
 
   return <main dir="rtl" className="mx-auto max-w-5xl space-y-10 px-4 py-8">
-    <header><h1 className="text-3xl font-black">{activityType === "reading" ? "الفهم القرائي" : activityType === "lab" ? "المختبر الافتراضي" : "أنشطة العلوم"}</h1><p className="mt-2 text-muted-foreground">{activityType === "reading" ? "اقرئي النصوص العلمية واستنتجي الإجابات من المعلومات الواردة فيها." : activityType === "lab" ? "استكشفي التجارب العلمية وتابعي كيف يتطور فهمك بعد المشاهدة." : "اقرئي النصوص العلمية واستكشفي التجارب الافتراضية."}</p>{(requestedDomainId || getStoredSelectionContext()?.domainName) && <p className="mt-3 inline-flex rounded-full bg-indigo-50 px-4 py-2 text-sm font-bold text-indigo-800">المجال المحدد: {getStoredSelectionContext()?.domainName || "المجال المختار"}</p>}</header>
+    <header><h1 className="text-3xl font-black">{activityType === "reading" ? "الفهم القرائي" : activityType === "lab" ? "المختبر الافتراضي" : "أنشطة العلوم"}</h1><p className="mt-2 text-muted-foreground">{activityType === "reading" ? "اقرئي النصوص العلمية واستنتجي الإجابات من المعلومات الواردة فيها." : activityType === "lab" ? "استكشفي التجارب العلمية وتابعي كيف يتطور فهمك بعد المشاهدة." : "اقرئي النصوص العلمية واستكشفي التجارب الافتراضية."}</p>{selectedDomainName && <p className="mt-3 inline-flex rounded-full bg-indigo-50 px-4 py-2 text-sm font-bold text-indigo-800">المجال المحدد: {selectedDomainName}</p>}</header>
     {showReading && <section className="space-y-4"><h2 className="flex items-center gap-2 text-2xl font-black"><BookOpen className="h-6 w-6 text-indigo-600" />اقرئي واستنتجي</h2>
       {readings.length === 0 && <p className="rounded-xl bg-slate-50 p-4 text-slate-600">لا توجد نصوص علمية متاحة حاليًا.</p>}
       {readings.map((reading) => <Card key={reading.id} className="overflow-hidden rounded-3xl border-2 border-indigo-100 shadow-lg shadow-indigo-950/5"><CardHeader className="bg-gradient-to-l from-indigo-50 via-white to-violet-50"><CardTitle className="flex items-center gap-3 text-indigo-950"><span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-600 text-white shadow-md"><BookOpen className="h-6 w-6" /></span>{reading.title}</CardTitle></CardHeader><CardContent className="space-y-5 p-4 sm:p-6">{reading.image_url && <img src={reading.image_url} alt={`صورة توضيحية: ${reading.title}`} className="max-h-80 w-full rounded-2xl border border-indigo-100 bg-white object-contain" />}<div className="max-h-[50vh] overflow-y-auto whitespace-pre-wrap rounded-2xl border border-violet-100 bg-gradient-to-br from-indigo-50/80 to-white p-5 leading-8 text-slate-800">{reading.passage}</div>

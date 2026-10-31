@@ -49,6 +49,7 @@ import { useAcademicCatalog } from "@/hooks/use-academic-catalog";
 import { SoundToggle } from "@/components/ui/SoundToggle";
 import { audioManager } from "@/lib/audio";
 import { StudentSidebar } from "@/components/student/StudentSidebar";
+import { StudentPortalHub } from "@/components/student/StudentPortalHub";
 import { isStudentFemale } from "@/lib/studentUtils";
 import {
   clearSelectionContext,
@@ -1473,6 +1474,7 @@ export default function StudentDashboard() {
               </div>
             </div>
           )}
+          <StudentPortalHub studentName={studentName} />
           </main>
         </div>
       </div>

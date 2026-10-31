@@ -1362,14 +1362,16 @@ export default function StudentDashboard() {
                 </button>
               </div>
 
-              <div className="mx-auto grid max-w-5xl gap-3 sm:grid-cols-2">
-                <button type="button" onClick={() => navigateToScientificActivity("reading")} className="group flex min-h-24 items-center gap-4 rounded-2xl border-2 border-indigo-200 bg-white p-5 text-right shadow-sm transition hover:-translate-y-1 hover:border-indigo-400 hover:shadow-lg">
-                  <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-600 to-blue-500 text-white shadow-md shadow-indigo-500/25 group-hover:scale-105 transition-transform"><BookOpen className="h-7 w-7" /></span>
-                  <span><span className="block text-base font-black text-slate-900">الفهم القرائي</span><span className="mt-1 block text-xs font-bold leading-5 text-slate-500">اقرئي النصوص العلمية وأجيبي عن أسئلتها</span></span>
+              <div className="mx-auto grid max-w-5xl gap-4 sm:grid-cols-2">
+                <button type="button" aria-label="افتحي الفهم القرائي" onClick={() => navigateToScientificActivity("reading")} className="group flex min-h-32 items-center gap-4 rounded-3xl border-2 border-indigo-300 bg-gradient-to-br from-white to-indigo-50 p-5 text-right shadow-md shadow-indigo-900/5 transition hover:-translate-y-1 hover:border-indigo-500 hover:shadow-xl focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-200">
+                  <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-600 to-blue-500 text-white shadow-lg shadow-indigo-500/30 transition-transform group-hover:scale-110"><BookOpen className="h-8 w-8" /></span>
+                  <span className="min-w-0 flex-1"><span className="mb-1 inline-flex rounded-full bg-indigo-100 px-2.5 py-1 text-[11px] font-black text-indigo-800">نصوص وأسئلة</span><span className="block text-lg font-black text-slate-950">الفهم القرائي</span><span className="mt-1 block text-sm font-bold leading-5 text-slate-600">اقرئي النصوص العلمية وأجيبي عن أسئلتها</span></span>
+                  <ArrowLeft className="h-5 w-5 shrink-0 text-indigo-600 transition-transform group-hover:-translate-x-1" />
                 </button>
-                <button type="button" onClick={() => navigateToScientificActivity("lab")} className="group flex min-h-24 items-center gap-4 rounded-2xl border-2 border-emerald-200 bg-white p-5 text-right shadow-sm transition hover:-translate-y-1 hover:border-emerald-400 hover:shadow-lg">
-                  <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-500 text-white shadow-md shadow-emerald-500/25 group-hover:scale-105 transition-transform"><FlaskConical className="h-7 w-7" /></span>
-                  <span><span className="block text-base font-black text-slate-900">المختبر الافتراضي</span><span className="mt-1 block text-xs font-bold leading-5 text-slate-500">استكشفي التجارب وشاهدي أثرها في فهمك</span></span>
+                <button type="button" aria-label="افتحي المختبر الافتراضي" onClick={() => navigateToScientificActivity("lab")} className="group flex min-h-32 items-center gap-4 rounded-3xl border-2 border-emerald-300 bg-gradient-to-br from-white to-emerald-50 p-5 text-right shadow-md shadow-emerald-900/5 transition hover:-translate-y-1 hover:border-emerald-500 hover:shadow-xl focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-200">
+                  <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-500 text-white shadow-lg shadow-emerald-500/30 transition-transform group-hover:scale-110"><FlaskConical className="h-8 w-8" /></span>
+                  <span className="min-w-0 flex-1"><span className="mb-1 inline-flex rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-black text-emerald-800">تجارب تفاعلية</span><span className="block text-lg font-black text-slate-950">المختبر الافتراضي</span><span className="mt-1 block text-sm font-bold leading-5 text-slate-600">استكشفي التجارب وشاهدي أثرها في فهمك</span></span>
+                  <ArrowLeft className="h-5 w-5 shrink-0 text-emerald-600 transition-transform group-hover:-translate-x-1" />
                 </button>
               </div>
 

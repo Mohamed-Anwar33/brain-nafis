@@ -20,6 +20,7 @@ import {
 import { validateSelectionScope } from "@/lib/selection-scope-validation";
 import { SelectionScopeValue } from "@/types/selection";
 import { useAcademicCatalog } from "@/hooks/use-academic-catalog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface Props {
   question: CentralExamQuestion | null;
@@ -35,6 +36,7 @@ export function CentralExamQuestionForm({ question, onComplete, defaultDomainId 
   const [orderIndex, setOrderIndex] = useState(question?.order_index || 0);
   const [wrongReason, setWrongReason] = useState(question?.wrong_reason || "");
   const [explanationUrl, setExplanationUrl] = useState(question?.explanation_url || "");
+  const [scientificSkill, setScientificSkill] = useState(question?.scientific_skill || "");
   const [scope, setScope] = useState<SelectionScopeValue>(() => ({
     trackType: "central",
     gradeId: "",
@@ -68,6 +70,7 @@ export function CentralExamQuestionForm({ question, onComplete, defaultDomainId 
     setOrderIndex(question?.order_index || 0);
     setWrongReason(question?.wrong_reason || "");
     setExplanationUrl(question?.explanation_url || "");
+    setScientificSkill(question?.scientific_skill || "");
 
     let targetGsId = question?.grade_subject_id || "";
     let derivedGradeId = "";
@@ -263,6 +266,7 @@ export function CentralExamQuestionForm({ question, onComplete, defaultDomainId 
           domain_id: effectiveScope.domainId,
           wrong_reason: wrongReason || null,
           explanation_url: explanationUrl || null,
+          scientific_skill: scientificSkill || null,
         }, validChoices);
         toast.success("تم تحديث السؤال بنجاح");
       } else {
@@ -276,6 +280,7 @@ export function CentralExamQuestionForm({ question, onComplete, defaultDomainId 
           domain_id: effectiveScope.domainId,
           wrong_reason: wrongReason || null,
           explanation_url: explanationUrl || null,
+          scientific_skill: scientificSkill || null,
         }, validChoices as CentralExamChoiceInput[]);
         toast.success("تم إضافة السؤال بنجاح");
       }
@@ -298,6 +303,22 @@ export function CentralExamQuestionForm({ question, onComplete, defaultDomainId 
             <Switch checked={active} onCheckedChange={setActive} />
             <span className="text-sm text-slate-600">{active ? 'السؤال نشط ومتاح للطلاب' : 'السؤال مخفي'}</span>
           </div>
+        </div>
+
+        <div className="space-y-2 rounded-xl border border-indigo-100 bg-indigo-50/40 p-4">
+          <Label>المهارة العلمية</Label>
+          <Select value={scientificSkill || "none"} onValueChange={(value) => setScientificSkill(value === "none" ? "" : value)}>
+            <SelectTrigger><SelectValue placeholder="اختر المهارة العلمية" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">غير مصنّف</SelectItem>
+              <SelectItem value="فهم المفاهيم العلمية">فهم المفاهيم العلمية</SelectItem>
+              <SelectItem value="الاستدلال العلمي">الاستدلال العلمي</SelectItem>
+              <SelectItem value="التطبيق">التطبيق (تطبيق المعرفة العلمية)</SelectItem>
+              <SelectItem value="قراءة الرسوم والبيانات">قراءة الرسوم والبيانات</SelectItem>
+              <SelectItem value="الفهم القرائي العلمي">الفهم القرائي العلمي</SelectItem>
+            </SelectContent>
+          </Select>
+          <p className="text-xs leading-5 text-slate-600">يساعد تصنيف السؤال على عرض نتيجتك في تحليل المهارات المحفوظ.</p>
         </div>
 
         <div className="space-y-2">

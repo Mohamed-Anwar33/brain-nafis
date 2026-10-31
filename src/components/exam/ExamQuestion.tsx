@@ -11,6 +11,7 @@ import { canChooseAnswerAfterWrongAnswer } from "@/lib/nafis-quick-quiz";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { hasQuestionExplanationMedia } from "@/lib/question-explanation";
+import { selectSimilarQuestionCandidates } from "@/lib/similar-question-matching";
 
 type SimilarQuestion = ExamQuestionType;
 type SimilarQuestionRow = Omit<SimilarQuestion, "choices" | "order_index"> & {
@@ -118,22 +119,34 @@ export function ExamQuestion({
   const progress = ((currentIndex + 1) / totalQuestions) * 100;
 
   const loadSimilarQuestion = async () => {
-    if (!question.scientific_skill || !question.scientific_concept) {
+    if (!question.scientific_skill) {
+      console.info("Similar question unavailable: current question has no scientific skill", question.id);
       setSimilarState("empty");
       return;
     }
     setSimilarState("loading");
     try {
-      let query = supabase.from("questions").select("*, choices(*)")
+      const buildQuery = (sameScope: boolean) => {
+        let query = supabase.from("questions").select("*, choices(*)")
         .eq("active", true)
         .eq("scientific_skill", question.scientific_skill)
-        .eq("scientific_concept", question.scientific_concept)
         .neq("id", question.id);
-      if (question.grade_subject_id) query = query.eq("grade_subject_id", question.grade_subject_id);
-      if (question.domain_id) query = query.eq("domain_id", question.domain_id);
-      const { data, error } = await query.limit(20);
+        if (sameScope && question.grade_subject_id) query = query.eq("grade_subject_id", question.grade_subject_id);
+        if (sameScope && question.domain_id) query = query.eq("domain_id", question.domain_id);
+        return query.limit(20);
+      };
+
+      let { data, error } = await buildQuery(true);
       if (error) throw error;
-      const candidates = ((data || []) as unknown as SimilarQuestionRow[]).filter((item) => Array.isArray(item.choices) && item.choices.length >= 2);
+      let candidates = selectSimilarQuestionCandidates(
+        question,
+        (data || []) as unknown as SimilarQuestionRow[],
+      );
+      if (!candidates.length && (question.grade_subject_id || question.domain_id)) {
+        ({ data, error } = await buildQuery(false));
+        if (error) throw error;
+        candidates = selectSimilarQuestionCandidates(question, (data || []) as unknown as SimilarQuestionRow[]);
+      }
       if (!candidates.length) {
         setSimilarState("empty");
         return;
@@ -351,12 +364,12 @@ export function ExamQuestion({
           <section className="rounded-3xl border border-indigo-200 bg-indigo-50/70 p-5 text-right space-y-3">
             {!showSimilarQuestion ? (
               <Button type="button" onClick={() => { setShowSimilarQuestion(true); void loadSimilarQuestion(); }} className="gap-2" disabled={!onSimilarQuestionAnswer}>
-                جرّبي سؤالًا مشابهًا
+                تحقّقي من فهمك بسؤال مشابه
               </Button>
             ) : similarState === "loading" ? (
-              <div className="flex items-center gap-2 text-indigo-800"><Loader2 className="h-4 w-4 animate-spin" /> جارٍ تجهيز سؤال على نفس المهارة والمفهوم...</div>
+              <div className="flex items-center gap-2 text-indigo-800"><Loader2 className="h-4 w-4 animate-spin" /> جارٍ تجهيز سؤال على المهارة نفسها...</div>
             ) : similarState === "empty" ? (
-              <p className="text-sm font-bold text-slate-700">لا يوجد حاليًا سؤال آخر مصنف بنفس المهارة والمفهوم.</p>
+              <p className="text-sm font-bold text-slate-700">لا يوجد حاليًا سؤال آخر مصنّف على المهارة نفسها.</p>
             ) : similarQuestion ? (
               <div className="space-y-3">
                 <h3 className="font-black text-indigo-950">سؤال تدريب على {similarQuestion.scientific_skill}</h3>

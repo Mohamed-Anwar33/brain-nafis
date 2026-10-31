@@ -136,6 +136,7 @@ export interface FinalizeAttemptResponse {
   is_passed: boolean;
   is_certificate_eligible: boolean;
   challenges_snapshot?: any[];
+  subject_point_eligible?: boolean;
   subject_point_awarded?: boolean;
   subject_point?: number;
   subject_point_grade_subject_id?: string;

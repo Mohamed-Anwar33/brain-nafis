@@ -24,6 +24,7 @@ export interface CentralExamQuestion {
   domain_id?: string | null;
   wrong_reason?: string | null;
   explanation_url?: string | null;
+  scientific_skill?: string | null;
   choices?: CentralExamChoice[];
 }
 
@@ -133,6 +134,7 @@ export async function createCentralExamQuestion(
     domain_id: question.domain_id || null,
     wrong_reason: question.wrong_reason || null,
     explanation_url: question.explanation_url || null,
+    scientific_skill: question.scientific_skill || null,
   };
 
   let { data: qData, error: qError } = await supabase
@@ -223,6 +225,7 @@ export async function updateCentralExamQuestion(
   if (question.domain_id !== undefined) updatePayload.domain_id = question.domain_id || null;
   if (question.wrong_reason !== undefined) updatePayload.wrong_reason = question.wrong_reason || null;
   if (question.explanation_url !== undefined) updatePayload.explanation_url = question.explanation_url || null;
+  if (question.scientific_skill !== undefined) updatePayload.scientific_skill = question.scientific_skill || null;
 
   let { error: qError } = await supabase
     .from("central_exam_questions")

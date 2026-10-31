@@ -49,6 +49,7 @@ import {
 } from "lucide-react";
 import { QuestionForm } from "@/components/admin/QuestionForm";
 import { CSVImport } from "@/components/admin/CSVImport";
+import { FooterSectionsEditor } from "@/components/admin/FooterSectionsEditor";
 import { useAcademicCatalog } from "@/hooks/use-academic-catalog";
 import { Tag, Sparkles } from "lucide-react";
 
@@ -485,6 +486,8 @@ export default function NafisQuestions() {
           <p className="text-slate-500">إدارة أسئلة النظام العام</p>
         </div>
       </div>
+
+      <FooterSectionsEditor />
 
       {/* Stats */}
       <div className="grid gap-4 md:grid-cols-4">

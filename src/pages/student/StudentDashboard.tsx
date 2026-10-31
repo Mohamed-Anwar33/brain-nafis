@@ -49,6 +49,7 @@ import { useAcademicCatalog } from "@/hooks/use-academic-catalog";
 import { SoundToggle } from "@/components/ui/SoundToggle";
 import { audioManager } from "@/lib/audio";
 import { StudentSidebar } from "@/components/student/StudentSidebar";
+import { StudentPortalHub } from "@/components/student/StudentPortalHub";
 import { isStudentFemale } from "@/lib/studentUtils";
 import {
   clearSelectionContext,
@@ -638,6 +639,15 @@ export default function StudentDashboard() {
     navigate("/");
   };
 
+  const navigateToScientificActivity = (type: "reading" | "lab") => {
+    const context = buildSelectionContextExtended(selection.trackType, "interactive-games");
+    if (context) saveSelectionContext(context);
+    const params = new URLSearchParams({ type });
+    if (context?.domainId) params.set("domain_id", context.domainId);
+    if (context?.gradeSubjectId) params.set("grade_subject_id", context.gradeSubjectId);
+    navigate(`/student/science-activities?${params.toString()}`);
+  };
+
   const startNafisQuickQuiz = async (context: SelectionContext) => {
     await startNafisStagesRound({
       context,
@@ -1162,20 +1172,6 @@ export default function StudentDashboard() {
                 )}
               </div>
 
-              {/* Back Button with Modern Tactile Pill */}
-              <div className="flex justify-center pt-4">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    audioManager.playClick();
-                    handleBack();
-                  }}
-                  className="rounded-2xl border-2 border-slate-200/90 bg-white/95 text-slate-700 hover:bg-slate-100 hover:text-indigo-600 hover:border-indigo-300 h-12 px-6 font-black text-sm gap-2.5 shadow-sm hover:shadow-md transition-all hover:scale-105 active:scale-95"
-                >
-                  <ArrowRight className="w-4 h-4" />
-                  <span>العودة لاختيار المسار التعليمي</span>
-                </Button>
-              </div>
             </div>
           )}
 
@@ -1369,10 +1365,17 @@ export default function StudentDashboard() {
                 </button>
               </div>
 
-              <div className="mx-auto max-w-5xl">
-                <Button type="button" variant="outline" className="w-full border-indigo-200 bg-white text-indigo-800" onClick={() => navigate("/student/science-activities")}>
-                  <BookOpen className="ml-2 h-4 w-4" /> الفهم القرائي والمختبر الافتراضي
-                </Button>
+              <div className="mx-auto grid max-w-5xl gap-4 sm:grid-cols-2">
+                <button type="button" aria-label="افتحي الفهم القرائي" onClick={() => navigateToScientificActivity("reading")} className="group flex min-h-32 items-center gap-4 rounded-3xl border-2 border-indigo-300 bg-gradient-to-br from-white to-indigo-50 p-5 text-right shadow-md shadow-indigo-900/5 transition hover:-translate-y-1 hover:border-indigo-500 hover:shadow-xl focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-200">
+                  <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-600 to-blue-500 text-white shadow-lg shadow-indigo-500/30 transition-transform group-hover:scale-110"><BookOpen className="h-8 w-8" /></span>
+                  <span className="min-w-0 flex-1"><span className="mb-1 inline-flex rounded-full bg-indigo-100 px-2.5 py-1 text-[11px] font-black text-indigo-800">نصوص وأسئلة</span><span className="block text-lg font-black text-slate-950">الفهم القرائي</span><span className="mt-1 block text-sm font-bold leading-5 text-slate-600">اقرئي النصوص العلمية وأجيبي عن أسئلتها</span></span>
+                  <ArrowLeft className="h-5 w-5 shrink-0 text-indigo-600 transition-transform group-hover:-translate-x-1" />
+                </button>
+                <button type="button" aria-label="افتحي المختبر الافتراضي" onClick={() => navigateToScientificActivity("lab")} className="group flex min-h-32 items-center gap-4 rounded-3xl border-2 border-emerald-300 bg-gradient-to-br from-white to-emerald-50 p-5 text-right shadow-md shadow-emerald-900/5 transition hover:-translate-y-1 hover:border-emerald-500 hover:shadow-xl focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-200">
+                  <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-500 text-white shadow-lg shadow-emerald-500/30 transition-transform group-hover:scale-110"><FlaskConical className="h-8 w-8" /></span>
+                  <span className="min-w-0 flex-1"><span className="mb-1 inline-flex rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-black text-emerald-800">تجارب تفاعلية</span><span className="block text-lg font-black text-slate-950">المختبر الافتراضي</span><span className="mt-1 block text-sm font-bold leading-5 text-slate-600">استكشفي التجارب وشاهدي أثرها في فهمك</span></span>
+                  <ArrowLeft className="h-5 w-5 shrink-0 text-emerald-600 transition-transform group-hover:-translate-x-1" />
+                </button>
               </div>
 
               {/* Direct Domain Games Launchpad */}
@@ -1473,6 +1476,7 @@ export default function StudentDashboard() {
               </div>
             </div>
           )}
+          <StudentPortalHub studentName={studentName} />
           </main>
         </div>
       </div>

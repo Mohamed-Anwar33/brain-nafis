@@ -638,6 +638,13 @@ export default function StudentDashboard() {
     navigate("/");
   };
 
+  const navigateToScientificActivity = (type: "reading" | "lab") => {
+    const params = new URLSearchParams({ type });
+    if (selectedDomain?.id) params.set("domain_id", selectedDomain.id);
+    if (selection.gradeSubjectId) params.set("grade_subject_id", selection.gradeSubjectId);
+    navigate(`/student/science-activities?${params.toString()}`);
+  };
+
   const startNafisQuickQuiz = async (context: SelectionContext) => {
     await startNafisStagesRound({
       context,
@@ -1356,11 +1363,11 @@ export default function StudentDashboard() {
               </div>
 
               <div className="mx-auto grid max-w-5xl gap-3 sm:grid-cols-2">
-                <button type="button" onClick={() => navigate("/student/science-activities?type=reading")} className="group flex min-h-24 items-center gap-4 rounded-2xl border-2 border-indigo-200 bg-white p-5 text-right shadow-sm transition hover:-translate-y-1 hover:border-indigo-400 hover:shadow-lg">
+                <button type="button" onClick={() => navigateToScientificActivity("reading")} className="group flex min-h-24 items-center gap-4 rounded-2xl border-2 border-indigo-200 bg-white p-5 text-right shadow-sm transition hover:-translate-y-1 hover:border-indigo-400 hover:shadow-lg">
                   <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-600 to-blue-500 text-white shadow-md shadow-indigo-500/25 group-hover:scale-105 transition-transform"><BookOpen className="h-7 w-7" /></span>
                   <span><span className="block text-base font-black text-slate-900">الفهم القرائي</span><span className="mt-1 block text-xs font-bold leading-5 text-slate-500">اقرئي النصوص العلمية وأجيبي عن أسئلتها</span></span>
                 </button>
-                <button type="button" onClick={() => navigate("/student/science-activities?type=lab")} className="group flex min-h-24 items-center gap-4 rounded-2xl border-2 border-emerald-200 bg-white p-5 text-right shadow-sm transition hover:-translate-y-1 hover:border-emerald-400 hover:shadow-lg">
+                <button type="button" onClick={() => navigateToScientificActivity("lab")} className="group flex min-h-24 items-center gap-4 rounded-2xl border-2 border-emerald-200 bg-white p-5 text-right shadow-sm transition hover:-translate-y-1 hover:border-emerald-400 hover:shadow-lg">
                   <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-500 text-white shadow-md shadow-emerald-500/25 group-hover:scale-105 transition-transform"><FlaskConical className="h-7 w-7" /></span>
                   <span><span className="block text-base font-black text-slate-900">المختبر الافتراضي</span><span className="mt-1 block text-xs font-bold leading-5 text-slate-500">استكشفي التجارب وشاهدي أثرها في فهمك</span></span>
                 </button>

@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Loader2, BookOpen, FlaskConical, Play, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
 import { getStoredSelectionContext } from "@/lib/selection-context";
+import { isScientificActivityInScope } from "@/lib/scientific-activity-scope";
 
 type Choice = { id: string; text: string };
 type ReadingQuestion = { id: string; text: string; question_order: number; choices: Choice[] };
@@ -37,6 +38,8 @@ const embedUrl = (input: string) => {
 export default function ScientificActivities() {
   const [searchParams] = useSearchParams();
   const activityType = searchParams.get("type");
+  const requestedDomainId = searchParams.get("domain_id");
+  const requestedGradeSubjectId = searchParams.get("grade_subject_id");
   const showReading = activityType !== "lab";
   const showLab = activityType !== "reading";
   const [readings, setReadings] = useState<Reading[]>([]);
@@ -63,15 +66,16 @@ export default function ScientificActivities() {
       if (readingError) console.error("Could not load readings:", readingError);
       if (labError) console.error("Could not load virtual labs:", labError);
       const context = getStoredSelectionContext();
+      const domainId = requestedDomainId || context?.domainId || null;
+      const gradeSubjectId = requestedGradeSubjectId || context?.gradeSubjectId || null;
       const inScope = (item: { domain_id?: string | null; grade_subject_id?: string | null }) =>
-        (!context?.domainId || !item.domain_id || item.domain_id === context.domainId)
-        && (!context?.gradeSubjectId || !item.grade_subject_id || item.grade_subject_id === context.gradeSubjectId);
+        isScientificActivityInScope(item, { domainId, gradeSubjectId });
       setReadings(((readingData || []) as unknown as Reading[]).filter(inScope));
       setLabs(((labData || []) as unknown as Lab[]).filter(inScope));
       setLoading(false);
     };
     void load();
-  }, []);
+  }, [requestedDomainId, requestedGradeSubjectId]);
 
   const saveReadingAnswer = async (question: ReadingQuestion) => {
     const choiceId = readingAnswers[question.id];
@@ -167,7 +171,7 @@ export default function ScientificActivities() {
   if (loading) return <div className="flex min-h-[60vh] items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
 
   return <main dir="rtl" className="mx-auto max-w-5xl space-y-10 px-4 py-8">
-    <header><h1 className="text-3xl font-black">{activityType === "reading" ? "الفهم القرائي" : activityType === "lab" ? "المختبر الافتراضي" : "أنشطة العلوم"}</h1><p className="mt-2 text-muted-foreground">{activityType === "reading" ? "اقرئي النصوص العلمية واستنتجي الإجابات من المعلومات الواردة فيها." : activityType === "lab" ? "استكشفي التجارب العلمية وتابعي كيف يتطور فهمك بعد المشاهدة." : "اقرئي النصوص العلمية واستكشفي التجارب الافتراضية."}</p></header>
+    <header><h1 className="text-3xl font-black">{activityType === "reading" ? "الفهم القرائي" : activityType === "lab" ? "المختبر الافتراضي" : "أنشطة العلوم"}</h1><p className="mt-2 text-muted-foreground">{activityType === "reading" ? "اقرئي النصوص العلمية واستنتجي الإجابات من المعلومات الواردة فيها." : activityType === "lab" ? "استكشفي التجارب العلمية وتابعي كيف يتطور فهمك بعد المشاهدة." : "اقرئي النصوص العلمية واستكشفي التجارب الافتراضية."}</p>{(requestedDomainId || getStoredSelectionContext()?.domainName) && <p className="mt-3 inline-flex rounded-full bg-indigo-50 px-4 py-2 text-sm font-bold text-indigo-800">المجال المحدد: {getStoredSelectionContext()?.domainName || "المجال المختار"}</p>}</header>
     {showReading && <section className="space-y-4"><h2 className="flex items-center gap-2 text-2xl font-black"><BookOpen className="h-6 w-6 text-indigo-600" />اقرئي واستنتجي</h2>
       {readings.length === 0 && <p className="rounded-xl bg-slate-50 p-4 text-slate-600">لا توجد نصوص علمية متاحة حاليًا.</p>}
       {readings.map((reading) => <Card key={reading.id}><CardHeader><CardTitle>{reading.title}</CardTitle></CardHeader><CardContent className="space-y-5"><div className="max-h-[50vh] overflow-y-auto whitespace-pre-wrap rounded-xl bg-slate-50 p-5 leading-8">{reading.passage}</div>

@@ -364,12 +364,12 @@ export function ExamQuestion({
           <section className="rounded-3xl border border-indigo-200 bg-indigo-50/70 p-5 text-right space-y-3">
             {!showSimilarQuestion ? (
               <Button type="button" onClick={() => { setShowSimilarQuestion(true); void loadSimilarQuestion(); }} className="gap-2" disabled={!onSimilarQuestionAnswer}>
-                جرّبي سؤالًا مشابهًا
+                تحقّقي من فهمك بسؤال مشابه
               </Button>
             ) : similarState === "loading" ? (
-              <div className="flex items-center gap-2 text-indigo-800"><Loader2 className="h-4 w-4 animate-spin" /> جارٍ تجهيز سؤال على نفس المهارة والمفهوم...</div>
+              <div className="flex items-center gap-2 text-indigo-800"><Loader2 className="h-4 w-4 animate-spin" /> جارٍ تجهيز سؤال على المهارة نفسها...</div>
             ) : similarState === "empty" ? (
-              <p className="text-sm font-bold text-slate-700">لا يوجد حاليًا سؤال آخر مصنف بنفس المهارة والمفهوم.</p>
+              <p className="text-sm font-bold text-slate-700">لا يوجد حاليًا سؤال آخر مصنّف على المهارة نفسها.</p>
             ) : similarQuestion ? (
               <div className="space-y-3">
                 <h3 className="font-black text-indigo-950">سؤال تدريب على {similarQuestion.scientific_skill}</h3>

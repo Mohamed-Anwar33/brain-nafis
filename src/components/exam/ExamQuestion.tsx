@@ -11,6 +11,7 @@ import { canChooseAnswerAfterWrongAnswer } from "@/lib/nafis-quick-quiz";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { hasQuestionExplanationMedia } from "@/lib/question-explanation";
+import { selectSimilarQuestionCandidates } from "@/lib/similar-question-matching";
 
 type SimilarQuestion = ExamQuestionType;
 type SimilarQuestionRow = Omit<SimilarQuestion, "choices" | "order_index"> & {
@@ -119,34 +120,26 @@ export function ExamQuestion({
 
   const loadSimilarQuestion = async () => {
     if (!question.scientific_skill) {
+      console.info("Similar question unavailable: current question has no scientific skill", question.id);
       setSimilarState("empty");
       return;
     }
     setSimilarState("loading");
     try {
-      const buildQuery = (includeConcept: boolean) => {
+      const buildQuery = () => {
         let query = supabase.from("questions").select("*, choices(*)")
         .eq("active", true)
         .eq("scientific_skill", question.scientific_skill)
         .neq("id", question.id);
-        if (includeConcept && question.scientific_concept) {
-          query = query.eq("scientific_concept", question.scientific_concept);
-        }
-        if (question.grade_subject_id) query = query.eq("grade_subject_id", question.grade_subject_id);
-        if (question.domain_id) query = query.eq("domain_id", question.domain_id);
         return query.limit(20);
       };
 
-      // Prefer the same concept when one is assigned, then fall back to the
-      // linked scientific skill so skill-only questions can still be practiced.
-      let { data, error } = await buildQuery(true);
+      const { data, error } = await buildQuery();
       if (error) throw error;
-      let candidates = ((data || []) as unknown as SimilarQuestionRow[]).filter((item) => Array.isArray(item.choices) && item.choices.length >= 2);
-      if (!candidates.length && question.scientific_concept) {
-        ({ data, error } = await buildQuery(false));
-        if (error) throw error;
-        candidates = ((data || []) as unknown as SimilarQuestionRow[]).filter((item) => Array.isArray(item.choices) && item.choices.length >= 2);
-      }
+      const candidates = selectSimilarQuestionCandidates(
+        question,
+        (data || []) as unknown as SimilarQuestionRow[],
+      );
       if (!candidates.length) {
         setSimilarState("empty");
         return;

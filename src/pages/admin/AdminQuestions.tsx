@@ -51,6 +51,7 @@ import {
 } from "lucide-react";
 import { QuestionForm } from "@/components/admin/QuestionForm";
 import { CSVImport } from "@/components/admin/CSVImport";
+import { FooterSectionsEditor } from "@/components/admin/FooterSectionsEditor";
 
 interface Question {
   id: string;
@@ -485,6 +486,8 @@ export default function AdminQuestions() {
           </Dialog>
         </div>
       </div>
+
+      <FooterSectionsEditor />
 
       {/* Stage Tabs */}
       <Card className="card-elevated border-primary/10">

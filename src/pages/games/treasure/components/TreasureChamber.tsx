@@ -27,38 +27,47 @@ export function TreasureChamber({
   const durationMins = Math.floor(finalResult.duration_seconds / 60);
   const durationSecs = finalResult.duration_seconds % 60;
   const isPassed = finalResult.is_passed;
+  const earnedPerfectScore = finalResult.subject_point_eligible === true;
 
   return (
     <div
-      className="relative z-30 max-w-lg w-full mx-auto my-auto p-7 sm:p-9 rounded-[2.5rem] bg-white/95 backdrop-blur-2xl border-2 border-amber-300 shadow-2xl shadow-amber-500/20 text-center select-none animate-in zoom-in-95 duration-300 overflow-hidden"
+      className={`relative z-30 max-w-lg w-full mx-auto my-auto p-7 sm:p-9 rounded-[2.5rem] backdrop-blur-2xl border-2 shadow-2xl text-center select-none animate-in zoom-in-95 duration-300 overflow-hidden ${earnedPerfectScore ? "bg-gradient-to-br from-emerald-50 via-white to-amber-50 border-emerald-300 shadow-emerald-500/25" : "bg-white/95 border-amber-300 shadow-amber-500/20"}`}
       dir="rtl"
     >
       {/* Ambient Victory Aura */}
-      <div className="absolute -top-20 -left-20 w-60 h-60 bg-amber-400/25 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute -bottom-20 -right-20 w-60 h-60 bg-emerald-400/20 rounded-full blur-3xl pointer-events-none" />
+      <div className={`absolute -top-20 -left-20 w-60 h-60 rounded-full blur-3xl pointer-events-none ${earnedPerfectScore ? "bg-amber-400/35" : "bg-amber-400/25"}`} />
+      <div className={`absolute -bottom-20 -right-20 w-60 h-60 rounded-full blur-3xl pointer-events-none ${earnedPerfectScore ? "bg-emerald-400/35" : "bg-emerald-400/20"}`} />
 
       {/* 1. 3D Trophy Header with Glow */}
       <div className="relative w-24 h-24 mx-auto mb-4 flex items-center justify-center">
-        <div className="absolute -inset-2 rounded-3xl bg-amber-400/30 blur-lg animate-pulse pointer-events-none" />
-        <div className="relative w-22 h-22 rounded-3xl bg-gradient-to-tr from-amber-400 via-yellow-400 to-amber-500 text-amber-950 flex items-center justify-center shadow-xl shadow-amber-500/40 ring-4 ring-amber-100">
+        <div className={`absolute -inset-2 rounded-3xl blur-lg animate-pulse pointer-events-none ${earnedPerfectScore ? "bg-emerald-400/45" : "bg-amber-400/30"}`} />
+        <div className={`relative w-22 h-22 rounded-3xl text-amber-950 flex items-center justify-center shadow-xl ring-4 ${earnedPerfectScore ? "bg-gradient-to-tr from-emerald-400 via-teal-400 to-amber-400 shadow-emerald-500/40 ring-emerald-100 motion-safe:animate-bounce" : "bg-gradient-to-tr from-amber-400 via-yellow-400 to-amber-500 shadow-amber-500/40 ring-amber-100"}`}>
           <Trophy className="w-11 h-11 text-white filter drop-shadow-md" />
         </div>
       </div>
 
       {/* 2. Clear Title */}
       <h2 className="text-2xl sm:text-3xl font-black text-slate-900 mb-2">
-        {isPassed ? "مبروك يا بطل! تم فتح الكنز 🗝️🎉" : "انتهت المغامرة"}
+        {earnedPerfectScore
+          ? "مبروك! أتممتِ جميع التحديات بامتياز 🎉"
+          : finalResult.final_score === 100
+            ? "نتيجة كاملة! بقي شرط المكافأة الذهبية 🌟"
+            : isPassed
+              ? "أحسنتِ! أنهيتِ مغامرة الكنز 🌟"
+              : "انتهت المغامرة"}
       </h2>
       <p className="text-sm text-slate-600 mb-6 max-w-sm mx-auto leading-relaxed font-bold">
-        {isPassed
-          ? "أجبت على جميع التحديات العلمية بنجاح وفتحت بوابة الكنز الأسطوري بذكائك الفائق!"
-          : "يمكنك إعادة المغامرة والمحاولة مرة أخرى."}
+        {earnedPerfectScore
+          ? "أجبتِ إجابة صحيحة عن جميع التحديات، وأنهيتِ المغامرة في أقل من ٥ دقائق. تستحقين درجة إضافية في المادة!"
+          : finalResult.final_score === 100
+            ? "أحرزتِ ١٠٠ نقطة! لتحصلي على الدرجة الإضافية، أجيبي عن كل التحديات إجابة صحيحة وأنهي المغامرة في أقل من ٥ دقائق."
+            : "لم يحالفك الحظ هذه المرة، لا تيأسي! راجعي التحديات وحاولي مجددًا؛ قد تكون محاولتك القادمة هي الفوز."}
       </p>
 
-      {gradePointAwarded && (
+      {gradePointAwarded && earnedPerfectScore && (
         <div className="mb-5 flex items-center justify-center gap-2 rounded-2xl border border-emerald-300 bg-emerald-50 px-4 py-3 font-black text-emerald-800">
           <Award className="h-5 w-5 shrink-0" />
-          <span>حصلت على درجة واحدة إضافية في المادة</span>
+          <span>حصلتِ على درجة واحدة إضافية في المادة</span>
         </div>
       )}
       {!gradePointAwarded && gradePointError && (
@@ -78,7 +87,7 @@ export function TreasureChamber({
       )}
 
       {/* 3. Clean Modern Score Card */}
-      <div className="bg-gradient-to-b from-amber-50/60 to-white border-2 border-amber-200/80 rounded-3xl p-5 mb-6 text-center space-y-4 shadow-sm">
+      <div className={`bg-gradient-to-b rounded-3xl p-5 mb-6 text-center space-y-4 shadow-sm border-2 ${earnedPerfectScore ? "from-emerald-50 to-white border-emerald-200" : "from-amber-50/60 to-white border-amber-200/80"}`}>
         <div>
           <span className="text-xs text-amber-800 font-black block mb-1">الدرجة النهائية المستحقة 🏆</span>
           <div className="flex items-baseline justify-center gap-1.5 font-sans">
@@ -97,14 +106,14 @@ export function TreasureChamber({
           </div>
           <div className="space-y-0.5 border-x border-amber-200/70">
             <span className="text-[11px] text-slate-500 font-bold block">بونص السرعة</span>
-            <span className="text-base font-black text-emerald-600 flex items-center justify-center gap-0.5">
+            <span className={`text-base font-black flex items-center justify-center gap-0.5 ${earnedPerfectScore ? "text-emerald-600" : "text-slate-400"}`}>
               <Zap className="w-3.5 h-3.5" />
               +{finalResult.speed_bonus}
             </span>
           </div>
           <div className="space-y-0.5">
             <span className="text-[11px] text-slate-500 font-bold block">الوقت المستغرق</span>
-            <span className="text-base font-black text-slate-800 font-mono">
+            <span className={`text-base font-black font-mono ${earnedPerfectScore ? "text-emerald-700" : "text-slate-800"}`}>
               {durationMins.toString().padStart(2, "0")}:{durationSecs.toString().padStart(2, "0")}
             </span>
           </div>

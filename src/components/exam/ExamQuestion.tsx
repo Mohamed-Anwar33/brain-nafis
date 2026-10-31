@@ -118,22 +118,35 @@ export function ExamQuestion({
   const progress = ((currentIndex + 1) / totalQuestions) * 100;
 
   const loadSimilarQuestion = async () => {
-    if (!question.scientific_skill || !question.scientific_concept) {
+    if (!question.scientific_skill) {
       setSimilarState("empty");
       return;
     }
     setSimilarState("loading");
     try {
-      let query = supabase.from("questions").select("*, choices(*)")
+      const buildQuery = (includeConcept: boolean) => {
+        let query = supabase.from("questions").select("*, choices(*)")
         .eq("active", true)
         .eq("scientific_skill", question.scientific_skill)
-        .eq("scientific_concept", question.scientific_concept)
         .neq("id", question.id);
-      if (question.grade_subject_id) query = query.eq("grade_subject_id", question.grade_subject_id);
-      if (question.domain_id) query = query.eq("domain_id", question.domain_id);
-      const { data, error } = await query.limit(20);
+        if (includeConcept && question.scientific_concept) {
+          query = query.eq("scientific_concept", question.scientific_concept);
+        }
+        if (question.grade_subject_id) query = query.eq("grade_subject_id", question.grade_subject_id);
+        if (question.domain_id) query = query.eq("domain_id", question.domain_id);
+        return query.limit(20);
+      };
+
+      // Prefer the same concept when one is assigned, then fall back to the
+      // linked scientific skill so skill-only questions can still be practiced.
+      let { data, error } = await buildQuery(true);
       if (error) throw error;
-      const candidates = ((data || []) as unknown as SimilarQuestionRow[]).filter((item) => Array.isArray(item.choices) && item.choices.length >= 2);
+      let candidates = ((data || []) as unknown as SimilarQuestionRow[]).filter((item) => Array.isArray(item.choices) && item.choices.length >= 2);
+      if (!candidates.length && question.scientific_concept) {
+        ({ data, error } = await buildQuery(false));
+        if (error) throw error;
+        candidates = ((data || []) as unknown as SimilarQuestionRow[]).filter((item) => Array.isArray(item.choices) && item.choices.length >= 2);
+      }
       if (!candidates.length) {
         setSimilarState("empty");
         return;

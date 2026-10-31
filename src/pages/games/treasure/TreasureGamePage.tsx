@@ -503,13 +503,19 @@ export default function TreasureGamePage() {
       // This RPC is idempotent: it safely retries both finalization and the one-point award.
       const retryResult = await treasureService.finalizeAttempt(sessionId);
       const saved = retryResult.subject_point_awarded === true && retryResult.subject_point === 1;
+      setFinalResult((current) => current ? {
+        ...current,
+        subject_point_eligible: retryResult.subject_point_eligible === true,
+      } : current);
       if (saved) {
         setTreasurePointAwarded(true);
         setTreasurePointError("");
-      } else {
+      } else if (retryResult.subject_point_eligible === true) {
         setTreasurePointError("تعذر تسجيل الدرجة الإضافية الآن.");
+      } else {
+        setTreasurePointError("");
       }
-      if (!saved) toast.error("ما زال تسجيل الدرجة متعذرًا. أعد المحاولة بعد قليل.");
+      if (!saved && retryResult.subject_point_eligible === true) toast.error("ما زال تسجيل الدرجة متعذرًا. أعد المحاولة بعد قليل.");
     } catch (error) {
       console.error("Could not retry the treasure subject point:", error);
       setTreasurePointError("تعذر الاتصال لحفظ الدرجة الإضافية.");
@@ -547,7 +553,9 @@ export default function TreasureGamePage() {
         }
         const pointAwarded = finalized.subject_point_awarded === true && finalized.subject_point === 1;
         setTreasurePointAwarded(pointAwarded);
-        if (!pointAwarded) setTreasurePointError("لم يؤكد الخادم تسجيل الدرجة الإضافية. أعد المحاولة من شاشة الكنز.");
+        if (finalized.subject_point_eligible === true && !pointAwarded) {
+          setTreasurePointError("لم يؤكد الخادم تسجيل الدرجة الإضافية. أعد المحاولة من شاشة الكنز.");
+        }
       } else {
         setTreasurePointError("لا يمكن تسجيل درجة المادة دون اتصال بقاعدة البيانات.");
       }
@@ -568,17 +576,38 @@ export default function TreasureGamePage() {
       speed_bonus: finalized?.speed_bonus ?? 0,
       duration_seconds: finalized?.duration_seconds ?? 120,
       challenges_snapshot: fallbackChallenges || sessionData?.challenges || DEFAULT_TREASURE_12_CHALLENGES,
+      subject_point_eligible: finalized?.subject_point_eligible === true,
+      subject_point_awarded: finalized?.subject_point_awarded === true,
     });
     setCurrentPhase("completed");
     setIsFinalizing(false);
     treasureHalalAudio.playChestVictory();
 
     // Launch Confetti Celebration
+    const isRewardWin = finalized?.subject_point_eligible === true && finalized.subject_point_awarded === true;
     confetti({
-      particleCount: 180,
-      spread: 100,
+      particleCount: isRewardWin ? 360 : 180,
+      spread: isRewardWin ? 150 : 100,
+      startVelocity: isRewardWin ? 55 : 42,
       origin: { y: 0.55 },
+      colors: isRewardWin ? ["#fbbf24", "#34d399", "#60a5fa", "#f472b6", "#ffffff"] : undefined,
     });
+    if (isRewardWin) {
+      window.setTimeout(() => confetti({
+        particleCount: 130,
+        spread: 120,
+        startVelocity: 38,
+        origin: { y: 0.6, x: 0.25 },
+        colors: ["#fbbf24", "#34d399", "#60a5fa", "#f472b6", "#ffffff"],
+      }), 450);
+      window.setTimeout(() => confetti({
+        particleCount: 130,
+        spread: 120,
+        startVelocity: 38,
+        origin: { y: 0.6, x: 0.75 },
+        colors: ["#fbbf24", "#34d399", "#60a5fa", "#f472b6", "#ffffff"],
+      }), 750);
+    }
   };
 
   const toggleSound = () => {
@@ -602,7 +631,7 @@ export default function TreasureGamePage() {
   ) || DEFAULT_TREASURE_12_CHALLENGES[0];
 
   return (
-    <div className="fixed inset-0 w-full h-dvh overflow-hidden bg-slate-950 text-foreground select-none flex flex-col justify-between" dir="rtl">
+    <div className="relative w-full h-dvh min-h-[100dvh] overflow-hidden bg-slate-950 text-foreground select-none flex flex-col justify-between" dir="rtl">
       {/* 1. Full-Screen Interactive 3D World Scene Layer */}
       <div className="absolute inset-0 w-full h-full z-0 overflow-hidden select-none">
         <Suspense

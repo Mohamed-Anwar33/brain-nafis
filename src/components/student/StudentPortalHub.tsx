@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Trophy, Award, TrendingUp, Sparkles, Lock, CheckCircle2 } from "lucide-react";
+import { Trophy, Award, TrendingUp, Sparkles, Lock, CheckCircle2, BookOpenCheck } from "lucide-react";
 import { audioManager } from "@/lib/audio";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -11,6 +11,7 @@ import { LeaderboardModal } from "./LeaderboardModal";
 import { AchievementsModal } from "./AchievementsModal";
 import { ProgressModal } from "./ProgressModal";
 import { CertificatesPortalModal } from "./CertificatesPortalModal";
+import { SkillAnalysisModal } from "./SkillAnalysisModal";
 
 export interface StudentPortalHubProps {
   studentName?: string | null;
@@ -21,7 +22,7 @@ export function StudentPortalHub({ studentName, className = "" }: StudentPortalH
   const [top10, setTop10] = useState<LeaderboardStudent[]>([]);
   const [stats, setStats] = useState<StudentProgressStats | null>(null);
   const [activeModal, setActiveModal] = useState<
-    "leaderboard" | "achievements" | "progress" | "certificates" | null
+    "leaderboard" | "achievements" | "progress" | "certificates" | "skills" | null
   >(null);
   const [resolvedStudentName, setResolvedStudentName] = useState<string | null>(studentName || null);
 
@@ -75,7 +76,7 @@ export function StudentPortalHub({ studentName, className = "" }: StudentPortalH
     };
   }, [studentName]);
 
-  const handleOpen = (type: "leaderboard" | "achievements" | "progress" | "certificates") => {
+  const handleOpen = (type: "leaderboard" | "achievements" | "progress" | "certificates" | "skills") => {
     audioManager.playClick();
     setActiveModal(type);
   };
@@ -99,7 +100,7 @@ export function StudentPortalHub({ studentName, className = "" }: StudentPortalH
       </div>
 
       {/* The 4 Grid Cards - Inspired by user request & screenshot */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 sm:gap-5">
+      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3.5 sm:gap-5">
         {/* Card 1: Leaderboard (المتصدرون) */}
         <button
           type="button"
@@ -207,6 +208,24 @@ export function StudentPortalHub({ studentName, className = "" }: StudentPortalH
             </p>
           </div>
         </button>
+
+        {/* Card 5: Skill analysis */}
+        <button
+          type="button"
+          onClick={() => handleOpen("skills")}
+          className="group relative p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-white/90 backdrop-blur-xl border-2 border-slate-200/80 hover:border-cyan-400 shadow-sm hover:shadow-xl hover:-translate-y-1.5 active:scale-95 transition-all text-right flex flex-col justify-between overflow-hidden"
+        >
+          <div className="flex items-center justify-between mb-3">
+            <div className="w-11 h-11 sm:w-13 sm:h-13 rounded-2xl bg-cyan-50 text-cyan-600 group-hover:bg-cyan-600 group-hover:text-white flex items-center justify-center transition-all duration-300 shadow-2xs">
+              <BookOpenCheck className="w-5 h-5 sm:w-6 sm:h-6" />
+            </div>
+            <span className="text-[10px] sm:text-xs font-black bg-cyan-100/90 text-cyan-900 px-2.5 py-0.5 rounded-full border border-cyan-200">تحليل محفوظ</span>
+          </div>
+          <div>
+            <h4 className="text-base sm:text-lg font-black text-slate-900 group-hover:text-cyan-600 transition-colors">الإخفاق والارتفاع</h4>
+            <p className="text-[11px] sm:text-xs font-bold text-slate-400 mt-0.5">تحليل نسب كل مهارة</p>
+          </div>
+        </button>
       </div>
 
       {/* Modals */}
@@ -240,6 +259,12 @@ export function StudentPortalHub({ studentName, className = "" }: StudentPortalH
         isInTop10={isInTop10}
         totalScore={stats?.totalScore || 0}
         pointsToTop10={stats?.pointsToTop10 || 0}
+      />
+
+      <SkillAnalysisModal
+        isOpen={activeModal === "skills"}
+        onClose={() => setActiveModal(null)}
+        studentName={resolvedStudentName}
       />
     </section>
   );

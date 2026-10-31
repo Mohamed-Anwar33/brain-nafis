@@ -958,7 +958,7 @@ export default function CentralExamPlay() {
 
           <Card className="border-indigo-200 bg-indigo-50/70 p-5 space-y-3">
             <div className="flex items-center justify-between gap-3 flex-wrap">
-              <div className="text-indigo-950 font-black">تدريب بسؤال مشابه</div>
+              <div className="text-indigo-950 font-black">تحقّق من فهمك بسؤال مشابه</div>
               {similarQuestionState === "idle" && (
                 <Button type="button" onClick={() => void loadSimilarQuestion()}>اعرض السؤال المشابه</Button>
               )}

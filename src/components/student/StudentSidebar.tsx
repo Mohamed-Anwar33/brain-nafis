@@ -14,6 +14,7 @@ import {
   User,
   ShieldCheck,
   ChevronLeft,
+  BookOpenCheck,
 } from "lucide-react";
 import { audioManager } from "@/lib/audio";
 import { supabase } from "@/integrations/supabase/client";
@@ -26,11 +27,12 @@ import { LeaderboardModal } from "./LeaderboardModal";
 import { AchievementsModal } from "./AchievementsModal";
 import { ProgressModal } from "./ProgressModal";
 import { CertificatesPortalModal } from "./CertificatesPortalModal";
+import { SkillAnalysisModal } from "./SkillAnalysisModal";
 import { isStudentFemale } from "@/lib/studentUtils";
 
 export interface StudentSidebarProps {
   studentName?: string | null;
-  activeItem?: "home" | "progress" | "achievements" | "badges" | "certificates" | "leaderboard" | "games";
+  activeItem?: "home" | "progress" | "achievements" | "badges" | "certificates" | "leaderboard" | "games" | "skills";
   onNavigateHome?: () => void;
   isOpen?: boolean;
   onClose?: () => void;
@@ -53,7 +55,7 @@ export function StudentSidebar({
   const [top10, setTop10] = useState<LeaderboardStudent[]>([]);
   const [stats, setStats] = useState<StudentProgressStats | null>(null);
   const [activeModal, setActiveModal] = useState<
-    "leaderboard" | "achievements" | "progress" | "certificates" | null
+    "leaderboard" | "achievements" | "progress" | "certificates" | "skills" | null
   >(null);
 
   // Resolved menu open state
@@ -134,6 +136,9 @@ export function StudentSidebar({
       case "leaderboard":
         setActiveModal("leaderboard");
         break;
+      case "skills":
+        setActiveModal("skills");
+        break;
       case "games":
         navigate("/student/games");
         break;
@@ -189,6 +194,15 @@ export function StudentSidebar({
       iconBg: "bg-blue-50 text-blue-600 group-hover:bg-blue-600 group-hover:text-white",
       badge: stats ? `${stats.accuracy}% دقة` : "0% دقة",
       badgeColor: "bg-blue-50 text-blue-700 border-blue-200",
+    },
+    {
+      key: "skills",
+      label: "الإخفاق والارتفاع",
+      subtitle: "المهارات المتقنة وما يحتاج إلى مراجعة",
+      icon: BookOpenCheck,
+      iconBg: "bg-cyan-50 text-cyan-600 group-hover:bg-cyan-600 group-hover:text-white",
+      badge: "الإخفاق والارتفاع",
+      badgeColor: "bg-cyan-50 text-cyan-700 border-cyan-200",
     },
     {
       key: "certificates",
@@ -392,6 +406,12 @@ export function StudentSidebar({
         isOpen={activeModal === "progress"}
         onClose={() => setActiveModal(null)}
         stats={stats}
+        studentName={resolvedName}
+      />
+
+      <SkillAnalysisModal
+        isOpen={activeModal === "skills"}
+        onClose={() => setActiveModal(null)}
         studentName={resolvedName}
       />
 

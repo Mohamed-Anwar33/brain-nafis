@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -34,6 +35,10 @@ const embedUrl = (input: string) => {
 };
 
 export default function ScientificActivities() {
+  const [searchParams] = useSearchParams();
+  const activityType = searchParams.get("type");
+  const showReading = activityType !== "lab";
+  const showLab = activityType !== "reading";
   const [readings, setReadings] = useState<Reading[]>([]);
   const [labs, setLabs] = useState<Lab[]>([]);
   const [loading, setLoading] = useState(true);
@@ -162,15 +167,15 @@ export default function ScientificActivities() {
   if (loading) return <div className="flex min-h-[60vh] items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
 
   return <main dir="rtl" className="mx-auto max-w-5xl space-y-10 px-4 py-8">
-    <header><h1 className="text-3xl font-black">أنشطة العلوم</h1><p className="mt-2 text-muted-foreground">اقرئي النصوص العلمية واستكشفي التجارب الافتراضية.</p></header>
-    <section className="space-y-4"><h2 className="flex items-center gap-2 text-2xl font-black"><BookOpen className="h-6 w-6 text-indigo-600" />اقرئي واستنتجي</h2>
+    <header><h1 className="text-3xl font-black">{activityType === "reading" ? "الفهم القرائي" : activityType === "lab" ? "المختبر الافتراضي" : "أنشطة العلوم"}</h1><p className="mt-2 text-muted-foreground">{activityType === "reading" ? "اقرئي النصوص العلمية واستنتجي الإجابات من المعلومات الواردة فيها." : activityType === "lab" ? "استكشفي التجارب العلمية وتابعي كيف يتطور فهمك بعد المشاهدة." : "اقرئي النصوص العلمية واستكشفي التجارب الافتراضية."}</p></header>
+    {showReading && <section className="space-y-4"><h2 className="flex items-center gap-2 text-2xl font-black"><BookOpen className="h-6 w-6 text-indigo-600" />اقرئي واستنتجي</h2>
       {readings.length === 0 && <p className="rounded-xl bg-slate-50 p-4 text-slate-600">لا توجد نصوص علمية متاحة حاليًا.</p>}
       {readings.map((reading) => <Card key={reading.id}><CardHeader><CardTitle>{reading.title}</CardTitle></CardHeader><CardContent className="space-y-5"><div className="max-h-[50vh] overflow-y-auto whitespace-pre-wrap rounded-xl bg-slate-50 p-5 leading-8">{reading.passage}</div>
         {reading.questions.slice().sort((a, b) => a.question_order - b.question_order).map((question, index) => <div key={question.id} className="space-y-3 rounded-xl border p-4"><p className="font-bold">{index + 1}. {question.text}</p><RadioGroup value={readingAnswers[question.id] || ""} onValueChange={(value) => setReadingAnswers((current) => ({ ...current, [question.id]: value }))}>{(question.choices || []).map((choice) => <div key={choice.id} className="flex items-center gap-2"><RadioGroupItem id={`${question.id}-${choice.id}`} value={choice.id} /><Label htmlFor={`${question.id}-${choice.id}`}>{choice.text}</Label></div>)}</RadioGroup><Button variant="outline" onClick={() => void saveReadingAnswer(question)}>تحققي من الإجابة</Button>{readingResults[question.id] !== undefined && <p className={`font-bold ${readingResults[question.id] ? "text-emerald-700" : "text-rose-700"}`}>{readingResults[question.id] ? "إجابة صحيحة" : "إجابة غير صحيحة، أعيدي قراءة القطعة."}</p>}</div>)}
       </CardContent></Card>)}
-    </section>
+    </section>}
 
-    <section className="space-y-4"><h2 className="flex items-center gap-2 text-2xl font-black"><FlaskConical className="h-6 w-6 text-emerald-600" />استكشفي وجرّبي</h2>
+    {showLab && <section className="space-y-4"><h2 className="flex items-center gap-2 text-2xl font-black"><FlaskConical className="h-6 w-6 text-emerald-600" />استكشفي وجرّبي</h2>
       {labs.length === 0 && <p className="rounded-xl bg-slate-50 p-4 text-slate-600">لا توجد تجارب افتراضية متاحة حاليًا.</p>}
       {labs.map((lab) => {
         const questions = lab.question_set || [];
@@ -202,6 +207,6 @@ export default function ScientificActivities() {
           </>}
         </CardContent></Card>;
       })}
-    </section>
+    </section>}
   </main>;
 }

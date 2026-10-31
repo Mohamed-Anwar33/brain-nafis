@@ -31,6 +31,7 @@ import {
   Tag,
   Layers,
   Sparkles,
+  Pencil,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -127,6 +128,7 @@ export default function NafisMatching() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
   const [selectedDomainId, setSelectedDomainId] = useState<string>("");
+  const [editingQuestion, setEditingQuestion] = useState<MatchingQuestion | null>(null);
   const [filterDomain, setFilterDomain] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -265,12 +267,13 @@ export default function NafisMatching() {
             .from("game-images")
             .upload(fileName, pair.imageFile);
 
-          if (!uploadError) {
-            const { data } = supabase.storage
-              .from("game-images")
-              .getPublicUrl(fileName);
-            imageUrl = data.publicUrl;
-          }
+          if (uploadError) throw uploadError;
+          const { data } = supabase.storage
+            .from("game-images")
+            .getPublicUrl(fileName);
+          imageUrl = data.publicUrl;
+        } else {
+          imageUrl = pair.imagePreview;
         }
 
         uploadedItems.push({
@@ -283,28 +286,34 @@ export default function NafisMatching() {
 
       const firstItem = uploadedItems[0];
 
-      const { error } = await supabase.from("matching_game_questions").insert({
+      const payload = {
         left_text: firstItem.left_text || "",
         right_text: firstItem.right_text || "",
         right_image_url: firstItem.right_image_url || null,
         left_image_url: null,
         items: uploadedItems,
-        level: 1,
-        is_active: true,
+        level: editingQuestion?.level ?? 1,
+        is_active: editingQuestion?.is_active ?? true,
         track_type: "nafis",
         stage: "default",
-        grade_subject_id: defaultGradeSubjectId,
+        grade_subject_id: editingQuestion?.grade_subject_id || defaultGradeSubjectId,
         domain_id:
           selectedDomainId && selectedDomainId !== "none" ? selectedDomainId : null,
-      });
+      };
+
+      const { error } = editingQuestion
+        ? await supabase.from("matching_game_questions").update(payload).eq("id", editingQuestion.id)
+        : await supabase.from("matching_game_questions").insert(payload);
 
       if (error) throw error;
 
-      toast.success(
-        `تمت إضافة سؤال المطابقة بنجاح يحتوي على (${uploadedItems.length}) أزواج مصطلحات وصور`,
-      );
+      toast.success(editingQuestion
+        ? "تم حفظ تعديلات سؤال المطابقة"
+        : `تمت إضافة سؤال المطابقة بنجاح يحتوي على (${uploadedItems.length}) أزواج مصطلحات وصور`);
 
       // Reset form
+      setEditingQuestion(null);
+      setSelectedDomainId("");
       setPairs([
         {
           id: `pair_${Date.now()}_1`,
@@ -328,6 +337,29 @@ export default function NafisMatching() {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const startEditing = (question: MatchingQuestion) => {
+    const sourceItems = question.items?.length ? question.items : [question];
+    setEditingQuestion(question);
+    setSelectedDomainId(question.domain_id || "none");
+    setPairs(sourceItems.map((item, index) => ({
+      id: `edit_${question.id}_${index}`,
+      termText: item.left_text || "",
+      answerText: item.right_text || "",
+      imageFile: null,
+      imagePreview: item.right_image_url || item.left_image_url || "",
+    })));
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const cancelEditing = () => {
+    setEditingQuestion(null);
+    setSelectedDomainId("");
+    setPairs([
+      { id: `pair_${Date.now()}_1`, termText: "", answerText: "", imageFile: null, imagePreview: "" },
+      { id: `pair_${Date.now()}_2`, termText: "", answerText: "", imageFile: null, imagePreview: "" },
+    ]);
   };
 
   const handleUpdateDomain = async (questionId: string, domainId: string) => {
@@ -468,8 +500,8 @@ export default function NafisMatching() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <CardTitle className="flex items-center gap-2 text-lg sm:text-xl font-black text-slate-900">
-                <Plus className="w-5 h-5 text-rose-600" />
-                <span>إضافة تحدي مطابقة جديد (مصطلحات وصور متعددة)</span>
+                {editingQuestion ? <Pencil className="w-5 h-5 text-rose-600" /> : <Plus className="w-5 h-5 text-rose-600" />}
+                <span>{editingQuestion ? "تعديل سؤال المطابقة" : "إضافة تحدي مطابقة جديد (مصطلحات وصور متعددة)"}</span>
               </CardTitle>
               <p className="text-xs font-bold text-slate-600 mt-1">
                 يمكنك إضافة عدة مصطلحات علمية وصورها المقابلة في نفس السؤال لتظهر للطلاب في عمودين متوازيين
@@ -653,8 +685,9 @@ export default function NafisMatching() {
                 ) : (
                   <Plus className="w-5 h-5" />
                 )}
-                <span>حفظ سؤال المطابقة بجميع أزواجه الآن</span>
+                <span>{editingQuestion ? "حفظ التعديلات" : "حفظ سؤال المطابقة بجميع أزواجه الآن"}</span>
               </Button>
+              {editingQuestion && <Button type="button" variant="outline" onClick={cancelEditing}>إلغاء التعديل</Button>}
             </div>
           </form>
         </CardContent>
@@ -737,7 +770,7 @@ export default function NafisMatching() {
                     <TableHead className="font-bold">الصور التوضيحية المقابلة</TableHead>
                     <TableHead className="w-48 font-bold">المجال العلمي</TableHead>
                     <TableHead className="w-24 text-center font-bold">الحالة</TableHead>
-                    <TableHead className="w-20 text-center font-bold">حذف</TableHead>
+                    <TableHead className="w-28 text-center font-bold">الإجراءات</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -845,16 +878,16 @@ export default function NafisMatching() {
                           </Badge>
                         </TableCell>
 
-                        {/* Delete Action */}
+                        {/* Edit and delete actions */}
                         <TableCell className="text-center">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => confirmDelete(question.id)}
-                            className="hover:bg-red-50 hover:text-red-600 rounded-xl"
-                          >
-                            <Trash2 className="w-4 h-4 text-red-500" />
-                          </Button>
+                          <div className="flex justify-center gap-1">
+                            <Button type="button" variant="ghost" size="icon" onClick={() => startEditing(question)} className="rounded-xl hover:bg-indigo-50 hover:text-indigo-700" aria-label="تعديل سؤال المطابقة">
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button type="button" variant="ghost" size="icon" onClick={() => confirmDelete(question.id)} className="rounded-xl hover:bg-red-50 hover:text-red-600" aria-label="حذف سؤال المطابقة">
+                              <Trash2 className="w-4 h-4 text-red-500" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     );

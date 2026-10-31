@@ -1162,20 +1162,6 @@ export default function StudentDashboard() {
                 )}
               </div>
 
-              {/* Back Button with Modern Tactile Pill */}
-              <div className="flex justify-center pt-4">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    audioManager.playClick();
-                    handleBack();
-                  }}
-                  className="rounded-2xl border-2 border-slate-200/90 bg-white/95 text-slate-700 hover:bg-slate-100 hover:text-indigo-600 hover:border-indigo-300 h-12 px-6 font-black text-sm gap-2.5 shadow-sm hover:shadow-md transition-all hover:scale-105 active:scale-95"
-                >
-                  <ArrowRight className="w-4 h-4" />
-                  <span>العودة لاختيار المسار التعليمي</span>
-                </Button>
-              </div>
             </div>
           )}
 
@@ -1369,10 +1355,15 @@ export default function StudentDashboard() {
                 </button>
               </div>
 
-              <div className="mx-auto max-w-5xl">
-                <Button type="button" variant="outline" className="w-full border-indigo-200 bg-white text-indigo-800" onClick={() => navigate("/student/science-activities")}>
-                  <BookOpen className="ml-2 h-4 w-4" /> الفهم القرائي والمختبر الافتراضي
-                </Button>
+              <div className="mx-auto grid max-w-5xl gap-3 sm:grid-cols-2">
+                <button type="button" onClick={() => navigate("/student/science-activities?type=reading")} className="group flex min-h-24 items-center gap-4 rounded-2xl border-2 border-indigo-200 bg-white p-5 text-right shadow-sm transition hover:-translate-y-1 hover:border-indigo-400 hover:shadow-lg">
+                  <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-600 to-blue-500 text-white shadow-md shadow-indigo-500/25 group-hover:scale-105 transition-transform"><BookOpen className="h-7 w-7" /></span>
+                  <span><span className="block text-base font-black text-slate-900">الفهم القرائي</span><span className="mt-1 block text-xs font-bold leading-5 text-slate-500">اقرئي النصوص العلمية وأجيبي عن أسئلتها</span></span>
+                </button>
+                <button type="button" onClick={() => navigate("/student/science-activities?type=lab")} className="group flex min-h-24 items-center gap-4 rounded-2xl border-2 border-emerald-200 bg-white p-5 text-right shadow-sm transition hover:-translate-y-1 hover:border-emerald-400 hover:shadow-lg">
+                  <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-500 text-white shadow-md shadow-emerald-500/25 group-hover:scale-105 transition-transform"><FlaskConical className="h-7 w-7" /></span>
+                  <span><span className="block text-base font-black text-slate-900">المختبر الافتراضي</span><span className="mt-1 block text-xs font-bold leading-5 text-slate-500">استكشفي التجارب وشاهدي أثرها في فهمك</span></span>
+                </button>
               </div>
 
               {/* Direct Domain Games Launchpad */}

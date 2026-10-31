@@ -640,9 +640,11 @@ export default function StudentDashboard() {
   };
 
   const navigateToScientificActivity = (type: "reading" | "lab") => {
+    const context = buildSelectionContextExtended(selection.trackType, "interactive-games");
+    if (context) saveSelectionContext(context);
     const params = new URLSearchParams({ type });
-    if (selectedDomain?.id) params.set("domain_id", selectedDomain.id);
-    if (selection.gradeSubjectId) params.set("grade_subject_id", selection.gradeSubjectId);
+    if (context?.domainId) params.set("domain_id", context.domainId);
+    if (context?.gradeSubjectId) params.set("grade_subject_id", context.gradeSubjectId);
     navigate(`/student/science-activities?${params.toString()}`);
   };
 

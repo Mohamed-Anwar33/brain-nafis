@@ -59,15 +59,24 @@ export default function ScientificActivities() {
 
   useEffect(() => {
     const load = async () => {
-      const [{ data: readingData, error: readingError }, { data: labData, error: labError }] = await Promise.all([
-        supabase.from("scientific_readings").select("*,questions:scientific_reading_questions(*)").eq("active", true).order("created_at", { ascending: false }),
-        supabase.from("virtual_lab_activities").select("*").eq("active", true).order("created_at", { ascending: false }),
-      ]);
-      if (readingError) console.error("Could not load readings:", readingError);
-      if (labError) console.error("Could not load virtual labs:", labError);
       const context = getStoredSelectionContext();
       const domainId = requestedDomainId || context?.domainId || null;
       const gradeSubjectId = requestedGradeSubjectId || context?.gradeSubjectId || null;
+      let readingQuery = supabase.from("scientific_readings").select("*,questions:scientific_reading_questions(*)").eq("active", true);
+      let labQuery = supabase.from("virtual_lab_activities").select("*").eq("active", true);
+      if (domainId) {
+        readingQuery = readingQuery.eq("domain_id", domainId);
+        labQuery = labQuery.eq("domain_id", domainId);
+      } else if (gradeSubjectId) {
+        readingQuery = readingQuery.eq("grade_subject_id", gradeSubjectId);
+        labQuery = labQuery.eq("grade_subject_id", gradeSubjectId);
+      }
+      const [{ data: readingData, error: readingError }, { data: labData, error: labError }] = await Promise.all([
+        readingQuery.order("created_at", { ascending: false }),
+        labQuery.order("created_at", { ascending: false }),
+      ]);
+      if (readingError) console.error("Could not load readings:", readingError);
+      if (labError) console.error("Could not load virtual labs:", labError);
       const inScope = (item: { domain_id?: string | null; grade_subject_id?: string | null }) =>
         isScientificActivityInScope(item, { domainId, gradeSubjectId });
       setReadings(((readingData || []) as unknown as Reading[]).filter(inScope));

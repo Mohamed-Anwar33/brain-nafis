@@ -30,11 +30,9 @@ export function selectSimilarQuestionCandidates<T extends SimilarQuestionCandida
   const sameDomain = source.domain_id
     ? sameSubject.filter((candidate) => candidate.domain_id === source.domain_id)
     : sameSubject;
-  const sameConcept = source.scientific_concept
-    ? sameDomain.filter((candidate) => candidate.scientific_concept === source.scientific_concept)
-    : sameDomain;
-
-  // Prefer the closest match, but widen to the same skill when a narrower
-  // concept/domain/subject has no usable practice question.
-  return sameConcept.length ? sameConcept : withChoices;
+  // Skill is the instructional link. Concept metadata may be absent or
+  // inconsistent, so it must not prevent a student from getting practice.
+  if (sameDomain.length) return sameDomain;
+  if (sameSubject.length) return sameSubject;
+  return withChoices;
 }

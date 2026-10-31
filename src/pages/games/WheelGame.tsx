@@ -951,7 +951,7 @@ export default function WheelGame() {
           </div>
 
           {/* Feedback & Video Lesson Button */}
-          {currentQuestion?.wrong_reason && (
+          {isAnswered && currentQuestion?.wrong_reason && (
             <div className="mt-4 p-3 bg-amber-50 rounded-2xl border border-amber-200 text-xs text-amber-900 leading-relaxed font-bold">
               💡 {currentQuestion.wrong_reason}
             </div>

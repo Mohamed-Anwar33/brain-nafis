@@ -19,10 +19,10 @@ const candidate = (overrides: Record<string, unknown> = {}) => ({
 });
 
 describe("similar question matching", () => {
-  it("prefers a question matching skill, subject, domain, and concept", () => {
+  it("matches by skill and scope without requiring the same concept", () => {
     const exact = candidate();
     const otherConcept = candidate({ id: "other-concept", scientific_concept: "القياس" });
-    expect(selectSimilarQuestionCandidates(source, [otherConcept, exact]).map((q) => q.id)).toEqual(["practice-1"]);
+    expect(selectSimilarQuestionCandidates(source, [otherConcept, exact]).map((q) => q.id)).toEqual(["other-concept", "practice-1"]);
   });
 
   it("falls back to another concept in the same skill and scope", () => {

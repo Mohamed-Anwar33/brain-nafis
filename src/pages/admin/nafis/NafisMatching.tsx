@@ -881,8 +881,9 @@ export default function NafisMatching() {
                         {/* Edit and delete actions */}
                         <TableCell className="text-center">
                           <div className="flex justify-center gap-1">
-                            <Button type="button" variant="ghost" size="icon" onClick={() => startEditing(question)} className="rounded-xl hover:bg-indigo-50 hover:text-indigo-700" aria-label="تعديل سؤال المطابقة">
+                            <Button type="button" variant="outline" size="sm" onClick={() => startEditing(question)} className="gap-1.5 rounded-xl border-indigo-200 text-indigo-700 hover:bg-indigo-50" aria-label="تعديل سؤال المطابقة">
                               <Pencil className="h-4 w-4" />
+                              <span>تعديل</span>
                             </Button>
                             <Button type="button" variant="ghost" size="icon" onClick={() => confirmDelete(question.id)} className="rounded-xl hover:bg-red-50 hover:text-red-600" aria-label="حذف سؤال المطابقة">
                               <Trash2 className="w-4 h-4 text-red-500" />

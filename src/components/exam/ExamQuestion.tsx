@@ -126,20 +126,27 @@ export function ExamQuestion({
     }
     setSimilarState("loading");
     try {
-      const buildQuery = () => {
+      const buildQuery = (sameScope: boolean) => {
         let query = supabase.from("questions").select("*, choices(*)")
         .eq("active", true)
         .eq("scientific_skill", question.scientific_skill)
         .neq("id", question.id);
+        if (sameScope && question.grade_subject_id) query = query.eq("grade_subject_id", question.grade_subject_id);
+        if (sameScope && question.domain_id) query = query.eq("domain_id", question.domain_id);
         return query.limit(20);
       };
 
-      const { data, error } = await buildQuery();
+      let { data, error } = await buildQuery(true);
       if (error) throw error;
-      const candidates = selectSimilarQuestionCandidates(
+      let candidates = selectSimilarQuestionCandidates(
         question,
         (data || []) as unknown as SimilarQuestionRow[],
       );
+      if (!candidates.length && (question.grade_subject_id || question.domain_id)) {
+        ({ data, error } = await buildQuery(false));
+        if (error) throw error;
+        candidates = selectSimilarQuestionCandidates(question, (data || []) as unknown as SimilarQuestionRow[]);
+      }
       if (!candidates.length) {
         setSimilarState("empty");
         return;

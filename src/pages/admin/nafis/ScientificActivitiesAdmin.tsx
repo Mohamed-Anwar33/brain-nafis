@@ -30,6 +30,7 @@ export default function ScientificActivitiesAdmin() {
   const [labs, setLabs] = useState<LabAdminRow[]>([]);
   const [title, setTitle] = useState("");
   const [passage, setPassage] = useState("");
+  const [readingImageUrl, setReadingImageUrl] = useState("");
   const [readingDomain, setReadingDomain] = useState("");
   const [readingQuestions, setReadingQuestions] = useState<ReadingQuestionDraft[]>([
     makeReadingQuestion(), makeReadingQuestion(), makeReadingQuestion(), makeReadingQuestion(),
@@ -76,8 +77,19 @@ export default function ScientificActivitiesAdmin() {
       toast.error("أدخلي النص ومعه من ٤ إلى ٦ أسئلة مكتملة");
       return;
     }
+    let imageUrl: string | null = null;
+    if (readingImageUrl.trim()) {
+      try {
+        const parsed = new URL(readingImageUrl.trim());
+        if (parsed.protocol !== "https:") throw new Error();
+        imageUrl = parsed.toString();
+      } catch {
+        toast.error("رابط الصورة يجب أن يكون رابط HTTPS صالحًا");
+        return;
+      }
+    }
     const { data: reading, error } = await supabase.from("scientific_readings").insert({
-      title: title.trim(), passage: passage.trim(), domain_id: readingDomain || null,
+      title: title.trim(), passage: passage.trim(), image_url: imageUrl, domain_id: readingDomain || null,
       grade_subject_id: domains.find((domain) => domain.id === readingDomain)?.grade_subject_id || null,
     }).select("id").single();
     if (error || !reading) { toast.error("تعذر حفظ النص العلمي"); return; }
@@ -100,7 +112,7 @@ export default function ScientificActivitiesAdmin() {
       }
     }
     toast.success("تمت إضافة النص وأسئلته");
-    setTitle(""); setPassage(""); setReadingQuestions(Array.from({ length: 4 }, makeReadingQuestion));
+    setTitle(""); setPassage(""); setReadingImageUrl(""); setReadingQuestions(Array.from({ length: 4 }, makeReadingQuestion));
     await refresh();
   };
 
@@ -171,6 +183,7 @@ export default function ScientificActivitiesAdmin() {
         <Input required value={title} onChange={(event) => setTitle(event.target.value)} placeholder="عنوان النص" />
         <Select value={readingDomain || "none"} onValueChange={(value) => setReadingDomain(value === "none" ? "" : value)}><SelectTrigger><SelectValue placeholder="المجال العلمي" /></SelectTrigger><SelectContent><SelectItem value="none">اختياري — كل المجالات</SelectItem>{domains.map((domain) => <SelectItem key={domain.id} value={domain.id}>{domain.name}</SelectItem>)}</SelectContent></Select>
         <Textarea required value={passage} onChange={(event) => setPassage(event.target.value)} placeholder="محتوى القطعة العلمية" className="min-h-40" />
+        <Input type="url" value={readingImageUrl} onChange={(event) => setReadingImageUrl(event.target.value)} placeholder="رابط صورة توضيحية للقطعة (اختياري — HTTPS)" dir="ltr" />
         {readingQuestions.map((question, index) => <div key={question.id} className="space-y-3 rounded-xl border p-4"><Label>السؤال {index + 1}</Label><Input value={question.text} onChange={(event) => updateReadingQuestion(question.id, { text: event.target.value })} placeholder="نص السؤال" />{renderChoiceEditor(question.choices, (choices) => updateReadingQuestion(question.id, { choices }), `reading-${question.id}`)}{readingQuestions.length > 4 && <Button type="button" variant="ghost" onClick={() => setReadingQuestions(readingQuestions.filter((item) => item.id !== question.id))}>حذف السؤال</Button>}</div>)}
         {readingQuestions.length < 6 && <Button type="button" variant="outline" onClick={() => setReadingQuestions([...readingQuestions, makeReadingQuestion()])}>إضافة سؤال للنص</Button>}
         <Button type="submit">حفظ النص وأسئلته</Button>

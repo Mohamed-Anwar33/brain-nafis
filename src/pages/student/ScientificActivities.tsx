@@ -5,10 +5,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { Loader2, BookOpen, FlaskConical, Play, TrendingUp } from "lucide-react";
+import { Loader2, BookOpen, FlaskConical, Play, TrendingUp, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { getStoredSelectionContext } from "@/lib/selection-context";
 import { isScientificActivityInScope } from "@/lib/scientific-activity-scope";
+import { getLabVideoSource } from "@/lib/lab-video";
 
 type Choice = { id: string; text: string };
 type ReadingQuestion = { id: string; text: string; question_order: number; choices: Choice[] };
@@ -21,19 +22,6 @@ type Lab = {
   before_question: string; before_choices: Choice[]; after_question: string; after_choices: Choice[];
 };
 type LabComparison = { before_percent: number; after_percent: number; improvement_percent: number };
-
-const embedUrl = (input: string) => {
-  try {
-    const url = new URL(input);
-    const host = url.hostname.replace(/^www\./, "");
-    if (host === "youtu.be") return `https://www.youtube-nocookie.com/embed/${url.pathname.slice(1)}`;
-    if (host === "youtube.com" || host === "m.youtube.com") {
-      const id = url.searchParams.get("v");
-      if (id) return `https://www.youtube-nocookie.com/embed/${id}`;
-    }
-    return url.toString();
-  } catch { return input; }
-};
 
 export default function ScientificActivities() {
   const [searchParams] = useSearchParams();
@@ -199,6 +187,17 @@ export default function ScientificActivities() {
       {labs.map((lab) => {
         const questions = lab.question_set || [];
         const usesQuestionSet = questions.length >= 4;
+        const videoSource = getLabVideoSource(lab.simulation_url);
+        const videoPlayer = labOpened[lab.id] && videoSource.kind !== "invalid" ? <>
+          {videoSource.kind === "file" ? (
+            <video title={`فيديو ${lab.title}`} src={videoSource.url} controls playsInline preload="metadata" className="aspect-video w-full rounded-xl border bg-black" />
+          ) : (
+            <iframe title={`فيديو ${lab.title}`} src={videoSource.url} className="aspect-video w-full rounded-xl border bg-black" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" />
+          )}
+          <a href={videoSource.externalUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-sm font-bold text-indigo-700 underline underline-offset-4">
+            <ExternalLink className="h-4 w-4" /> إذا لم يعمل المشغل، افتحي الفيديو مباشرة
+          </a>
+        </> : null;
         return <Card key={lab.id} className="overflow-hidden rounded-3xl border-2 border-emerald-100 shadow-lg shadow-emerald-950/5"><CardHeader className="bg-gradient-to-l from-emerald-50 via-white to-teal-50"><CardTitle className="flex items-center gap-3 text-emerald-950"><span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-600 text-white shadow-md"><FlaskConical className="h-6 w-6" /></span>{lab.title}</CardTitle></CardHeader><CardContent className="space-y-5 p-4 sm:p-6">
           {lab.instructions && <p className="whitespace-pre-wrap text-sm leading-7">{lab.instructions}</p>}
           {usesQuestionSet ? <>
@@ -206,8 +205,10 @@ export default function ScientificActivities() {
               {questions.map((question, index) => <div key={question.id} className="space-y-2 rounded-xl border border-indigo-100 bg-white p-3"><p className="font-black text-indigo-950">{index + 1}. {question.text}</p><RadioGroup value={beforeAnswers[lab.id]?.[question.id] || ""} onValueChange={(value) => setQuestionAnswer(setBeforeAnswers, lab.id, question.id, value)}>{question.choices.map((choice) => <div key={choice.id} className={`flex items-center gap-2 rounded-xl border p-3 ${beforeAnswers[lab.id]?.[question.id] === choice.id ? "border-indigo-400 bg-indigo-50" : "border-slate-200 bg-slate-50 hover:border-indigo-200"}`}><RadioGroupItem id={`${lab.id}-before-${question.id}-${choice.id}`} value={choice.id} /><Label className="flex-1 cursor-pointer font-bold" htmlFor={`${lab.id}-before-${question.id}-${choice.id}`}>{choice.text}</Label></div>)}</RadioGroup></div>)}
               <Button disabled={busy[lab.id] || !!attempts[lab.id]} onClick={() => void saveBeforeSet(lab)}>{busy[lab.id] ? <Loader2 className="ml-2 h-4 w-4 animate-spin" /> : null}{attempts[lab.id] ? `نتيجتك قبل الفيديو: ${beforeScores[lab.id]}٪` : "حفظ الإجابات وبدء التجربة"}</Button>
             </div>
-            <Button disabled={!attempts[lab.id] || !!labOpened[lab.id]} onClick={() => void openVideo(lab)}><Play className="ml-2 h-4 w-4" />{labOpened[lab.id] ? "الفيديو مفتوح" : "شاهدي فيديو التجربة"}</Button>
-            {labOpened[lab.id] && <iframe title={`فيديو ${lab.title}`} src={embedUrl(lab.simulation_url)} className="aspect-video w-full rounded-xl border bg-black" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" />}
+            <Button disabled={!attempts[lab.id] || !!labOpened[lab.id] || videoSource.kind === "invalid"} onClick={() => void openVideo(lab)}><Play className="ml-2 h-4 w-4" />{labOpened[lab.id] ? "الفيديو مفتوح" : "شاهدي فيديو التجربة"}</Button>
+            {!attempts[lab.id] && <p className="text-sm font-bold text-slate-600">أجيبي عن الأسئلة واحفظيها أولًا لتفعيل الفيديو.</p>}
+            {videoSource.kind === "invalid" && <p role="alert" className="text-sm font-bold text-rose-700">رابط فيديو التجربة غير صالح؛ أضيفي رابط YouTube أو Vimeo أو ملف فيديو مباشر.</p>}
+            {videoPlayer}
             {labOpened[lab.id] && <div className="space-y-4 rounded-xl border border-emerald-100 bg-emerald-50/50 p-4"><p className="font-bold">بعد الفيديو — أجيبي عن الأسئلة نفسها</p>
               {questions.map((question, index) => <div key={question.id} className="space-y-2 rounded-xl border border-emerald-100 bg-white p-3"><p className="font-black text-emerald-950">{index + 1}. {question.text}</p><RadioGroup value={afterAnswers[lab.id]?.[question.id] || ""} onValueChange={(value) => setQuestionAnswer(setAfterAnswers, lab.id, question.id, value)}>{question.choices.map((choice) => <div key={choice.id} className={`flex items-center gap-2 rounded-xl border p-3 ${afterAnswers[lab.id]?.[question.id] === choice.id ? "border-emerald-400 bg-emerald-50" : "border-slate-200 bg-slate-50 hover:border-emerald-200"}`}><RadioGroupItem id={`${lab.id}-after-${question.id}-${choice.id}`} value={choice.id} /><Label className="flex-1 cursor-pointer font-bold" htmlFor={`${lab.id}-after-${question.id}-${choice.id}`}>{choice.text}</Label></div>)}</RadioGroup></div>)}
               <Button disabled={busy[lab.id] || !!comparisons[lab.id]} onClick={() => void saveAfterSet(lab)}>{busy[lab.id] ? <Loader2 className="ml-2 h-4 w-4 animate-spin" /> : null}احسبي نسبة التحسن</Button>
@@ -217,8 +218,10 @@ export default function ScientificActivities() {
             <p className="rounded-lg bg-indigo-50 p-3 font-bold">قبل التجربة — {lab.before_question}</p>
             <RadioGroup value={legacyAnswers[`${lab.id}-before`] || ""} onValueChange={(value) => setLegacyAnswers((current) => ({ ...current, [`${lab.id}-before`]: value }))}>{lab.before_choices.map((choice) => <div key={choice.id} className="flex items-center gap-2"><RadioGroupItem id={`${lab.id}-legacy-before-${choice.id}`} value={choice.id} /><Label htmlFor={`${lab.id}-legacy-before-${choice.id}`}>{choice.text}</Label></div>)}</RadioGroup>
             <Button variant="outline" onClick={() => void saveLegacyAnswer(lab, "before")}>حفظ التوقع</Button>
-            <Button disabled={!attempts[lab.id] || !!labOpened[lab.id]} onClick={() => void openVideo(lab)}><Play className="ml-2 h-4 w-4" />{labOpened[lab.id] ? "الفيديو مفتوح" : "شاهدي فيديو التجربة"}</Button>
-            {labOpened[lab.id] && <iframe title={`فيديو ${lab.title}`} src={embedUrl(lab.simulation_url)} className="aspect-video w-full rounded-xl border bg-black" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" />}
+            <Button disabled={!attempts[lab.id] || !!labOpened[lab.id] || videoSource.kind === "invalid"} onClick={() => void openVideo(lab)}><Play className="ml-2 h-4 w-4" />{labOpened[lab.id] ? "الفيديو مفتوح" : "شاهدي فيديو التجربة"}</Button>
+            {!attempts[lab.id] && <p className="text-sm font-bold text-slate-600">احفظي إجابة التوقع أولًا لتفعيل الفيديو.</p>}
+            {videoSource.kind === "invalid" && <p role="alert" className="text-sm font-bold text-rose-700">رابط فيديو التجربة غير صالح؛ أضيفي رابط YouTube أو Vimeo أو ملف فيديو مباشر.</p>}
+            {videoPlayer}
             <p className="rounded-lg bg-emerald-50 p-3 font-bold">بعد التجربة — {lab.after_question}</p>
             <RadioGroup value={legacyAnswers[`${lab.id}-after`] || ""} onValueChange={(value) => setLegacyAnswers((current) => ({ ...current, [`${lab.id}-after`]: value }))}>{lab.after_choices.map((choice) => <div key={choice.id} className="flex items-center gap-2"><RadioGroupItem id={`${lab.id}-legacy-after-${choice.id}`} value={choice.id} /><Label htmlFor={`${lab.id}-legacy-after-${choice.id}`}>{choice.text}</Label></div>)}</RadioGroup>
             <Button disabled={!labOpened[lab.id]} onClick={() => void saveLegacyAnswer(lab, "after")}>تحققي من استنتاجي</Button>

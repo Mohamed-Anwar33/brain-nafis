@@ -5,14 +5,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { Loader2, BookOpen, FlaskConical, Play, TrendingUp, Leaf, Sparkles } from "lucide-react";
+import { Loader2, BookOpen, FlaskConical, Play, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
 import { getStoredSelectionContext } from "@/lib/selection-context";
 import { isScientificActivityInScope } from "@/lib/scientific-activity-scope";
+import { ReadingPassageDesignSystem, type ReadingPassageItem, type ReadingQuestionItem } from "@/components/student/reading/ReadingPassageDesignSystem";
 
 type Choice = { id: string; text: string };
-type ReadingQuestion = { id: string; text: string; question_order: number; choices: Choice[] };
-type Reading = { id: string; title: string; passage: string; image_url?: string | null; domain_id?: string | null; grade_subject_id?: string | null; questions: ReadingQuestion[] };
+type ReadingQuestion = ReadingQuestionItem;
+type Reading = ReadingPassageItem & { domain_id?: string | null; grade_subject_id?: string | null };
 type LabQuestion = { id: string; text: string; choices: Choice[] };
 type Lab = {
   id: string; title: string; domain_id?: string | null; grade_subject_id?: string | null;
@@ -21,13 +22,6 @@ type Lab = {
   before_question: string; before_choices: Choice[]; after_question: string; after_choices: Choice[];
 };
 type LabComparison = { before_percent: number; after_percent: number; improvement_percent: number };
-
-const readingChoiceColors = [
-  "border-emerald-200 bg-emerald-50/70 hover:border-emerald-300 hover:bg-emerald-50",
-  "border-sky-200 bg-sky-50/70 hover:border-sky-300 hover:bg-sky-50",
-  "border-amber-200 bg-amber-50/70 hover:border-amber-300 hover:bg-amber-50",
-  "border-violet-200 bg-violet-50/70 hover:border-violet-300 hover:bg-violet-50",
-];
 
 const embedUrl = (input: string) => {
   try {
@@ -41,6 +35,18 @@ const embedUrl = (input: string) => {
     return url.toString();
   } catch { return input; }
 };
+
+function orderKnownBiologyReadings(items: Reading[]) {
+  const priority = (title: string) => {
+    if (title.includes("كيف تحصل الخلية على الطاقة")) return 0;
+    if (title.includes("الغدد الصماء")) return 1;
+    return 2;
+  };
+  return items
+    .map((item, index) => ({ item, index }))
+    .sort((a, b) => priority(a.item.title) - priority(b.item.title) || a.index - b.index)
+    .map(({ item }) => item);
+}
 
 export default function ScientificActivities() {
   const [searchParams] = useSearchParams();
@@ -92,7 +98,7 @@ export default function ScientificActivities() {
       if (labError) console.error("Could not load virtual labs:", labError);
       const inScope = (item: { domain_id?: string | null; grade_subject_id?: string | null }) =>
         isScientificActivityInScope(item, { domainId, gradeSubjectId });
-      setReadings(((readingData || []) as unknown as Reading[]).filter(inScope));
+      setReadings(orderKnownBiologyReadings(((readingData || []) as unknown as Reading[]).filter(inScope)));
       setLabs(((labData || []) as unknown as Lab[]).filter(inScope));
       setLoading(false);
     };
@@ -192,45 +198,41 @@ export default function ScientificActivities() {
 
   if (loading) return <div className="flex min-h-[60vh] items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
 
-  return <main dir="rtl" className="mx-auto max-w-5xl space-y-10 px-4 py-8">
-    <header><h1 className="text-3xl font-black">{activityType === "reading" ? "الفهم القرائي" : activityType === "lab" ? "المختبر الافتراضي" : "أنشطة العلوم"}</h1><p className="mt-2 text-muted-foreground">{activityType === "reading" ? "اقرئي النصوص العلمية واستنتجي الإجابات من المعلومات الواردة فيها." : activityType === "lab" ? "استكشفي التجارب العلمية وتابعي كيف يتطور فهمك بعد المشاهدة." : "اقرئي النصوص العلمية واستكشفي التجارب الافتراضية."}</p>{selectedDomainName && <p className="mt-3 inline-flex rounded-full bg-indigo-50 px-4 py-2 text-sm font-bold text-indigo-800">المجال المحدد: {selectedDomainName}</p>}</header>
-    {showReading && <section className="space-y-6"><h2 className="flex items-center gap-2 text-2xl font-black"><BookOpen className="h-6 w-6 text-indigo-600" />اقرئي واستنتجي</h2>
+  const readingQuestionCount = readings.reduce((count, reading) => count + (reading.questions?.length || 0), 0);
+
+  return <main dir="rtl" className="mx-auto max-w-5xl space-y-8 bg-gradient-to-br from-indigo-50/70 via-sky-50/40 to-emerald-50/60 px-3 py-6 sm:space-y-10 sm:px-5 sm:py-8">
+    {showReading && <header className="relative isolate overflow-hidden rounded-[2rem] border border-violet-100 bg-gradient-to-l from-violet-100 via-sky-50 to-emerald-100 px-5 py-7 shadow-lg shadow-indigo-900/5 sm:px-8 sm:py-9">
+      <div aria-hidden="true" className="pointer-events-none absolute -left-16 -top-16 -z-10 h-56 w-56 rounded-full border border-violet-300/40" />
+      <div aria-hidden="true" className="pointer-events-none absolute -left-8 -top-8 -z-10 h-40 w-40 rounded-full border border-dashed border-sky-300/50" />
+      <div className="flex flex-wrap items-start justify-between gap-5">
+        <div className="max-w-2xl">
+          <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white bg-white/85 px-3.5 py-2 text-sm font-black text-violet-800 shadow-sm"><BookOpen className="h-4 w-4" />وقت القراءة والاستكشاف</div>
+          <h1 className="text-3xl font-black leading-tight text-indigo-950 sm:text-4xl">الفهم القرائي <span className="text-violet-700">بطريقة ممتعة!</span></h1>
+          <p className="mt-3 text-base font-bold leading-8 text-slate-600 sm:text-lg">اقرئي القطع بعناية، واكتشفي الأفكار، ثم اختاري الإجابة الأنسب بثقة وتركيز.</p>
+          {selectedDomainName && <p className="mt-3 inline-flex rounded-full border border-indigo-100 bg-white/80 px-4 py-2 text-sm font-black text-indigo-800">المجال: {selectedDomainName}</p>}
+        </div>
+        <div className="flex flex-wrap gap-2 self-end">
+          <span className="rounded-2xl border border-white bg-white/80 px-4 py-3 text-sm font-black text-indigo-900 shadow-sm">📖 {readings.length} {readings.length === 2 ? "قطعتان قرائيتان" : "قطع قرائية"}</span>
+          <span className="rounded-2xl border border-white bg-white/80 px-4 py-3 text-sm font-black text-violet-900 shadow-sm">✨ {readingQuestionCount} سؤالًا</span>
+        </div>
+      </div>
+    </header>}
+    {!showReading && <header><h1 className="text-3xl font-black">{activityType === "lab" ? "المختبر الافتراضي" : "أنشطة العلوم"}</h1><p className="mt-2 text-muted-foreground">استكشفي التجارب العلمية وتابعي كيف يتطور فهمك بعد المشاهدة.</p>{selectedDomainName && <p className="mt-3 inline-flex rounded-full bg-indigo-50 px-4 py-2 text-sm font-bold text-indigo-800">المجال المحدد: {selectedDomainName}</p>}</header>}
+    {showReading && <section className="space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-3 px-1">
+        <h2 className="flex items-center gap-2 text-xl font-black text-indigo-950 sm:text-2xl"><BookOpen className="h-6 w-6 text-violet-700" />اقرئي واستنتجي</h2>
+        <span className="text-sm font-bold text-slate-500">قطعة ← أسئلة ← مراجعة</span>
+      </div>
       {readings.length === 0 && <p className="rounded-xl bg-slate-50 p-4 text-slate-600">لا توجد نصوص علمية متاحة حاليًا.</p>}
-      {readings.map((reading) => <Card key={reading.id} className="overflow-hidden rounded-[2rem] border-2 border-emerald-100 bg-white shadow-xl shadow-emerald-950/5">
-        <CardHeader className="border-b border-emerald-100 bg-gradient-to-l from-emerald-100 via-teal-50 to-amber-50 px-5 py-6 sm:px-7">
-          <CardTitle className="flex items-center gap-3 text-emerald-950">
-            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-600 text-white shadow-lg shadow-emerald-800/20"><BookOpen className="h-6 w-6" /></span>
-            <span className="text-xl font-black sm:text-2xl">{reading.title}</span>
-          </CardTitle>
-          <div className="mr-[3.75rem] flex items-center gap-2 text-sm font-bold text-emerald-800"><Sparkles className="h-4 w-4 text-amber-600" />الفهم القرائي العلمي</div>
-        </CardHeader>
-        <CardContent className="space-y-7 p-4 sm:p-7">
-          {reading.image_url && <img src={reading.image_url} alt={`صورة توضيحية: ${reading.title}`} className="max-h-80 w-full rounded-2xl border border-emerald-100 bg-white object-contain" />}
-          <article className="relative overflow-hidden rounded-[1.75rem] border border-amber-200 bg-[radial-gradient(ellipse_at_top_right,_rgba(16,185,129,0.10),_transparent_42%),linear-gradient(145deg,#fffef8,#f0fdf8_58%,#fff)] px-5 py-7 shadow-inner sm:px-8 sm:py-9">
-            <Leaf aria-hidden="true" className="absolute right-4 top-4 h-7 w-7 rotate-12 text-emerald-700/20" />
-            <Leaf aria-hidden="true" className="absolute bottom-4 left-4 h-8 w-8 -rotate-45 text-amber-700/20" />
-            <div className="relative mx-auto mb-5 flex max-w-max items-center gap-2 rounded-full border border-emerald-200 bg-white/85 px-4 py-2 text-sm font-black text-emerald-900 shadow-sm">
-              <BookOpen className="h-4 w-4" />اقرئي القطعة بهدوء ثم أجيبي
-            </div>
-            <div className="relative max-h-[58vh] overflow-y-auto whitespace-pre-wrap text-right text-lg font-medium leading-[2.05] text-slate-800 sm:text-xl sm:leading-[2.1]">{reading.passage}</div>
-          </article>
-          <div className="space-y-4">
-            {reading.questions.slice().sort((a, b) => a.question_order - b.question_order).map((question, index) => <div key={question.id} className="space-y-4 rounded-3xl border border-indigo-100 bg-gradient-to-br from-white via-white to-indigo-50/60 p-4 shadow-sm sm:p-5">
-              <p className="flex items-start gap-3 text-right text-lg font-black leading-relaxed text-slate-900 sm:text-xl"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-600 to-violet-600 text-sm text-white shadow-md">{index + 1}</span><span>{question.text}</span></p>
-              <RadioGroup dir="rtl" value={readingAnswers[question.id] || ""} onValueChange={(value) => setReadingAnswers((current) => ({ ...current, [question.id]: value }))} className="space-y-2.5">
-                {(question.choices || []).map((choice, choiceIndex) => <Label key={choice.id} htmlFor={`${question.id}-${choice.id}`} className={`grid cursor-pointer grid-cols-[auto_1fr] items-center gap-3 rounded-2xl border p-3.5 text-right text-base font-bold leading-relaxed text-slate-800 transition-all sm:p-4 sm:text-lg ${readingAnswers[question.id] === choice.id ? "border-indigo-400 bg-indigo-50 ring-2 ring-indigo-100" : readingChoiceColors[choiceIndex % readingChoiceColors.length]}`}>
-                  <RadioGroupItem id={`${question.id}-${choice.id}`} value={choice.id} className="h-5 w-5 border-indigo-800" />
-                  <span>{choice.text}</span>
-                </Label>)}
-              </RadioGroup>
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <Button className="h-12 rounded-xl bg-indigo-700 px-6 text-base font-black hover:bg-indigo-800" onClick={() => void saveReadingAnswer(question)}>تحققي من الإجابة</Button>
-                {readingResults[question.id] !== undefined && <p role="status" className={`font-black ${readingResults[question.id] ? "text-emerald-700" : "text-rose-700"}`}>{readingResults[question.id] ? "إجابة صحيحة ✓" : "إجابة غير صحيحة، أعيدي قراءة القطعة."}</p>}
-              </div>
-            </div>)}
-          </div>
-        </CardContent>
-      </Card>)}
+      {readings.map((reading, index) => <ReadingPassageDesignSystem
+        key={reading.id}
+        reading={reading}
+        passageNumber={index + 1}
+        selectedAnswers={readingAnswers}
+        results={readingResults}
+        onAnswerChange={(questionId, choiceId) => setReadingAnswers((current) => ({ ...current, [questionId]: choiceId }))}
+        onCheckAnswer={(question) => void saveReadingAnswer(question)}
+      />)}
     </section>}
 
     {showLab && <section className="space-y-4"><h2 className="flex items-center gap-2 text-2xl font-black"><FlaskConical className="h-6 w-6 text-emerald-600" />استكشفي وجرّبي</h2>

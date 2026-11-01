@@ -109,7 +109,7 @@ export default function ScientificActivities() {
 
   const saveReadingAnswer = async (question: ReadingQuestion) => {
     const choiceId = readingAnswers[question.id];
-    if (!choiceId) { toast.error("اختاري إجابة أولًا"); return; }
+    if (!choiceId) { toast.error("اختر إجابة أولًا"); return; }
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { toast.error("سجّلي الدخول لحفظ إجاباتك"); return; }
     const { data, error } = await supabase.rpc("submit_scientific_reading_answer", { p_question_id: question.id, p_choice_id: choiceId });
@@ -124,7 +124,7 @@ export default function ScientificActivities() {
   const saveBeforeSet = async (lab: Lab) => {
     const questions = lab.question_set || [];
     const answers = beforeAnswers[lab.id] || {};
-    if (questions.length < 4 || questions.some((question) => !answers[question.id])) { toast.error("أجيبي عن كل الأسئلة أولًا"); return; }
+    if (questions.length < 4 || questions.some((question) => !answers[question.id])) { toast.error("أجب عن كل الأسئلة أولًا"); return; }
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { toast.error("سجّلي الدخول لحفظ تقدمك في المختبر"); return; }
     setBusy((current) => ({ ...current, [lab.id]: true }));
@@ -136,14 +136,14 @@ export default function ScientificActivities() {
     if (error || !data?.attempt_id) { toast.error("تعذر حفظ الإجابات القبلية"); return; }
     setAttempts((current) => ({ ...current, [lab.id]: data.attempt_id }));
     setBeforeScores((current) => ({ ...current, [lab.id]: data.before_percent }));
-    toast.success("حُفظت إجاباتك. افتحي الفيديو ثم أجيبي عن الأسئلة نفسها.");
+    toast.success("حُفظت إجاباتك. افتح الفيديو ثم أجب عن الأسئلة نفسها.");
   };
 
   const openVideo = async (lab: Lab) => {
     const isQuestionSet = (lab.question_set || []).length >= 4;
     let attemptId = attempts[lab.id];
-    if (isQuestionSet && !attemptId) { toast.error("أجيبي عن أسئلة ما قبل الفيديو أولًا"); return; }
-    if (!isQuestionSet && !legacyAnswers[`${lab.id}-before`]) { toast.error("أجيبي عن سؤال التوقع أولًا"); return; }
+    if (isQuestionSet && !attemptId) { toast.error("أجب عن أسئلة ما قبل الفيديو أولًا"); return; }
+    if (!isQuestionSet && !legacyAnswers[`${lab.id}-before`]) { toast.error("أجب عن سؤال التوقع أولًا"); return; }
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { toast.error("سجّلي الدخول لحفظ تقدمك في المختبر"); return; }
     if (!attemptId && !isQuestionSet) {
@@ -163,7 +163,7 @@ export default function ScientificActivities() {
     const questions = lab.question_set || [];
     const answers = afterAnswers[lab.id] || {};
     if (!attempts[lab.id] || !labOpened[lab.id] || questions.some((question) => !answers[question.id])) {
-      toast.error("شاهدي الفيديو ثم أجيبي عن كل الأسئلة مرة أخرى"); return;
+      toast.error("شاهد الفيديو ثم أجب عن كل الأسئلة مرة أخرى"); return;
     }
     setBusy((current) => ({ ...current, [lab.id]: true }));
     const { data, error } = await supabase.rpc("submit_virtual_lab_question_set", {
@@ -177,12 +177,12 @@ export default function ScientificActivities() {
 
   const saveLegacyAnswer = async (lab: Lab, phase: "before" | "after") => {
     const answer = legacyAnswers[`${lab.id}-${phase}`];
-    if (!answer) { toast.error("اختاري إجابة أولًا"); return; }
+    if (!answer) { toast.error("اختر إجابة أولًا"); return; }
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { toast.error("سجّلي الدخول لحفظ تقدمك في المختبر"); return; }
     let attemptId = attempts[lab.id];
     if (!attemptId) {
-      if (phase === "after") { toast.error("أجيبي عن سؤال التوقع وافتحي الفيديو أولًا"); return; }
+      if (phase === "after") { toast.error("أجب عن سؤال التوقع وافتح الفيديو أولًا"); return; }
       const { data, error } = await supabase.rpc("start_virtual_lab_attempt", { p_activity_id: lab.id, p_before_answer: answer });
       if (error || !data) { toast.error("تعذر حفظ الإجابة"); return; }
       attemptId = data as string; setAttempts((current) => ({ ...current, [lab.id]: attemptId! }));
@@ -190,9 +190,9 @@ export default function ScientificActivities() {
     if (phase === "before") {
       const { error } = await supabase.rpc("update_virtual_lab_prediction", { p_attempt_id: attemptId, p_before_answer: answer });
       if (error) { toast.error("تعذر حفظ التوقع"); return; }
-      toast.success("تم حفظ توقعك. افتحي الفيديو ثم أجيبي عن سؤال الاستنتاج."); return;
+      toast.success("تم حفظ توقعك. افتح الفيديو ثم أجب عن سؤال الاستنتاج."); return;
     }
-    if (!labOpened[lab.id]) { toast.error("افتحي الفيديو أولًا ثم أجيبي عن سؤال الاستنتاج"); return; }
+    if (!labOpened[lab.id]) { toast.error("افتح الفيديو أولًا ثم أجب عن سؤال الاستنتاج"); return; }
     const { data, error } = await supabase.rpc("submit_virtual_lab_answer", { p_attempt_id: attemptId, p_after_answer: answer });
     if (error) { toast.error("تعذر حفظ الإجابة"); return; }
     setLegacyResults((current) => ({ ...current, [lab.id]: data === true }));
@@ -218,7 +218,7 @@ export default function ScientificActivities() {
         <div className="max-w-2xl">
           <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white bg-white/85 px-3.5 py-2 text-sm font-black text-violet-800 shadow-sm"><BookOpen className="h-4 w-4" />وقت القراءة والاستكشاف</div>
           <h1 className="text-3xl font-black leading-tight text-indigo-950 sm:text-4xl">الفهم القرائي <span className="text-violet-700">بطريقة ممتعة!</span></h1>
-          <p className="mt-3 text-base font-bold leading-8 text-slate-600 sm:text-lg">اقرئي القطع بعناية، واكتشفي الأفكار، ثم اختاري الإجابة الأنسب بثقة وتركيز.</p>
+          <p className="mt-3 text-base font-bold leading-8 text-slate-600 sm:text-lg">اقرأ القطع بعناية، واكتشفي الأفكار، ثم اختر الإجابة الأنسب بثقة وتركيز.</p>
           {selectedDomainName && <p className="mt-3 inline-flex rounded-full border border-indigo-100 bg-white/80 px-4 py-2 text-sm font-black text-indigo-800">المجال: {selectedDomainName}</p>}
         </div>
         <div className="flex flex-wrap gap-2 self-end">
@@ -230,7 +230,7 @@ export default function ScientificActivities() {
     {!showReading && <header><h1 className="text-3xl font-black">{activityType === "lab" ? "المختبر الافتراضي" : "أنشطة العلوم"}</h1><p className="mt-2 text-muted-foreground">استكشفي التجارب العلمية وتابعي كيف يتطور فهمك بعد المشاهدة.</p>{selectedDomainName && <p className="mt-3 inline-flex rounded-full bg-indigo-50 px-4 py-2 text-sm font-bold text-indigo-800">المجال المحدد: {selectedDomainName}</p>}</header>}
     {showReading && <section className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3 px-1">
-        <h2 className="flex items-center gap-2 text-xl font-black text-indigo-950 sm:text-2xl"><BookOpen className="h-6 w-6 text-violet-700" />اقرئي واستنتجي</h2>
+        <h2 className="flex items-center gap-2 text-xl font-black text-indigo-950 sm:text-2xl"><BookOpen className="h-6 w-6 text-violet-700" />اقرأ واستنتجي</h2>
         <span className="text-sm font-bold text-slate-500">قطعة ← أسئلة ← مراجعة</span>
       </div>
       {readings.length === 0 && <p className="rounded-2xl border border-violet-100 bg-white/90 p-5 font-bold text-slate-600">لا توجد نصوص علمية متاحة حاليًا.</p>}
@@ -250,7 +250,7 @@ export default function ScientificActivities() {
       />}
       {readings.length > 1 && <div className="flex items-center justify-center gap-3" aria-label="التنقل بين القطع القرائية">
         {readings.map((reading, index) => <span key={reading.id} className={`h-2.5 w-2.5 rounded-full ${index === currentReadingIndex ? (index % 2 === 0 ? "bg-violet-600" : "bg-teal-600") : "bg-indigo-200"}`} />)}
-        <span className="text-xs font-bold text-slate-500">استخدمي زر الانتقال أسفل القطعة</span>
+        <span className="text-xs font-bold text-slate-500">استخدم زر الانتقال أسفل القطعة</span>
       </div>}
     </section>}
 
@@ -262,13 +262,13 @@ export default function ScientificActivities() {
         return <Card key={lab.id} className="overflow-hidden rounded-3xl border-2 border-emerald-100 shadow-lg shadow-emerald-950/5"><CardHeader className="bg-gradient-to-l from-emerald-50 via-white to-teal-50"><CardTitle className="flex items-center gap-3 text-emerald-950"><span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-600 text-white shadow-md"><FlaskConical className="h-6 w-6" /></span>{lab.title}</CardTitle></CardHeader><CardContent className="space-y-5 p-4 sm:p-6">
           {lab.instructions && <p className="whitespace-pre-wrap text-sm leading-7">{lab.instructions}</p>}
           {usesQuestionSet ? <>
-            <div className="space-y-4 rounded-xl border border-indigo-100 bg-indigo-50/50 p-4"><p className="font-bold">قبل الفيديو — أجيبي عن الأسئلة لقياس فهمك الأولي</p>
+            <div className="space-y-4 rounded-xl border border-indigo-100 bg-indigo-50/50 p-4"><p className="font-bold">قبل الفيديو — أجب عن الأسئلة لقياس فهمك الأولي</p>
               {questions.map((question, index) => <div key={question.id} className="space-y-2 rounded-xl border border-indigo-100 bg-white p-3"><p className="font-black text-indigo-950">{index + 1}. {question.text}</p><RadioGroup value={beforeAnswers[lab.id]?.[question.id] || ""} onValueChange={(value) => setQuestionAnswer(setBeforeAnswers, lab.id, question.id, value)}>{question.choices.map((choice) => <div key={choice.id} className={`flex items-center gap-2 rounded-xl border p-3 ${beforeAnswers[lab.id]?.[question.id] === choice.id ? "border-indigo-400 bg-indigo-50" : "border-slate-200 bg-slate-50 hover:border-indigo-200"}`}><RadioGroupItem id={`${lab.id}-before-${question.id}-${choice.id}`} value={choice.id} /><Label className="flex-1 cursor-pointer font-bold" htmlFor={`${lab.id}-before-${question.id}-${choice.id}`}>{choice.text}</Label></div>)}</RadioGroup></div>)}
               <Button disabled={busy[lab.id] || !!attempts[lab.id]} onClick={() => void saveBeforeSet(lab)}>{busy[lab.id] ? <Loader2 className="ml-2 h-4 w-4 animate-spin" /> : null}{attempts[lab.id] ? `نتيجتك قبل الفيديو: ${beforeScores[lab.id]}٪` : "حفظ الإجابات وبدء التجربة"}</Button>
             </div>
-            <Button disabled={!attempts[lab.id] || !!labOpened[lab.id]} onClick={() => void openVideo(lab)}><Play className="ml-2 h-4 w-4" />{labOpened[lab.id] ? "الفيديو مفتوح" : "شاهدي فيديو التجربة"}</Button>
+            <Button disabled={!attempts[lab.id] || !!labOpened[lab.id]} onClick={() => void openVideo(lab)}><Play className="ml-2 h-4 w-4" />{labOpened[lab.id] ? "الفيديو مفتوح" : "شاهد فيديو التجربة"}</Button>
             {labOpened[lab.id] && <iframe title={`فيديو ${lab.title}`} src={embedUrl(lab.simulation_url)} className="aspect-video w-full rounded-xl border bg-black" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" />}
-            {labOpened[lab.id] && <div className="space-y-4 rounded-xl border border-emerald-100 bg-emerald-50/50 p-4"><p className="font-bold">بعد الفيديو — أجيبي عن الأسئلة نفسها</p>
+            {labOpened[lab.id] && <div className="space-y-4 rounded-xl border border-emerald-100 bg-emerald-50/50 p-4"><p className="font-bold">بعد الفيديو — أجب عن الأسئلة نفسها</p>
               {questions.map((question, index) => <div key={question.id} className="space-y-2 rounded-xl border border-emerald-100 bg-white p-3"><p className="font-black text-emerald-950">{index + 1}. {question.text}</p><RadioGroup value={afterAnswers[lab.id]?.[question.id] || ""} onValueChange={(value) => setQuestionAnswer(setAfterAnswers, lab.id, question.id, value)}>{question.choices.map((choice) => <div key={choice.id} className={`flex items-center gap-2 rounded-xl border p-3 ${afterAnswers[lab.id]?.[question.id] === choice.id ? "border-emerald-400 bg-emerald-50" : "border-slate-200 bg-slate-50 hover:border-emerald-200"}`}><RadioGroupItem id={`${lab.id}-after-${question.id}-${choice.id}`} value={choice.id} /><Label className="flex-1 cursor-pointer font-bold" htmlFor={`${lab.id}-after-${question.id}-${choice.id}`}>{choice.text}</Label></div>)}</RadioGroup></div>)}
               <Button disabled={busy[lab.id] || !!comparisons[lab.id]} onClick={() => void saveAfterSet(lab)}>{busy[lab.id] ? <Loader2 className="ml-2 h-4 w-4 animate-spin" /> : null}احسبي نسبة التحسن</Button>
               {comparisons[lab.id] && <div className="rounded-xl border border-emerald-200 bg-white p-4"><p className="flex items-center gap-2 font-black text-emerald-900"><TrendingUp className="h-5 w-5" />نتيجة التجربة</p><div className="mt-3 grid grid-cols-3 gap-2 text-center"><div><p className="text-xs text-muted-foreground">قبل الفيديو</p><p className="text-xl font-black">{comparisons[lab.id].before_percent}٪</p></div><div><p className="text-xs text-muted-foreground">بعد الفيديو</p><p className="text-xl font-black text-emerald-700">{comparisons[lab.id].after_percent}٪</p></div><div><p className="text-xs text-muted-foreground">التحسن</p><p className="text-xl font-black text-indigo-700">{comparisons[lab.id].improvement_percent > 0 ? "+" : ""}{comparisons[lab.id].improvement_percent}٪</p></div></div></div>}
@@ -277,12 +277,12 @@ export default function ScientificActivities() {
             <p className="rounded-lg bg-indigo-50 p-3 font-bold">قبل التجربة — {lab.before_question}</p>
             <RadioGroup value={legacyAnswers[`${lab.id}-before`] || ""} onValueChange={(value) => setLegacyAnswers((current) => ({ ...current, [`${lab.id}-before`]: value }))}>{lab.before_choices.map((choice) => <div key={choice.id} className="flex items-center gap-2"><RadioGroupItem id={`${lab.id}-legacy-before-${choice.id}`} value={choice.id} /><Label htmlFor={`${lab.id}-legacy-before-${choice.id}`}>{choice.text}</Label></div>)}</RadioGroup>
             <Button variant="outline" onClick={() => void saveLegacyAnswer(lab, "before")}>حفظ التوقع</Button>
-            <Button disabled={!attempts[lab.id] || !!labOpened[lab.id]} onClick={() => void openVideo(lab)}><Play className="ml-2 h-4 w-4" />{labOpened[lab.id] ? "الفيديو مفتوح" : "شاهدي فيديو التجربة"}</Button>
+            <Button disabled={!attempts[lab.id] || !!labOpened[lab.id]} onClick={() => void openVideo(lab)}><Play className="ml-2 h-4 w-4" />{labOpened[lab.id] ? "الفيديو مفتوح" : "شاهد فيديو التجربة"}</Button>
             {labOpened[lab.id] && <iframe title={`فيديو ${lab.title}`} src={embedUrl(lab.simulation_url)} className="aspect-video w-full rounded-xl border bg-black" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" />}
             <p className="rounded-lg bg-emerald-50 p-3 font-bold">بعد التجربة — {lab.after_question}</p>
             <RadioGroup value={legacyAnswers[`${lab.id}-after`] || ""} onValueChange={(value) => setLegacyAnswers((current) => ({ ...current, [`${lab.id}-after`]: value }))}>{lab.after_choices.map((choice) => <div key={choice.id} className="flex items-center gap-2"><RadioGroupItem id={`${lab.id}-legacy-after-${choice.id}`} value={choice.id} /><Label htmlFor={`${lab.id}-legacy-after-${choice.id}`}>{choice.text}</Label></div>)}</RadioGroup>
-            <Button disabled={!labOpened[lab.id]} onClick={() => void saveLegacyAnswer(lab, "after")}>تحققي من استنتاجي</Button>
-            {legacyResults[lab.id] !== undefined && <p className={`font-bold ${legacyResults[lab.id] ? "text-emerald-700" : "text-rose-700"}`}>{legacyResults[lab.id] ? "أحسنتِ! أتقنتِ النشاط." : "راجعي التجربة وحاولي فهم النتيجة مرة أخرى."}</p>}
+            <Button disabled={!labOpened[lab.id]} onClick={() => void saveLegacyAnswer(lab, "after")}>تحقق من استنتاجي</Button>
+            {legacyResults[lab.id] !== undefined && <p className={`font-bold ${legacyResults[lab.id] ? "text-emerald-700" : "text-rose-700"}`}>{legacyResults[lab.id] ? "أحسنت! أتقنت النشاط." : "راجع التجربة وحاول فهم النتيجة مرة أخرى."}</p>}
           </>}
         </CardContent></Card>;
       })}

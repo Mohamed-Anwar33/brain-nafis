@@ -55,6 +55,13 @@ describe("Video Parser & Educational Links", () => {
     expect(parsed?.platformName).toBe("منصة مدرستي");
   });
 
+  it("keeps the PhET simulation URL embeddable in the virtual lab", () => {
+    const url = "https://phet.colorado.edu/sims/html/forces-and-motion-basics/latest/forces-and-motion-basics_ar_SA.html";
+    const parsed = parseExplanationUrl(url);
+    expect(parsed?.isValid).toBe(true);
+    expect(parsed?.embedUrl).toBe(url);
+  });
+
   it("should extract URLs from mixed teacher comments", () => {
     const text = "الإجابة الصحيحة هي الانقسام المتساوي، للمزيد شاهد الشرح عبر الرابط: https://youtu.be/sampleVid123 بالتوفيق!";
     const extracted = extractUrlFromText(text);

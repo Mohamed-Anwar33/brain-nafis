@@ -9,6 +9,8 @@ import { Loader2, BookOpen, FlaskConical, Play, TrendingUp, Atom, Leaf, Lightbul
 import { toast } from "sonner";
 import { getStoredSelectionContext } from "@/lib/selection-context";
 import { isScientificActivityInScope } from "@/lib/scientific-activity-scope";
+import { parseExplanationUrl } from "@/lib/video-parser";
+import { getVideoButtonLabel } from "@/lib/virtual-lab-video";
 import { ReadingPassageDesignSystem, type ReadingPassageItem, type ReadingQuestionItem } from "@/components/student/reading/ReadingPassageDesignSystem";
 
 type Choice = { id: string; text: string };
@@ -24,16 +26,14 @@ type Lab = {
 type LabComparison = { before_percent: number; after_percent: number; improvement_percent: number };
 
 const embedUrl = (input: string) => {
+  return parseExplanationUrl(input)?.embedUrl || input;
+};
+
+const externalVideoUrl = (input: string) => {
   try {
     const url = new URL(input);
-    const host = url.hostname.replace(/^www\./, "");
-    if (host === "youtu.be") return `https://www.youtube-nocookie.com/embed/${url.pathname.slice(1)}`;
-    if (host === "youtube.com" || host === "m.youtube.com") {
-      const id = url.searchParams.get("v");
-      if (id) return `https://www.youtube-nocookie.com/embed/${id}`;
-    }
-    return url.toString();
-  } catch { return input; }
+    return url.protocol === "https:" ? url.toString() : null;
+  } catch { return null; }
 };
 
 function orderKnownBiologyReadings(items: Reading[]) {
@@ -68,6 +68,7 @@ export default function ScientificActivities() {
   const [attempts, setAttempts] = useState<Record<string, string>>({});
   const [beforeScores, setBeforeScores] = useState<Record<string, number>>({});
   const [labOpened, setLabOpened] = useState<Record<string, boolean>>({});
+  const [openingVideo, setOpeningVideo] = useState<Record<string, boolean>>({});
   const [legacyResults, setLegacyResults] = useState<Record<string, boolean>>({});
   const [comparisons, setComparisons] = useState<Record<string, LabComparison>>({});
   const [busy, setBusy] = useState<Record<string, boolean>>({});
@@ -146,17 +147,24 @@ export default function ScientificActivities() {
     if (!isQuestionSet && !legacyAnswers[`${lab.id}-before`]) { toast.error("أجب عن سؤال التوقع أولًا"); return; }
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { toast.error("سجّلي الدخول لحفظ تقدمك في المختبر"); return; }
-    if (!attemptId && !isQuestionSet) {
-      const { data, error } = await supabase.rpc("start_virtual_lab_attempt", {
-        p_activity_id: lab.id, p_before_answer: legacyAnswers[`${lab.id}-before`],
-      });
-      if (error || !data) { toast.error("تعذر بدء تسجيل نشاط المختبر"); return; }
-      attemptId = data as string;
-      setAttempts((current) => ({ ...current, [lab.id]: attemptId! }));
+    setOpeningVideo((current) => ({ ...current, [lab.id]: true }));
+    try {
+      if (!attemptId && !isQuestionSet) {
+        const { data, error } = await supabase.rpc("start_virtual_lab_attempt", {
+          p_activity_id: lab.id, p_before_answer: legacyAnswers[`${lab.id}-before`],
+        });
+        if (error || !data) { toast.error("تعذر بدء تسجيل نشاط المختبر"); return; }
+        attemptId = data as string;
+        setAttempts((current) => ({ ...current, [lab.id]: attemptId! }));
+      }
+      const { error } = await supabase.rpc("mark_virtual_lab_opened", { p_attempt_id: attemptId });
+      if (error) { toast.error("تعذر تسجيل فتح الفيديو"); return; }
+      setLabOpened((current) => ({ ...current, [lab.id]: true }));
+    } catch {
+      toast.error("تعذر فتح الفيديو الآن. تحقق من اتصالك وحاول مرة أخرى.");
+    } finally {
+      setOpeningVideo((current) => ({ ...current, [lab.id]: false }));
     }
-    const { error } = await supabase.rpc("mark_virtual_lab_opened", { p_attempt_id: attemptId });
-    if (error) { toast.error("تعذر تسجيل فتح الفيديو"); return; }
-    setLabOpened((current) => ({ ...current, [lab.id]: true }));
   };
 
   const saveAfterSet = async (lab: Lab) => {
@@ -296,8 +304,17 @@ export default function ScientificActivities() {
               {questions.map((question, index) => <div key={question.id} className="space-y-2 rounded-xl border border-indigo-100 bg-white p-3"><p className="font-black text-indigo-950">{index + 1}. {question.text}</p><RadioGroup value={beforeAnswers[lab.id]?.[question.id] || ""} onValueChange={(value) => setQuestionAnswer(setBeforeAnswers, lab.id, question.id, value)}>{question.choices.map((choice) => <div key={choice.id} className={`flex items-center gap-2 rounded-xl border p-3 ${beforeAnswers[lab.id]?.[question.id] === choice.id ? "border-indigo-400 bg-indigo-50" : "border-slate-200 bg-slate-50 hover:border-indigo-200"}`}><RadioGroupItem id={`${lab.id}-before-${question.id}-${choice.id}`} value={choice.id} /><Label className="flex-1 cursor-pointer font-bold" htmlFor={`${lab.id}-before-${question.id}-${choice.id}`}>{choice.text}</Label></div>)}</RadioGroup></div>)}
               <Button disabled={busy[lab.id] || !!attempts[lab.id]} onClick={() => void saveBeforeSet(lab)}>{busy[lab.id] ? <Loader2 className="ml-2 h-4 w-4 animate-spin" /> : null}{attempts[lab.id] ? `نتيجتك قبل الفيديو: ${beforeScores[lab.id]}٪` : "حفظ الإجابات وبدء التجربة"}</Button>
             </div>
-            <Button disabled={!attempts[lab.id] || !!labOpened[lab.id]} onClick={() => void openVideo(lab)}><Play className="ml-2 h-4 w-4" />{labOpened[lab.id] ? "الفيديو مفتوح" : "شاهد فيديو التجربة"}</Button>
-            {labOpened[lab.id] && <iframe title={`فيديو ${lab.title}`} src={embedUrl(lab.simulation_url)} className="aspect-video w-full rounded-xl border bg-black" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" />}
+            <div className="space-y-2">
+              <Button disabled={!attempts[lab.id] || !!labOpened[lab.id] || !!openingVideo[lab.id]} onClick={() => void openVideo(lab)}>
+                {openingVideo[lab.id] ? <Loader2 className="ml-2 h-4 w-4 animate-spin" /> : <Play className="ml-2 h-4 w-4" />}
+                {getVideoButtonLabel({ hasAttempt: !!attempts[lab.id], isOpening: !!openingVideo[lab.id], isOpened: !!labOpened[lab.id] })}
+              </Button>
+              {!attempts[lab.id] && <p className="text-sm font-bold text-slate-500">أجب عن الأسئلة واحفظها أولًا حتى يتاح فتح التجربة.</p>}
+            </div>
+            {labOpened[lab.id] && <div className="space-y-2">
+              <iframe title={`فيديو ${lab.title}`} src={embedUrl(lab.simulation_url)} className="aspect-video w-full rounded-xl border bg-black" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" />
+              {externalVideoUrl(lab.simulation_url) && <a className="inline-flex text-sm font-bold text-indigo-700 underline underline-offset-4" href={externalVideoUrl(lab.simulation_url)!} target="_blank" rel="noopener noreferrer">إذا لم تظهر التجربة، افتحها في صفحة جديدة</a>}
+            </div>}
             {labOpened[lab.id] && <div className="space-y-4 rounded-xl border border-emerald-100 bg-emerald-50/50 p-4"><p className="font-bold">بعد الفيديو — أجب عن الأسئلة نفسها</p>
               {questions.map((question, index) => <div key={question.id} className="space-y-2 rounded-xl border border-emerald-100 bg-white p-3"><p className="font-black text-emerald-950">{index + 1}. {question.text}</p><RadioGroup value={afterAnswers[lab.id]?.[question.id] || ""} onValueChange={(value) => setQuestionAnswer(setAfterAnswers, lab.id, question.id, value)}>{question.choices.map((choice) => <div key={choice.id} className={`flex items-center gap-2 rounded-xl border p-3 ${afterAnswers[lab.id]?.[question.id] === choice.id ? "border-emerald-400 bg-emerald-50" : "border-slate-200 bg-slate-50 hover:border-emerald-200"}`}><RadioGroupItem id={`${lab.id}-after-${question.id}-${choice.id}`} value={choice.id} /><Label className="flex-1 cursor-pointer font-bold" htmlFor={`${lab.id}-after-${question.id}-${choice.id}`}>{choice.text}</Label></div>)}</RadioGroup></div>)}
               <Button disabled={busy[lab.id] || !!comparisons[lab.id]} onClick={() => void saveAfterSet(lab)}>{busy[lab.id] ? <Loader2 className="ml-2 h-4 w-4 animate-spin" /> : null}احسبي نسبة التحسن</Button>
@@ -307,8 +324,17 @@ export default function ScientificActivities() {
             <p className="rounded-lg bg-indigo-50 p-3 font-bold">قبل التجربة — {lab.before_question}</p>
             <RadioGroup value={legacyAnswers[`${lab.id}-before`] || ""} onValueChange={(value) => setLegacyAnswers((current) => ({ ...current, [`${lab.id}-before`]: value }))}>{lab.before_choices.map((choice) => <div key={choice.id} className="flex items-center gap-2"><RadioGroupItem id={`${lab.id}-legacy-before-${choice.id}`} value={choice.id} /><Label htmlFor={`${lab.id}-legacy-before-${choice.id}`}>{choice.text}</Label></div>)}</RadioGroup>
             <Button variant="outline" onClick={() => void saveLegacyAnswer(lab, "before")}>حفظ التوقع</Button>
-            <Button disabled={!attempts[lab.id] || !!labOpened[lab.id]} onClick={() => void openVideo(lab)}><Play className="ml-2 h-4 w-4" />{labOpened[lab.id] ? "الفيديو مفتوح" : "شاهد فيديو التجربة"}</Button>
-            {labOpened[lab.id] && <iframe title={`فيديو ${lab.title}`} src={embedUrl(lab.simulation_url)} className="aspect-video w-full rounded-xl border bg-black" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" />}
+            <div className="space-y-2">
+              <Button disabled={!attempts[lab.id] || !!labOpened[lab.id] || !!openingVideo[lab.id]} onClick={() => void openVideo(lab)}>
+                {openingVideo[lab.id] ? <Loader2 className="ml-2 h-4 w-4 animate-spin" /> : <Play className="ml-2 h-4 w-4" />}
+                {getVideoButtonLabel({ hasAttempt: !!attempts[lab.id], isOpening: !!openingVideo[lab.id], isOpened: !!labOpened[lab.id] })}
+              </Button>
+              {!attempts[lab.id] && <p className="text-sm font-bold text-slate-500">احفظ إجابتك أولًا حتى يتاح فتح التجربة.</p>}
+            </div>
+            {labOpened[lab.id] && <div className="space-y-2">
+              <iframe title={`فيديو ${lab.title}`} src={embedUrl(lab.simulation_url)} className="aspect-video w-full rounded-xl border bg-black" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" />
+              {externalVideoUrl(lab.simulation_url) && <a className="inline-flex text-sm font-bold text-indigo-700 underline underline-offset-4" href={externalVideoUrl(lab.simulation_url)!} target="_blank" rel="noopener noreferrer">إذا لم تظهر التجربة، افتحها في صفحة جديدة</a>}
+            </div>}
             <p className="rounded-lg bg-emerald-50 p-3 font-bold">بعد التجربة — {lab.after_question}</p>
             <RadioGroup value={legacyAnswers[`${lab.id}-after`] || ""} onValueChange={(value) => setLegacyAnswers((current) => ({ ...current, [`${lab.id}-after`]: value }))}>{lab.after_choices.map((choice) => <div key={choice.id} className="flex items-center gap-2"><RadioGroupItem id={`${lab.id}-legacy-after-${choice.id}`} value={choice.id} /><Label htmlFor={`${lab.id}-legacy-after-${choice.id}`}>{choice.text}</Label></div>)}</RadioGroup>
             <Button disabled={!labOpened[lab.id]} onClick={() => void saveLegacyAnswer(lab, "after")}>تحقق من استنتاجي</Button>

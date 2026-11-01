@@ -197,7 +197,7 @@ export function ReadingPassageDesignSystem({
           })}
         </section>
         <div className="rounded-2xl border border-violet-100 bg-violet-50/70 px-4 py-3 text-sm font-bold leading-relaxed text-violet-900">
-          🌈 خذي وقتك في القراءة؛ فهم الفكرة يساعدك على اختيار الإجابة بثقة.
+          🌈 خذ وقتك في القراءة؛ فهم الفكرة يساعدك على اختيار الإجابة بثقة.
         </div>
         <nav aria-label="التنقل بين القطع القرائية" className="flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-indigo-100 bg-gradient-to-l from-indigo-50 via-white to-sky-50 p-4 sm:p-5">
           <Button type="button" variant="outline" disabled={!hasPreviousPassage} onClick={onPreviousPassage} className="h-12 rounded-xl border-indigo-200 bg-white px-5 font-black text-indigo-800 disabled:opacity-40">

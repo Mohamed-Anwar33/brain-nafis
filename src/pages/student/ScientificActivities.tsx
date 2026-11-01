@@ -221,11 +221,11 @@ export default function ScientificActivities() {
         <p className="mt-2 text-sm font-bold leading-7 text-slate-700 sm:text-base">اقرأ النص التالي، ثم أجب عن الأسئلة</p>
       </div>
       <img src={currentReadingIndex === 1 ? "/assets/reading/reading-girl.png" : "/assets/reading/reading-boy.png"} alt="" aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 h-[150px] w-full object-contain object-bottom sm:h-[265px]" />
-      <div className="absolute bottom-3 left-3 z-20 flex flex-col gap-1.5 sm:bottom-5 sm:left-6 sm:flex-row sm:gap-2">
+      <div className="absolute bottom-3 left-1/2 z-20 flex -translate-x-1/2 gap-1.5 sm:bottom-5 sm:gap-2">
         <span className="rounded-full border border-white bg-white/90 px-3 py-2 text-xs font-black text-indigo-900 shadow-md sm:px-4 sm:text-sm">📖 {readings.length} {readings.length === 2 ? "قطعتان قرائيتان" : "قطع قرائية"}</span>
         <span className="rounded-full border border-white bg-white/90 px-3 py-2 text-xs font-black text-violet-900 shadow-md sm:px-4 sm:text-sm">✨ {readingQuestionCount} سؤالًا</span>
       </div>
-      {selectedDomainName && <span className="absolute bottom-3 right-3 z-20 rounded-full border border-white bg-white/90 px-3 py-2 text-xs font-black text-indigo-800 shadow-md sm:bottom-5 sm:right-6 sm:px-4 sm:text-sm">المجال: {selectedDomainName}</span>}
+      {selectedDomainName && <span className="absolute left-3 top-3 z-20 rounded-full border border-white bg-white/90 px-3 py-2 text-xs font-black text-indigo-800 shadow-md sm:left-6 sm:top-5 sm:px-4 sm:text-sm">المجال: {selectedDomainName}</span>}
     </header>}
     {!showReading && <header><h1 className="text-3xl font-black">{activityType === "lab" ? "المختبر الافتراضي" : "أنشطة العلوم"}</h1><p className="mt-2 text-muted-foreground">استكشفي التجارب العلمية وتابعي كيف يتطور فهمك بعد المشاهدة.</p>{selectedDomainName && <p className="mt-3 inline-flex rounded-full bg-indigo-50 px-4 py-2 text-sm font-bold text-indigo-800">المجال المحدد: {selectedDomainName}</p>}</header>}
     {showReading && <section className="space-y-6">

@@ -94,9 +94,6 @@ export function ReadingPassageDesignSystem({
               {isSecondPassage ? <ClipboardCheck className="h-7 w-7" /> : <BookOpen className="h-7 w-7" />}
             </div>
           </div>
-          <div className={`mt-10 hidden h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br ${theme.icon} text-white shadow-lg sm:flex`}>
-            {isSecondPassage ? <ClipboardCheck className="h-7 w-7" /> : <BookOpen className="h-7 w-7" />}
-          </div>
         </div>
       </CardHeader>
 

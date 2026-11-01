@@ -209,8 +209,12 @@ export default function ScientificActivities() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  return <main dir="rtl" className="relative w-full overflow-hidden bg-[radial-gradient(circle_at_12%_8%,rgba(167,139,250,0.18),transparent_25%),radial-gradient(circle_at_88%_42%,rgba(56,189,248,0.16),transparent_25%),linear-gradient(150deg,#f2f1ff,#f8fbff_50%,#effbf7)]">
-    <div className="mx-auto max-w-6xl space-y-8 px-3 py-6 sm:space-y-10 sm:px-6 sm:py-8">
+  return <main dir="rtl" className="relative isolate w-full overflow-hidden bg-[radial-gradient(circle_at_12%_8%,rgba(167,139,250,0.18),transparent_25%),radial-gradient(circle_at_88%_42%,rgba(56,189,248,0.16),transparent_25%),linear-gradient(150deg,#f2f1ff,#f8fbff_50%,#effbf7)]">
+    {showReading && <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-0 hidden overflow-hidden lg:block">
+      <div className="absolute inset-y-0 left-0 w-[clamp(200px,17vw,330px)] opacity-90" style={{ backgroundImage: "url('/assets/reading/reading-side-left.png')", backgroundRepeat: "repeat-y", backgroundSize: "100% auto", backgroundPosition: "center top", transform: "scaleX(-1)" }} />
+      <div className="absolute inset-y-0 right-0 w-[clamp(200px,17vw,330px)] opacity-90" style={{ backgroundImage: "url('/assets/reading/reading-side-right.png')", backgroundRepeat: "repeat-y", backgroundSize: "100% auto", backgroundPosition: "center top", transform: "scaleX(-1)" }} />
+    </div>}
+    <div className="relative z-10 mx-auto max-w-6xl space-y-8 px-3 py-6 sm:space-y-10 sm:px-6 sm:py-8">
     {showReading && <header className="relative isolate min-h-[300px] overflow-hidden rounded-[2rem] border border-violet-100 bg-[radial-gradient(ellipse_at_50%_100%,rgba(255,255,255,0.25),transparent_55%),linear-gradient(120deg,#d8d3ff_0%,#d9f0ff_48%,#bdf4dd_100%)] px-4 pb-4 pt-5 shadow-xl shadow-indigo-900/10 sm:min-h-[390px] sm:px-8 sm:pt-7">
       <div aria-hidden="true" className="pointer-events-none absolute -left-12 -top-16 h-52 w-52 rounded-full border-2 border-white/40" />
       <div aria-hidden="true" className="pointer-events-none absolute -right-12 top-20 h-40 w-40 rounded-full border border-dashed border-violet-400/40" />
@@ -252,7 +256,6 @@ export default function ScientificActivities() {
         {readings.map((reading, index) => <span key={reading.id} className={`h-2.5 w-2.5 rounded-full ${index === currentReadingIndex ? (index % 2 === 0 ? "bg-violet-600" : "bg-teal-600") : "bg-indigo-200"}`} />)}
         <span className="text-xs font-bold text-slate-500">استخدم زر الانتقال أسفل القطعة</span>
       </div>}
-      <div aria-hidden="true" className="relative -mt-3 h-36 overflow-hidden sm:h-52"><img src="/assets/reading/reading-footer.png" alt="" className="absolute inset-x-0 bottom-0 h-full w-full object-contain object-bottom" /></div>
     </section>}
 
     {showLab && <section className="space-y-4"><h2 className="flex items-center gap-2 text-2xl font-black"><FlaskConical className="h-6 w-6 text-emerald-600" />استكشفي وجرّبي</h2>
@@ -289,5 +292,6 @@ export default function ScientificActivities() {
       })}
     </section>}
     </div>
+    {showReading && <div aria-hidden="true" className="pointer-events-none absolute bottom-0 left-0 z-0 w-full overflow-hidden"><img src="/assets/reading/reading-footer.png" alt="" className="block h-auto max-h-[420px] w-full object-cover object-bottom sm:max-h-[520px]" /></div>}
   </main>;
 }

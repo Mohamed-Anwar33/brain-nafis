@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { Loader2, BookOpen, FlaskConical, Play, TrendingUp } from "lucide-react";
+import { Loader2, BookOpen, FlaskConical, Play, TrendingUp, Atom, Leaf, Lightbulb, Trophy } from "lucide-react";
 import { toast } from "sonner";
 import { getStoredSelectionContext } from "@/lib/selection-context";
 import { isScientificActivityInScope } from "@/lib/scientific-activity-scope";
@@ -211,21 +211,34 @@ export default function ScientificActivities() {
 
   return <main dir="rtl" className="relative isolate w-full overflow-hidden bg-[radial-gradient(circle_at_12%_8%,rgba(167,139,250,0.18),transparent_25%),radial-gradient(circle_at_88%_42%,rgba(56,189,248,0.16),transparent_25%),linear-gradient(150deg,#f2f1ff,#f8fbff_50%,#effbf7)]">
     {showReading && <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-0 hidden overflow-hidden 2xl:block">
+      <svg className="absolute inset-0 h-full w-full opacity-60" viewBox="0 0 100 100" preserveAspectRatio="none">
+        <path d="M7 0 C2 8, 11 13, 6 21 S10 33, 5 41 S11 52, 6 61 S10 73, 5 82 S9 94, 6 100" fill="none" stroke="#a78bfa" strokeWidth=".16" strokeDasharray=".7 1.1" />
+        <path d="M93 0 C98 9, 89 14, 94 23 S90 34, 95 44 S89 56, 94 65 S90 78, 95 87 S91 96, 94 100" fill="none" stroke="#5eead4" strokeWidth=".16" strokeDasharray=".7 1.1" />
+      </svg>
       <img
         src={currentReadingIndex === 1 ? "/assets/reading/reading-side-boy.png" : "/assets/reading/reading-side-girl.png"}
         alt=""
-        className="absolute left-[2.5%] top-[13%] w-[clamp(120px,10vw,185px)] drop-shadow-[0_14px_20px_rgba(89,65,156,0.12)]"
+        className="absolute left-[2.5%] top-[12%] w-[clamp(135px,11vw,200px)] drop-shadow-[0_14px_20px_rgba(89,65,156,0.12)]"
       />
       <img
         src="/assets/reading/reading-bookbulb.png"
         alt=""
-        className="absolute right-[2.5%] top-[39%] w-[clamp(115px,9vw,165px)] drop-shadow-[0_14px_20px_rgba(89,65,156,0.1)]"
+        className="absolute right-[3%] top-[34%] w-[clamp(125px,10vw,185px)] drop-shadow-[0_14px_20px_rgba(89,65,156,0.1)]"
       />
       <img
         src="/assets/reading/reading-microscope.png"
         alt=""
-        className="absolute left-[2.5%] top-[68%] w-[clamp(130px,10vw,180px)] drop-shadow-[0_14px_20px_rgba(30,120,125,0.12)]"
+        className="absolute left-[2.5%] top-[59%] w-[clamp(135px,11vw,195px)] drop-shadow-[0_14px_20px_rgba(30,120,125,0.12)]"
       />
+      <img
+        src="/assets/reading/reading-plant-books.png"
+        alt=""
+        className="absolute right-[2.5%] top-[77%] w-[clamp(145px,12vw,220px)] drop-shadow-[0_14px_20px_rgba(30,120,90,0.14)]"
+      />
+      <span className="absolute left-[4%] top-[29%] flex h-14 w-14 rotate-[-9deg] items-center justify-center rounded-[1.2rem] border border-white/90 bg-white/90 text-sky-600 shadow-lg shadow-sky-950/10"><Atom className="h-7 w-7" /></span>
+      <span className="absolute right-[4%] top-[17%] flex h-12 w-12 rotate-[8deg] items-center justify-center rounded-2xl border border-white/90 bg-white/90 text-amber-500 shadow-lg shadow-amber-950/10"><Lightbulb className="h-6 w-6" /></span>
+      <span className="absolute right-[4%] top-[58%] flex h-14 w-14 rotate-[7deg] items-center justify-center rounded-[1.2rem] border border-white/90 bg-white/90 text-emerald-600 shadow-lg shadow-emerald-950/10"><Leaf className="h-7 w-7" /></span>
+      <span className="absolute left-[4%] top-[82%] flex h-12 w-12 rotate-[-8deg] items-center justify-center rounded-2xl border border-white/90 bg-white/90 text-violet-600 shadow-lg shadow-violet-950/10"><Trophy className="h-6 w-6" /></span>
     </div>}
     <div className="relative z-10 mx-auto max-w-6xl space-y-8 px-3 py-6 sm:space-y-10 sm:px-6 sm:py-8">
     {showReading && <header className="relative isolate min-h-[300px] overflow-hidden rounded-[2rem] border border-violet-100 bg-[radial-gradient(ellipse_at_50%_100%,rgba(255,255,255,0.25),transparent_55%),linear-gradient(120deg,#d8d3ff_0%,#d9f0ff_48%,#bdf4dd_100%)] px-4 pb-4 pt-5 shadow-xl shadow-indigo-900/10 sm:min-h-[390px] sm:px-8 sm:pt-7">

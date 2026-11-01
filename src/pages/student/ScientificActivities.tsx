@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { Loader2, BookOpen, FlaskConical, Play, TrendingUp } from "lucide-react";
+import { Loader2, BookOpen, FlaskConical, Play, TrendingUp, Leaf, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { getStoredSelectionContext } from "@/lib/selection-context";
 import { isScientificActivityInScope } from "@/lib/scientific-activity-scope";
@@ -21,6 +21,13 @@ type Lab = {
   before_question: string; before_choices: Choice[]; after_question: string; after_choices: Choice[];
 };
 type LabComparison = { before_percent: number; after_percent: number; improvement_percent: number };
+
+const readingChoiceColors = [
+  "border-emerald-200 bg-emerald-50/70 hover:border-emerald-300 hover:bg-emerald-50",
+  "border-sky-200 bg-sky-50/70 hover:border-sky-300 hover:bg-sky-50",
+  "border-amber-200 bg-amber-50/70 hover:border-amber-300 hover:bg-amber-50",
+  "border-violet-200 bg-violet-50/70 hover:border-violet-300 hover:bg-violet-50",
+];
 
 const embedUrl = (input: string) => {
   try {
@@ -187,11 +194,43 @@ export default function ScientificActivities() {
 
   return <main dir="rtl" className="mx-auto max-w-5xl space-y-10 px-4 py-8">
     <header><h1 className="text-3xl font-black">{activityType === "reading" ? "الفهم القرائي" : activityType === "lab" ? "المختبر الافتراضي" : "أنشطة العلوم"}</h1><p className="mt-2 text-muted-foreground">{activityType === "reading" ? "اقرئي النصوص العلمية واستنتجي الإجابات من المعلومات الواردة فيها." : activityType === "lab" ? "استكشفي التجارب العلمية وتابعي كيف يتطور فهمك بعد المشاهدة." : "اقرئي النصوص العلمية واستكشفي التجارب الافتراضية."}</p>{selectedDomainName && <p className="mt-3 inline-flex rounded-full bg-indigo-50 px-4 py-2 text-sm font-bold text-indigo-800">المجال المحدد: {selectedDomainName}</p>}</header>
-    {showReading && <section className="space-y-4"><h2 className="flex items-center gap-2 text-2xl font-black"><BookOpen className="h-6 w-6 text-indigo-600" />اقرئي واستنتجي</h2>
+    {showReading && <section className="space-y-6"><h2 className="flex items-center gap-2 text-2xl font-black"><BookOpen className="h-6 w-6 text-indigo-600" />اقرئي واستنتجي</h2>
       {readings.length === 0 && <p className="rounded-xl bg-slate-50 p-4 text-slate-600">لا توجد نصوص علمية متاحة حاليًا.</p>}
-      {readings.map((reading) => <Card key={reading.id} className="overflow-hidden rounded-3xl border-2 border-indigo-100 shadow-lg shadow-indigo-950/5"><CardHeader className="bg-gradient-to-l from-indigo-50 via-white to-violet-50"><CardTitle className="flex items-center gap-3 text-indigo-950"><span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-600 text-white shadow-md"><BookOpen className="h-6 w-6" /></span>{reading.title}</CardTitle></CardHeader><CardContent className="space-y-5 p-4 sm:p-6">{reading.image_url && <img src={reading.image_url} alt={`صورة توضيحية: ${reading.title}`} className="max-h-80 w-full rounded-2xl border border-indigo-100 bg-white object-contain" />}<div className="max-h-[50vh] overflow-y-auto whitespace-pre-wrap rounded-2xl border border-violet-100 bg-gradient-to-br from-indigo-50/80 to-white p-5 leading-8 text-slate-800">{reading.passage}</div>
-        {reading.questions.slice().sort((a, b) => a.question_order - b.question_order).map((question, index) => <div key={question.id} className="space-y-3 rounded-2xl border border-indigo-100 bg-white p-4 shadow-sm"><p className="flex items-start gap-2 font-black text-slate-900"><span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-sm text-white">{index + 1}</span>{question.text}</p><RadioGroup value={readingAnswers[question.id] || ""} onValueChange={(value) => setReadingAnswers((current) => ({ ...current, [question.id]: value }))}>{(question.choices || []).map((choice) => <div key={choice.id} className={`flex items-center gap-2 rounded-xl border p-3 transition-colors ${readingAnswers[question.id] === choice.id ? "border-indigo-400 bg-indigo-50" : "border-slate-200 bg-slate-50/70 hover:border-indigo-200 hover:bg-indigo-50/50"}`}><RadioGroupItem id={`${question.id}-${choice.id}`} value={choice.id} /><Label className="flex-1 cursor-pointer font-bold text-slate-800" htmlFor={`${question.id}-${choice.id}`}>{choice.text}</Label></div>)}</RadioGroup><Button className="bg-indigo-700 hover:bg-indigo-800" onClick={() => void saveReadingAnswer(question)}>تحققي من الإجابة</Button>{readingResults[question.id] !== undefined && <p className={`font-bold ${readingResults[question.id] ? "text-emerald-700" : "text-rose-700"}`}>{readingResults[question.id] ? "إجابة صحيحة" : "إجابة غير صحيحة، أعيدي قراءة القطعة."}</p>}</div>)}
-      </CardContent></Card>)}
+      {readings.map((reading) => <Card key={reading.id} className="overflow-hidden rounded-[2rem] border-2 border-emerald-100 bg-white shadow-xl shadow-emerald-950/5">
+        <CardHeader className="border-b border-emerald-100 bg-gradient-to-l from-emerald-100 via-teal-50 to-amber-50 px-5 py-6 sm:px-7">
+          <CardTitle className="flex items-center gap-3 text-emerald-950">
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-600 text-white shadow-lg shadow-emerald-800/20"><BookOpen className="h-6 w-6" /></span>
+            <span className="text-xl font-black sm:text-2xl">{reading.title}</span>
+          </CardTitle>
+          <div className="mr-[3.75rem] flex items-center gap-2 text-sm font-bold text-emerald-800"><Sparkles className="h-4 w-4 text-amber-600" />الفهم القرائي العلمي</div>
+        </CardHeader>
+        <CardContent className="space-y-7 p-4 sm:p-7">
+          {reading.image_url && <img src={reading.image_url} alt={`صورة توضيحية: ${reading.title}`} className="max-h-80 w-full rounded-2xl border border-emerald-100 bg-white object-contain" />}
+          <article className="relative overflow-hidden rounded-[1.75rem] border border-amber-200 bg-[radial-gradient(ellipse_at_top_right,_rgba(16,185,129,0.10),_transparent_42%),linear-gradient(145deg,#fffef8,#f0fdf8_58%,#fff)] px-5 py-7 shadow-inner sm:px-8 sm:py-9">
+            <Leaf aria-hidden="true" className="absolute right-4 top-4 h-7 w-7 rotate-12 text-emerald-700/20" />
+            <Leaf aria-hidden="true" className="absolute bottom-4 left-4 h-8 w-8 -rotate-45 text-amber-700/20" />
+            <div className="relative mx-auto mb-5 flex max-w-max items-center gap-2 rounded-full border border-emerald-200 bg-white/85 px-4 py-2 text-sm font-black text-emerald-900 shadow-sm">
+              <BookOpen className="h-4 w-4" />اقرئي القطعة بهدوء ثم أجيبي
+            </div>
+            <div className="relative max-h-[58vh] overflow-y-auto whitespace-pre-wrap text-right text-lg font-medium leading-[2.05] text-slate-800 sm:text-xl sm:leading-[2.1]">{reading.passage}</div>
+          </article>
+          <div className="space-y-4">
+            {reading.questions.slice().sort((a, b) => a.question_order - b.question_order).map((question, index) => <div key={question.id} className="space-y-4 rounded-3xl border border-indigo-100 bg-gradient-to-br from-white via-white to-indigo-50/60 p-4 shadow-sm sm:p-5">
+              <p className="flex items-start gap-3 text-right text-lg font-black leading-relaxed text-slate-900 sm:text-xl"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-600 to-violet-600 text-sm text-white shadow-md">{index + 1}</span><span>{question.text}</span></p>
+              <RadioGroup dir="rtl" value={readingAnswers[question.id] || ""} onValueChange={(value) => setReadingAnswers((current) => ({ ...current, [question.id]: value }))} className="space-y-2.5">
+                {(question.choices || []).map((choice, choiceIndex) => <Label key={choice.id} htmlFor={`${question.id}-${choice.id}`} className={`grid cursor-pointer grid-cols-[auto_1fr] items-center gap-3 rounded-2xl border p-3.5 text-right text-base font-bold leading-relaxed text-slate-800 transition-all sm:p-4 sm:text-lg ${readingAnswers[question.id] === choice.id ? "border-indigo-400 bg-indigo-50 ring-2 ring-indigo-100" : readingChoiceColors[choiceIndex % readingChoiceColors.length]}`}>
+                  <RadioGroupItem id={`${question.id}-${choice.id}`} value={choice.id} className="h-5 w-5 border-indigo-800" />
+                  <span>{choice.text}</span>
+                </Label>)}
+              </RadioGroup>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <Button className="h-12 rounded-xl bg-indigo-700 px-6 text-base font-black hover:bg-indigo-800" onClick={() => void saveReadingAnswer(question)}>تحققي من الإجابة</Button>
+                {readingResults[question.id] !== undefined && <p role="status" className={`font-black ${readingResults[question.id] ? "text-emerald-700" : "text-rose-700"}`}>{readingResults[question.id] ? "إجابة صحيحة ✓" : "إجابة غير صحيحة، أعيدي قراءة القطعة."}</p>}
+              </div>
+            </div>)}
+          </div>
+        </CardContent>
+      </Card>)}
     </section>}
 
     {showLab && <section className="space-y-4"><h2 className="flex items-center gap-2 text-2xl font-black"><FlaskConical className="h-6 w-6 text-emerald-600" />استكشفي وجرّبي</h2>

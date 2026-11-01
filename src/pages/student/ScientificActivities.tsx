@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { getStoredSelectionContext } from "@/lib/selection-context";
 import { isScientificActivityInScope } from "@/lib/scientific-activity-scope";
 import { parseExplanationUrl } from "@/lib/video-parser";
-import { getVideoButtonLabel } from "@/lib/virtual-lab-video";
+import { getVideoButtonLabel, isInteractiveSimulationUrl } from "@/lib/virtual-lab-video";
 import { ReadingPassageDesignSystem, type ReadingPassageItem, type ReadingQuestionItem } from "@/components/student/reading/ReadingPassageDesignSystem";
 
 type Choice = { id: string; text: string };
@@ -307,12 +307,12 @@ export default function ScientificActivities() {
             <div className="space-y-2">
               <Button disabled={!attempts[lab.id] || !!labOpened[lab.id] || !!openingVideo[lab.id]} onClick={() => void openVideo(lab)}>
                 {openingVideo[lab.id] ? <Loader2 className="ml-2 h-4 w-4 animate-spin" /> : <Play className="ml-2 h-4 w-4" />}
-                {getVideoButtonLabel({ hasAttempt: !!attempts[lab.id], isOpening: !!openingVideo[lab.id], isOpened: !!labOpened[lab.id] })}
+                {getVideoButtonLabel({ hasAttempt: !!attempts[lab.id], isOpening: !!openingVideo[lab.id], isOpened: !!labOpened[lab.id], isSimulation: isInteractiveSimulationUrl(lab.simulation_url) })}
               </Button>
               {!attempts[lab.id] && <p className="text-sm font-bold text-slate-500">أجب عن الأسئلة واحفظها أولًا حتى يتاح فتح التجربة.</p>}
             </div>
             {labOpened[lab.id] && <div className="space-y-2">
-              <iframe title={`فيديو ${lab.title}`} src={embedUrl(lab.simulation_url)} className="aspect-video w-full rounded-xl border bg-black" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" />
+              <iframe title={`${isInteractiveSimulationUrl(lab.simulation_url) ? "محاكاة" : "فيديو"} ${lab.title}`} src={embedUrl(lab.simulation_url)} className="aspect-video w-full rounded-xl border bg-black" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" />
               {externalVideoUrl(lab.simulation_url) && <a className="inline-flex text-sm font-bold text-indigo-700 underline underline-offset-4" href={externalVideoUrl(lab.simulation_url)!} target="_blank" rel="noopener noreferrer">إذا لم تظهر التجربة، افتحها في صفحة جديدة</a>}
             </div>}
             {labOpened[lab.id] && <div className="space-y-4 rounded-xl border border-emerald-100 bg-emerald-50/50 p-4"><p className="font-bold">بعد الفيديو — أجب عن الأسئلة نفسها</p>
@@ -327,12 +327,12 @@ export default function ScientificActivities() {
             <div className="space-y-2">
               <Button disabled={!attempts[lab.id] || !!labOpened[lab.id] || !!openingVideo[lab.id]} onClick={() => void openVideo(lab)}>
                 {openingVideo[lab.id] ? <Loader2 className="ml-2 h-4 w-4 animate-spin" /> : <Play className="ml-2 h-4 w-4" />}
-                {getVideoButtonLabel({ hasAttempt: !!attempts[lab.id], isOpening: !!openingVideo[lab.id], isOpened: !!labOpened[lab.id] })}
+                {getVideoButtonLabel({ hasAttempt: !!attempts[lab.id], isOpening: !!openingVideo[lab.id], isOpened: !!labOpened[lab.id], isSimulation: isInteractiveSimulationUrl(lab.simulation_url) })}
               </Button>
               {!attempts[lab.id] && <p className="text-sm font-bold text-slate-500">احفظ إجابتك أولًا حتى يتاح فتح التجربة.</p>}
             </div>
             {labOpened[lab.id] && <div className="space-y-2">
-              <iframe title={`فيديو ${lab.title}`} src={embedUrl(lab.simulation_url)} className="aspect-video w-full rounded-xl border bg-black" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" />
+              <iframe title={`${isInteractiveSimulationUrl(lab.simulation_url) ? "محاكاة" : "فيديو"} ${lab.title}`} src={embedUrl(lab.simulation_url)} className="aspect-video w-full rounded-xl border bg-black" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" />
               {externalVideoUrl(lab.simulation_url) && <a className="inline-flex text-sm font-bold text-indigo-700 underline underline-offset-4" href={externalVideoUrl(lab.simulation_url)!} target="_blank" rel="noopener noreferrer">إذا لم تظهر التجربة، افتحها في صفحة جديدة</a>}
             </div>}
             <p className="rounded-lg bg-emerald-50 p-3 font-bold">بعد التجربة — {lab.after_question}</p>

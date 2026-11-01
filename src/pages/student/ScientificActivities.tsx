@@ -209,23 +209,23 @@ export default function ScientificActivities() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  return <main dir="rtl" className="w-full overflow-hidden bg-[radial-gradient(circle_at_12%_8%,rgba(167,139,250,0.14),transparent_23%),radial-gradient(circle_at_88%_42%,rgba(56,189,248,0.12),transparent_22%),linear-gradient(150deg,#f2f1ff,#f8fbff_50%,#effbf7)]">
+  return <main dir="rtl" className="relative w-full overflow-hidden bg-[radial-gradient(circle_at_12%_8%,rgba(167,139,250,0.18),transparent_25%),radial-gradient(circle_at_88%_42%,rgba(56,189,248,0.16),transparent_25%),linear-gradient(150deg,#f2f1ff,#f8fbff_50%,#effbf7)]">
     <div className="mx-auto max-w-6xl space-y-8 px-3 py-6 sm:space-y-10 sm:px-6 sm:py-8">
-    {showReading && <header className="relative isolate overflow-hidden rounded-[2rem] border border-violet-100 bg-gradient-to-l from-violet-100 via-sky-50 to-emerald-100 px-5 py-7 shadow-lg shadow-indigo-900/5 sm:px-8 sm:py-9">
-      <div aria-hidden="true" className="pointer-events-none absolute -left-16 -top-16 -z-10 h-56 w-56 rounded-full border border-violet-300/40" />
-      <div aria-hidden="true" className="pointer-events-none absolute -left-8 -top-8 -z-10 h-40 w-40 rounded-full border border-dashed border-sky-300/50" />
-      <div className="flex flex-wrap items-start justify-between gap-5">
-        <div className="max-w-2xl">
-          <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white bg-white/85 px-3.5 py-2 text-sm font-black text-violet-800 shadow-sm"><BookOpen className="h-4 w-4" />وقت القراءة والاستكشاف</div>
-          <h1 className="text-3xl font-black leading-tight text-indigo-950 sm:text-4xl">الفهم القرائي <span className="text-violet-700">بطريقة ممتعة!</span></h1>
-          <p className="mt-3 text-base font-bold leading-8 text-slate-600 sm:text-lg">اقرأ القطع بعناية، واكتشف الأفكار، ثم اختر الإجابة الأنسب بثقة وتركيز.</p>
-          {selectedDomainName && <p className="mt-3 inline-flex rounded-full border border-indigo-100 bg-white/80 px-4 py-2 text-sm font-black text-indigo-800">المجال: {selectedDomainName}</p>}
-        </div>
-        <div className="flex flex-wrap gap-2 self-end">
-          <span className="rounded-2xl border border-white bg-white/80 px-4 py-3 text-sm font-black text-indigo-900 shadow-sm">📖 {readings.length} {readings.length === 2 ? "قطعتان قرائيتان" : "قطع قرائية"}</span>
-          <span className="rounded-2xl border border-white bg-white/80 px-4 py-3 text-sm font-black text-violet-900 shadow-sm">✨ {readingQuestionCount} سؤالًا</span>
-        </div>
+    {showReading && <header className="relative isolate min-h-[300px] overflow-hidden rounded-[2rem] border border-violet-100 bg-[radial-gradient(ellipse_at_50%_100%,rgba(255,255,255,0.25),transparent_55%),linear-gradient(120deg,#d8d3ff_0%,#d9f0ff_48%,#bdf4dd_100%)] px-4 pb-4 pt-5 shadow-xl shadow-indigo-900/10 sm:min-h-[390px] sm:px-8 sm:pt-7">
+      <div aria-hidden="true" className="pointer-events-none absolute -left-12 -top-16 h-52 w-52 rounded-full border-2 border-white/40" />
+      <div aria-hidden="true" className="pointer-events-none absolute -right-12 top-20 h-40 w-40 rounded-full border border-dashed border-violet-400/40" />
+      <div className="relative z-10 mx-auto max-w-3xl text-center">
+        <div className="inline-flex items-center gap-2 rounded-full border border-violet-100 bg-white/90 px-4 py-2 text-sm font-black text-violet-800 shadow-md"><BookOpen className="h-4 w-4" />وقت القراءة والاستكشاف</div>
+        <h1 className="mx-auto mt-3 w-fit rounded-[2rem] border border-white/90 bg-white/90 px-6 py-2 text-3xl font-black leading-tight text-indigo-950 shadow-lg sm:px-10 sm:text-5xl">الفهم القرائي</h1>
+        <div aria-hidden="true" className="mx-auto mt-1 h-1.5 w-32 -rotate-2 rounded-full bg-amber-400 shadow-sm" />
+        <p className="mt-2 text-sm font-bold leading-7 text-slate-700 sm:text-base">اقرأ النص التالي، ثم أجب عن الأسئلة</p>
       </div>
+      <img src={currentReadingIndex === 1 ? "/assets/reading/reading-girl.png" : "/assets/reading/reading-boy.png"} alt="" aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 h-[150px] w-full object-contain object-bottom sm:h-[265px]" />
+      <div className="absolute bottom-3 left-3 z-20 flex flex-col gap-1.5 sm:bottom-5 sm:left-6 sm:flex-row sm:gap-2">
+        <span className="rounded-full border border-white bg-white/90 px-3 py-2 text-xs font-black text-indigo-900 shadow-md sm:px-4 sm:text-sm">📖 {readings.length} {readings.length === 2 ? "قطعتان قرائيتان" : "قطع قرائية"}</span>
+        <span className="rounded-full border border-white bg-white/90 px-3 py-2 text-xs font-black text-violet-900 shadow-md sm:px-4 sm:text-sm">✨ {readingQuestionCount} سؤالًا</span>
+      </div>
+      {selectedDomainName && <span className="absolute bottom-3 right-3 z-20 rounded-full border border-white bg-white/90 px-3 py-2 text-xs font-black text-indigo-800 shadow-md sm:bottom-5 sm:right-6 sm:px-4 sm:text-sm">المجال: {selectedDomainName}</span>}
     </header>}
     {!showReading && <header><h1 className="text-3xl font-black">{activityType === "lab" ? "المختبر الافتراضي" : "أنشطة العلوم"}</h1><p className="mt-2 text-muted-foreground">استكشفي التجارب العلمية وتابعي كيف يتطور فهمك بعد المشاهدة.</p>{selectedDomainName && <p className="mt-3 inline-flex rounded-full bg-indigo-50 px-4 py-2 text-sm font-bold text-indigo-800">المجال المحدد: {selectedDomainName}</p>}</header>}
     {showReading && <section className="space-y-6">
@@ -252,6 +252,7 @@ export default function ScientificActivities() {
         {readings.map((reading, index) => <span key={reading.id} className={`h-2.5 w-2.5 rounded-full ${index === currentReadingIndex ? (index % 2 === 0 ? "bg-violet-600" : "bg-teal-600") : "bg-indigo-200"}`} />)}
         <span className="text-xs font-bold text-slate-500">استخدم زر الانتقال أسفل القطعة</span>
       </div>}
+      <div aria-hidden="true" className="relative -mt-3 h-36 overflow-hidden sm:h-52"><img src="/assets/reading/reading-footer.png" alt="" className="absolute inset-x-0 bottom-0 h-full w-full object-contain object-bottom" /></div>
     </section>}
 
     {showLab && <section className="space-y-4"><h2 className="flex items-center gap-2 text-2xl font-black"><FlaskConical className="h-6 w-6 text-emerald-600" />استكشفي وجرّبي</h2>

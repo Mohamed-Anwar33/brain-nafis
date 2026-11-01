@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowRight, BookOpen, CheckCircle2, CircleHelp, ClipboardCheck, Leaf, Lightbulb, Sparkles, Trophy, XCircle } from "lucide-react";
+import { ArrowLeft, ArrowRight, BookOpen, CheckCircle2, CircleHelp, ClipboardCheck, Leaf, Sparkles, Trophy, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -54,47 +54,6 @@ function renderPassage(text: string) {
   ));
 }
 
-function ReadingMascot() {
-  return <svg aria-hidden="true" viewBox="0 0 180 190" className="h-full w-full drop-shadow-lg">
-    <ellipse cx="90" cy="173" rx="65" ry="10" fill="#8b7be8" opacity=".14" />
-    <path d="M48 130c2-22 19-36 42-36s40 14 42 36v22H48z" fill="#8d6be8" />
-    <path d="M64 131c0-15 11-25 26-25s26 10 26 25v21H64z" fill="#b8a5ff" />
-    <path d="M60 82c0-26 14-42 34-42s34 16 34 42-14 42-34 42S60 108 60 82z" fill="#f5c79f" />
-    <path d="M58 83c-8-31 8-55 36-55 27 0 40 20 37 47-7-8-12-16-14-25-12 12-30 17-53 16l-2 17z" fill="#332653" />
-    <path d="M72 84c4-4 9-4 13 0m13 0c4-4 9-4 13 0" fill="none" stroke="#34274e" strokeWidth="3" strokeLinecap="round" />
-    <circle cx="78" cy="88" r="2.5" fill="#30264b" /><circle cx="107" cy="88" r="2.5" fill="#30264b" />
-    <path d="M85 102c5 6 13 6 18 0" fill="none" stroke="#bd6671" strokeWidth="3" strokeLinecap="round" />
-    <path d="M46 150c18-10 34-10 48 2 14-12 30-12 48-2v19c-19-9-35-8-48 4-13-12-29-13-48-4z" fill="#fff" stroke="#6b59c8" strokeWidth="3" strokeLinejoin="round" />
-    <path d="M94 152v21" stroke="#6b59c8" strokeWidth="2" />
-    <path d="M124 118c8-9 11-17 7-25-3-6-9-8-14-4" fill="none" stroke="#f5c79f" strokeWidth="9" strokeLinecap="round" />
-    <path d="M115 87l-1-5" stroke="#f5c79f" strokeWidth="7" strokeLinecap="round" />
-    <path d="M29 54l5-10 5 10 10 5-10 5-5 10-5-10-10-5z" fill="#ffc64b" />
-    <path d="M143 36l3-7 3 7 7 3-7 3-3 7-3-7-7-3z" fill="#6ccac3" />
-  </svg>;
-}
-
-function LearningDoodles({ second }: { second: boolean }) {
-  const accent = second ? "#0f9f9a" : "#6553d7";
-  return <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
-    <svg viewBox="0 0 1200 230" preserveAspectRatio="none" className="absolute inset-0 h-full w-full opacity-60">
-      <path d="M0 182C150 95 230 240 390 157S680 74 810 142s245 76 390-21" fill="none" stroke={accent} strokeWidth="3" strokeDasharray="10 12" opacity=".32" />
-      <circle cx="185" cy="145" r="68" fill="white" opacity=".42" />
-      <circle cx="1020" cy="58" r="82" fill="white" opacity=".35" />
-    </svg>
-    <div className="absolute left-3 top-3 flex -rotate-6 items-center gap-2 rounded-2xl border border-white/80 bg-white/75 p-2.5 text-indigo-700 shadow-md sm:left-6 sm:top-5">
-      <BookOpen className="h-8 w-8" /><span className="hidden text-xs font-black sm:inline">اقرأ واكتشف</span>
-    </div>
-    <div className="absolute right-3 top-3 rotate-6 rounded-2xl border border-white/80 bg-white/80 p-2.5 text-teal-700 shadow-md sm:right-6 sm:top-5">
-      <ClipboardCheck className="h-8 w-8" />
-    </div>
-    <div className="absolute bottom-3 left-4 flex items-end gap-1 opacity-75 sm:bottom-5 sm:left-8">
-      <div className="h-3 w-12 rounded-t-md bg-rose-300 shadow-sm" /><div className="h-5 w-14 rounded-t-md bg-sky-300 shadow-sm" /><div className="h-7 w-16 rounded-t-md bg-violet-300 shadow-sm" />
-    </div>
-    <div className="absolute bottom-4 right-5 text-emerald-500/70 sm:bottom-6 sm:right-10"><Leaf className="h-9 w-9 -rotate-12" /></div>
-    <div className="absolute right-[29%] top-8 hidden text-amber-500 sm:block"><Lightbulb className="h-8 w-8" /></div>
-  </div>;
-}
-
 export function ReadingPassageDesignSystem({
   reading,
   passageNumber,
@@ -116,11 +75,10 @@ export function ReadingPassageDesignSystem({
 
   return (
     <Card className="overflow-hidden rounded-[2rem] border border-violet-100 bg-white shadow-xl shadow-indigo-950/5">
-      <CardHeader className={`relative min-h-52 overflow-hidden border-b border-violet-100 bg-gradient-to-l ${theme.banner} px-5 py-6 sm:min-h-64 sm:px-7`}>
-        <LearningDoodles second={isSecondPassage} />
+      <CardHeader className={`relative overflow-hidden border-b border-violet-100 bg-gradient-to-l ${theme.banner} px-5 py-5 sm:px-7 sm:py-6`}>
         <div aria-hidden="true" className="pointer-events-none absolute -left-10 -top-12 h-36 w-36 rounded-full border border-violet-300/40" />
         <div aria-hidden="true" className="pointer-events-none absolute -left-5 -top-7 h-24 w-24 rounded-full border border-dashed border-sky-300/50" />
-        <div className="relative z-10 flex items-center justify-between gap-2 pt-12 sm:gap-5 sm:pt-8">
+        <div className="relative flex items-center justify-between gap-2 sm:gap-5">
           <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
             <div className="min-w-0">
               <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-white bg-white/85 px-3.5 py-2 text-sm font-black text-indigo-800 shadow-sm"><Sparkles className="h-4 w-4" /> وقت القراءة والاستكشاف</div>
@@ -136,7 +94,9 @@ export function ReadingPassageDesignSystem({
               {isSecondPassage ? <ClipboardCheck className="h-7 w-7" /> : <BookOpen className="h-7 w-7" />}
             </div>
           </div>
-          <div className="relative h-24 w-24 shrink-0 rounded-full bg-white/45 p-1.5 sm:h-48 sm:w-48 sm:p-3"><div className="absolute -right-1 top-2 rounded-full bg-amber-300 p-2 text-amber-900 shadow-md sm:right-1 sm:top-4"><Lightbulb className="h-4 w-4 sm:h-6 sm:w-6" /></div><ReadingMascot /></div>
+          <div className={`mt-10 hidden h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br ${theme.icon} text-white shadow-lg sm:flex`}>
+            {isSecondPassage ? <ClipboardCheck className="h-7 w-7" /> : <BookOpen className="h-7 w-7" />}
+          </div>
         </div>
       </CardHeader>
 

@@ -210,9 +210,22 @@ export default function ScientificActivities() {
   };
 
   return <main dir="rtl" className="relative isolate w-full overflow-hidden bg-[radial-gradient(circle_at_12%_8%,rgba(167,139,250,0.18),transparent_25%),radial-gradient(circle_at_88%_42%,rgba(56,189,248,0.16),transparent_25%),linear-gradient(150deg,#f2f1ff,#f8fbff_50%,#effbf7)]">
-    {showReading && <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-0 hidden overflow-hidden lg:block">
-      <div className="absolute inset-y-0 left-0 w-[clamp(200px,17vw,330px)] opacity-90" style={{ backgroundImage: "url('/assets/reading/reading-side-left.png')", backgroundRepeat: "repeat-y", backgroundSize: "100% auto", backgroundPosition: "center top", transform: "scaleX(-1)" }} />
-      <div className="absolute inset-y-0 right-0 w-[clamp(200px,17vw,330px)] opacity-90" style={{ backgroundImage: "url('/assets/reading/reading-side-right.png')", backgroundRepeat: "repeat-y", backgroundSize: "100% auto", backgroundPosition: "center top", transform: "scaleX(-1)" }} />
+    {showReading && <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-0 hidden overflow-hidden 2xl:block">
+      <img
+        src={currentReadingIndex === 1 ? "/assets/reading/reading-side-boy.png" : "/assets/reading/reading-side-girl.png"}
+        alt=""
+        className="absolute left-[2.5%] top-[13%] w-[clamp(120px,10vw,185px)] drop-shadow-[0_14px_20px_rgba(89,65,156,0.12)]"
+      />
+      <img
+        src="/assets/reading/reading-bookbulb.png"
+        alt=""
+        className="absolute right-[2.5%] top-[39%] w-[clamp(115px,9vw,165px)] drop-shadow-[0_14px_20px_rgba(89,65,156,0.1)]"
+      />
+      <img
+        src="/assets/reading/reading-microscope.png"
+        alt=""
+        className="absolute left-[2.5%] top-[68%] w-[clamp(130px,10vw,180px)] drop-shadow-[0_14px_20px_rgba(30,120,125,0.12)]"
+      />
     </div>}
     <div className="relative z-10 mx-auto max-w-6xl space-y-8 px-3 py-6 sm:space-y-10 sm:px-6 sm:py-8">
     {showReading && <header className="relative isolate min-h-[300px] overflow-hidden rounded-[2rem] border border-violet-100 bg-[radial-gradient(ellipse_at_50%_100%,rgba(255,255,255,0.25),transparent_55%),linear-gradient(120deg,#d8d3ff_0%,#d9f0ff_48%,#bdf4dd_100%)] px-4 pb-4 pt-5 shadow-xl shadow-indigo-900/10 sm:min-h-[390px] sm:px-8 sm:pt-7">

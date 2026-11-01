@@ -102,6 +102,15 @@ export function ExamQuestion({
         setStreak(0);
         audioManager.playWrong();
 
+        // A wrong answer should immediately start the remediation flow:
+        // open its explanation video when available and load a skill-matched practice question.
+        setShowSimilarQuestion(true);
+        void loadSimilarQuestion();
+        if (hasExplanationVideo) {
+          setHasOpenedExplanationVideo(true);
+          setShowExplanationModal(true);
+        }
+
         // Keep feedback visible, clear selected choice to allow retry
         setTimeout(() => {
           setSelectedChoice(null);

@@ -82,7 +82,7 @@ function LearningDoodles({ second }: { second: boolean }) {
       <circle cx="1020" cy="58" r="82" fill="white" opacity=".35" />
     </svg>
     <div className="absolute left-3 top-3 flex -rotate-6 items-center gap-2 rounded-2xl border border-white/80 bg-white/75 p-2.5 text-indigo-700 shadow-md sm:left-6 sm:top-5">
-      <BookOpen className="h-8 w-8" /><span className="hidden text-xs font-black sm:inline">اقرأ واكتشفي</span>
+      <BookOpen className="h-8 w-8" /><span className="hidden text-xs font-black sm:inline">اقرأ واكتشف</span>
     </div>
     <div className="absolute right-3 top-3 rotate-6 rounded-2xl border border-white/80 bg-white/80 p-2.5 text-teal-700 shadow-md sm:right-6 sm:top-5">
       <ClipboardCheck className="h-8 w-8" />
@@ -126,7 +126,7 @@ export function ReadingPassageDesignSystem({
               <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-white bg-white/85 px-3.5 py-2 text-sm font-black text-indigo-800 shadow-sm"><Sparkles className="h-4 w-4" /> وقت القراءة والاستكشاف</div>
               <p className={`mb-1 text-xs font-extrabold ${theme.eyebrow}`}>الاختبار {passageNumber} · الفهم القرائي العلمي</p>
               <h2 className="text-2xl font-black leading-relaxed text-slate-950 sm:text-3xl">{reading.title}</h2>
-              <p className="mt-1 text-sm font-bold leading-7 text-slate-600">اقرأ النص، واكتشفي الأفكار، ثم اختر الإجابة الأدق.</p>
+              <p className="mt-1 text-sm font-bold leading-7 text-slate-600">اقرأ النص، واكتشف الأفكار، ثم اختر الإجابة الأدق.</p>
               <div className="mt-3 flex flex-wrap gap-2">
                 <span className="rounded-xl border border-white bg-white/80 px-3 py-2 text-sm font-black text-indigo-900">📚 قطعة قرائية</span>
                 <span className="rounded-xl border border-white bg-white/80 px-3 py-2 text-sm font-black text-violet-900">✨ {questions.length} أسئلة</span>

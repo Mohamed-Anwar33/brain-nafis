@@ -218,7 +218,7 @@ export default function ScientificActivities() {
         <div className="max-w-2xl">
           <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white bg-white/85 px-3.5 py-2 text-sm font-black text-violet-800 shadow-sm"><BookOpen className="h-4 w-4" />وقت القراءة والاستكشاف</div>
           <h1 className="text-3xl font-black leading-tight text-indigo-950 sm:text-4xl">الفهم القرائي <span className="text-violet-700">بطريقة ممتعة!</span></h1>
-          <p className="mt-3 text-base font-bold leading-8 text-slate-600 sm:text-lg">اقرأ القطع بعناية، واكتشفي الأفكار، ثم اختر الإجابة الأنسب بثقة وتركيز.</p>
+          <p className="mt-3 text-base font-bold leading-8 text-slate-600 sm:text-lg">اقرأ القطع بعناية، واكتشف الأفكار، ثم اختر الإجابة الأنسب بثقة وتركيز.</p>
           {selectedDomainName && <p className="mt-3 inline-flex rounded-full border border-indigo-100 bg-white/80 px-4 py-2 text-sm font-black text-indigo-800">المجال: {selectedDomainName}</p>}
         </div>
         <div className="flex flex-wrap gap-2 self-end">

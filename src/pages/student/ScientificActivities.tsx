@@ -61,6 +61,7 @@ export default function ScientificActivities() {
   const [loading, setLoading] = useState(true);
   const [readingAnswers, setReadingAnswers] = useState<Record<string, string>>({});
   const [readingResults, setReadingResults] = useState<Record<string, boolean>>({});
+  const [activeReadingIndex, setActiveReadingIndex] = useState(0);
   const [legacyAnswers, setLegacyAnswers] = useState<Record<string, string>>({});
   const [beforeAnswers, setBeforeAnswers] = useState<Record<string, Record<string, string>>>({});
   const [afterAnswers, setAfterAnswers] = useState<Record<string, Record<string, string>>>({});
@@ -99,6 +100,7 @@ export default function ScientificActivities() {
       const inScope = (item: { domain_id?: string | null; grade_subject_id?: string | null }) =>
         isScientificActivityInScope(item, { domainId, gradeSubjectId });
       setReadings(orderKnownBiologyReadings(((readingData || []) as unknown as Reading[]).filter(inScope)));
+      setActiveReadingIndex(0);
       setLabs(((labData || []) as unknown as Lab[]).filter(inScope));
       setLoading(false);
     };
@@ -199,8 +201,16 @@ export default function ScientificActivities() {
   if (loading) return <div className="flex min-h-[60vh] items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
 
   const readingQuestionCount = readings.reduce((count, reading) => count + (reading.questions?.length || 0), 0);
+  const currentReadingIndex = Math.min(activeReadingIndex, Math.max(readings.length - 1, 0));
+  const currentReading = readings[currentReadingIndex] || null;
+  const navigateToReading = (nextIndex: number) => {
+    if (nextIndex < 0 || nextIndex >= readings.length) return;
+    setActiveReadingIndex(nextIndex);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
-  return <main dir="rtl" className="mx-auto max-w-5xl space-y-8 bg-gradient-to-br from-indigo-50/70 via-sky-50/40 to-emerald-50/60 px-3 py-6 sm:space-y-10 sm:px-5 sm:py-8">
+  return <main dir="rtl" className="w-full overflow-hidden bg-[radial-gradient(circle_at_12%_8%,rgba(167,139,250,0.14),transparent_23%),radial-gradient(circle_at_88%_42%,rgba(56,189,248,0.12),transparent_22%),linear-gradient(150deg,#f2f1ff,#f8fbff_50%,#effbf7)]">
+    <div className="mx-auto max-w-6xl space-y-8 px-3 py-6 sm:space-y-10 sm:px-6 sm:py-8">
     {showReading && <header className="relative isolate overflow-hidden rounded-[2rem] border border-violet-100 bg-gradient-to-l from-violet-100 via-sky-50 to-emerald-100 px-5 py-7 shadow-lg shadow-indigo-900/5 sm:px-8 sm:py-9">
       <div aria-hidden="true" className="pointer-events-none absolute -left-16 -top-16 -z-10 h-56 w-56 rounded-full border border-violet-300/40" />
       <div aria-hidden="true" className="pointer-events-none absolute -left-8 -top-8 -z-10 h-40 w-40 rounded-full border border-dashed border-sky-300/50" />
@@ -223,16 +233,25 @@ export default function ScientificActivities() {
         <h2 className="flex items-center gap-2 text-xl font-black text-indigo-950 sm:text-2xl"><BookOpen className="h-6 w-6 text-violet-700" />اقرئي واستنتجي</h2>
         <span className="text-sm font-bold text-slate-500">قطعة ← أسئلة ← مراجعة</span>
       </div>
-      {readings.length === 0 && <p className="rounded-xl bg-slate-50 p-4 text-slate-600">لا توجد نصوص علمية متاحة حاليًا.</p>}
-      {readings.map((reading, index) => <ReadingPassageDesignSystem
-        key={reading.id}
-        reading={reading}
-        passageNumber={index + 1}
+      {readings.length === 0 && <p className="rounded-2xl border border-violet-100 bg-white/90 p-5 font-bold text-slate-600">لا توجد نصوص علمية متاحة حاليًا.</p>}
+      {currentReading && <ReadingPassageDesignSystem
+        key={currentReading.id}
+        reading={currentReading}
+        passageNumber={currentReadingIndex + 1}
+        passageCount={readings.length}
         selectedAnswers={readingAnswers}
         results={readingResults}
         onAnswerChange={(questionId, choiceId) => setReadingAnswers((current) => ({ ...current, [questionId]: choiceId }))}
         onCheckAnswer={(question) => void saveReadingAnswer(question)}
-      />)}
+        hasPreviousPassage={currentReadingIndex > 0}
+        hasNextPassage={currentReadingIndex < readings.length - 1}
+        onPreviousPassage={() => navigateToReading(currentReadingIndex - 1)}
+        onNextPassage={() => navigateToReading(currentReadingIndex + 1)}
+      />}
+      {readings.length > 1 && <div className="flex items-center justify-center gap-3" aria-label="التنقل بين القطع القرائية">
+        {readings.map((reading, index) => <span key={reading.id} className={`h-2.5 w-2.5 rounded-full ${index === currentReadingIndex ? (index % 2 === 0 ? "bg-violet-600" : "bg-teal-600") : "bg-indigo-200"}`} />)}
+        <span className="text-xs font-bold text-slate-500">استخدمي زر الانتقال أسفل القطعة</span>
+      </div>}
     </section>}
 
     {showLab && <section className="space-y-4"><h2 className="flex items-center gap-2 text-2xl font-black"><FlaskConical className="h-6 w-6 text-emerald-600" />استكشفي وجرّبي</h2>
@@ -268,5 +287,6 @@ export default function ScientificActivities() {
         </CardContent></Card>;
       })}
     </section>}
+    </div>
   </main>;
 }

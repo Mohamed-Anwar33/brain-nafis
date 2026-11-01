@@ -42,12 +42,34 @@ function ReadingHarness() {
       key={reading.id}
       reading={reading}
       passageNumber={index + 1}
+      passageCount={readings.length}
       selectedAnswers={answers}
       results={results}
       onAnswerChange={(questionId, choiceId) => setAnswers((current) => ({ ...current, [questionId]: choiceId }))}
       onCheckAnswer={(question) => setResults((current) => ({ ...current, [question.id]: answers[question.id] === question.choices[0]?.id }))}
+      hasPreviousPassage={index > 0}
+      hasNextPassage={index < readings.length - 1}
     />)}
   </div>;
+}
+
+function ReadingNavigationHarness() {
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const reading = readings[activeIndex];
+  return <ReadingPassageDesignSystem
+    reading={reading}
+    passageNumber={activeIndex + 1}
+    passageCount={readings.length}
+    selectedAnswers={answers}
+    results={{}}
+    onAnswerChange={(questionId, choiceId) => setAnswers((current) => ({ ...current, [questionId]: choiceId }))}
+    onCheckAnswer={() => {}}
+    hasPreviousPassage={activeIndex > 0}
+    hasNextPassage={activeIndex < readings.length - 1}
+    onPreviousPassage={() => setActiveIndex((index) => Math.max(0, index - 1))}
+    onNextPassage={() => setActiveIndex((index) => Math.min(readings.length - 1, index + 1))}
+  />;
 }
 
 describe("reading passage design system", () => {
@@ -78,5 +100,18 @@ describe("reading passage design system", () => {
     fireEvent.click(within(firstQuestion as HTMLElement).getByRole("button", { name: "تحققي من الإجابة" }));
 
     expect(within(firstQuestion as HTMLElement).getByRole("status")).toHaveTextContent("إجابة صحيحة، أحسنتِ!");
+  });
+
+  it("shows one passage at a time and preserves the first passage answer when moving forward and back", () => {
+    render(<ReadingNavigationHarness />);
+
+    fireEvent.click(screen.getByRole("radio", { name: "الخيار الطاقة 1-1" }));
+    fireEvent.click(screen.getByRole("button", { name: /انتقلي إلى القطعة التالية/ }));
+    expect(screen.getByRole("heading", { name: "الغدد الصماء" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "كيف تحصل الخلية على الطاقة؟" })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /القطعة السابقة/ }));
+    expect(screen.getByRole("heading", { name: "كيف تحصل الخلية على الطاقة؟" })).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "الخيار الطاقة 1-1" })).toBeChecked();
   });
 });

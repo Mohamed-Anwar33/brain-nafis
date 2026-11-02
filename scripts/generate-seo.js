@@ -113,6 +113,7 @@ function buildRobotsTxt() {
 
 User-agent: *
 Allow: /
+Sitemap: ${SITE_URL}/sitemap.xml
 
 # Disallow Private & Administrative Areas
 Disallow: /admin/
@@ -129,14 +130,22 @@ Disallow: /central-exam/play
 User-agent: Googlebot
 Allow: /
 Disallow: /admin/
+Disallow: /admin/*
 Disallow: /exam/
+Disallow: /exam/*
 Disallow: /result/
+Disallow: /result/*
+Disallow: /central-exam/play
 
 User-agent: Bingbot
 Allow: /
 Disallow: /admin/
+Disallow: /admin/*
 Disallow: /exam/
+Disallow: /exam/*
 Disallow: /result/
+Disallow: /result/*
+Disallow: /central-exam/play
 
 # Sitemap Location
 Sitemap: ${SITE_URL}/sitemap.xml

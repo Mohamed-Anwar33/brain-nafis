@@ -4,6 +4,7 @@
 
 User-agent: *
 Allow: /
+Sitemap: https://www.brain-scince-edecutioun.com/sitemap.xml
 
 # Disallow Private & Administrative Areas
 Disallow: /admin/
@@ -20,14 +21,22 @@ Disallow: /central-exam/play
 User-agent: Googlebot
 Allow: /
 Disallow: /admin/
+Disallow: /admin/*
 Disallow: /exam/
+Disallow: /exam/*
 Disallow: /result/
+Disallow: /result/*
+Disallow: /central-exam/play
 
 User-agent: Bingbot
 Allow: /
 Disallow: /admin/
+Disallow: /admin/*
 Disallow: /exam/
+Disallow: /exam/*
 Disallow: /result/
+Disallow: /result/*
+Disallow: /central-exam/play
 
 # Sitemap Location
 Sitemap: https://www.brain-scince-edecutioun.com/sitemap.xml

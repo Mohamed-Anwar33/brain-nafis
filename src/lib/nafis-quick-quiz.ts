@@ -55,3 +55,9 @@ export function canChooseAnswerAfterWrongAnswer(
 ): boolean {
   return !hasWrongAnswer || !hasExplanationVideo || hasOpenedExplanationVideo;
 }
+
+export function canRetryOriginalAfterSimilarQuestion(
+  similarState: "loading" | "ready" | "correct" | "wrong" | "empty" | null,
+): boolean {
+  return similarState === "correct" || similarState === "empty";
+}

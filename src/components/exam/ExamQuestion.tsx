@@ -7,7 +7,7 @@ import { StreakCounter } from "@/components/gamification/StreakCounter";
 import { FloatingXp } from "@/components/gamification/FloatingXp";
 import { SoundToggle } from "@/components/ui/SoundToggle";
 import { audioManager } from "@/lib/audio";
-import { canChooseAnswerAfterWrongAnswer } from "@/lib/nafis-quick-quiz";
+import { canChooseAnswerAfterWrongAnswer, canRetryOriginalAfterSimilarQuestion } from "@/lib/nafis-quick-quiz";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { hasQuestionExplanationMedia } from "@/lib/question-explanation";
@@ -184,9 +184,12 @@ export function ExamQuestion({
     if (!similarQuestion || !onSimilarQuestionAnswer || similarState === "correct") return;
     setSimilarChoiceId(choiceId);
     setSimilarState("loading");
+    audioManager.playOptionClick();
     try {
       const correct = await onSimilarQuestionAnswer(similarQuestion, choiceId);
       setSimilarState(correct ? "correct" : "wrong");
+      if (correct) audioManager.playCorrect();
+      else audioManager.playWrong();
     } catch (error) {
       console.error("Failed to submit practice answer:", error);
       setSimilarState("ready");
@@ -200,6 +203,7 @@ export function ExamQuestion({
     hasExplanationVideo,
     hasOpenedExplanationVideo,
   );
+  const isSimilarPracticeIncomplete = answerState === "wrong" && !canRetryOriginalAfterSimilarQuestion(similarState);
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col" dir="rtl">
@@ -273,10 +277,10 @@ export function ExamQuestion({
               <button
                 key={choice.id}
                 onClick={() => handleChoiceClick(choice)}
-                disabled={disabled || isSubmitting || answerState === "correct" || isWrongAnswerBlocked}
+                disabled={disabled || isSubmitting || answerState === "correct" || isWrongAnswerBlocked || isSimilarPracticeIncomplete}
                 className={cn(
                   "w-full text-right p-4 sm:p-5 rounded-2xl sm:rounded-3xl border-2 transition-all duration-200 flex items-center justify-between gap-4 outline-none",
-                  isWrongAnswerBlocked && "opacity-50 grayscale cursor-not-allowed bg-slate-100 border-slate-200",
+                  (isWrongAnswerBlocked || isSimilarPracticeIncomplete) && "opacity-50 grayscale cursor-not-allowed bg-slate-100 border-slate-200",
                   isCorrectAnswer
                     ? "border-emerald-500 bg-emerald-50/90 text-emerald-950 shadow-lg shadow-emerald-500/20 scale-[1.01]"
                     : isWrongAnswer
@@ -382,6 +386,7 @@ export function ExamQuestion({
             ) : similarQuestion ? (
               <div className="space-y-3">
                 <h3 className="font-black text-indigo-950">سؤال تدريب على {similarQuestion.scientific_skill}</h3>
+                {similarState !== "correct" && <p className="text-sm font-bold text-indigo-800">أجب عن السؤال المشابه إجابة صحيحة أولًا، ثم أعد المحاولة هنا.</p>}
                 <p className="font-bold leading-relaxed">{similarQuestion.text}</p>
                 {hasQuestionExplanationMedia(similarQuestion) && (
                   <Button type="button" variant="outline" onClick={() => setShowSimilarExplanation(true)}>
@@ -396,8 +401,8 @@ export function ExamQuestion({
                     </Button>
                   ))}
                 </div>
-                {similarState === "correct" && <p className="font-bold text-emerald-700">إجابة صحيحة، أحسنتِ! تم تسجيل نتيجة التدريب.</p>}
-                {similarState === "wrong" && <div className="flex items-center gap-3"><p className="font-bold text-rose-700">ليست الإجابة الصحيحة، حاولي خيارًا آخر.</p><Button type="button" variant="ghost" onClick={() => setSimilarState("ready")}>إعادة المحاولة</Button></div>}
+                {similarState === "correct" && <p className="font-bold text-emerald-700">إجابة صحيحة، أحسنت! يمكنك الآن إعادة المحاولة.</p>}
+                {similarState === "wrong" && <div className="flex items-center gap-3"><p className="font-bold text-rose-700">ليست الإجابة الصحيحة، حاول اختيار إجابة أخرى.</p><Button type="button" variant="ghost" onClick={() => setSimilarState("ready")}>إعادة المحاولة</Button></div>}
               </div>
             ) : null}
           </section>

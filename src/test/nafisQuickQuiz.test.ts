@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canChooseAnswerAfterWrongAnswer, orderNafisQuestions, selectNafisRoundQuestions, getNafisStageProgress } from "@/lib/nafis-quick-quiz";
+import { canChooseAnswerAfterWrongAnswer, canRetryOriginalAfterSimilarQuestion, orderNafisQuestions, selectNafisRoundQuestions, getNafisStageProgress } from "@/lib/nafis-quick-quiz";
 
 describe("Nafis quick quiz flow", () => {
   it("keeps student stages at ten questions with a stable next round", () => {
@@ -47,5 +47,14 @@ describe("Nafis quick quiz flow", () => {
     expect(canChooseAnswerAfterWrongAnswer(true, true, false)).toBe(false);
     expect(canChooseAnswerAfterWrongAnswer(true, true, true)).toBe(true);
     expect(canChooseAnswerAfterWrongAnswer(true, false, false)).toBe(true);
+  });
+
+  it("requires the similar question to be answered correctly before retrying the original", () => {
+    expect(canRetryOriginalAfterSimilarQuestion("loading")).toBe(false);
+    expect(canRetryOriginalAfterSimilarQuestion("ready")).toBe(false);
+    expect(canRetryOriginalAfterSimilarQuestion("wrong")).toBe(false);
+    expect(canRetryOriginalAfterSimilarQuestion("correct")).toBe(true);
+    expect(canRetryOriginalAfterSimilarQuestion("empty")).toBe(true);
+    expect(canRetryOriginalAfterSimilarQuestion(null)).toBe(false);
   });
 });

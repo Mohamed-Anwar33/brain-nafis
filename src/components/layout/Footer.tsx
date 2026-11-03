@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { shouldShowFooterSections } from "@/lib/footer-visibility";
+import { shouldHideFooter, shouldShowFooterSections } from "@/lib/footer-visibility";
 
 const footerKeys = [
     "footer_topic_teacher_title",
@@ -24,6 +24,7 @@ export const Footer = () => {
     const location = useLocation();
     const [content, setContent] = useState<FooterContent>(defaultFooterContent);
     const showFooterSections = shouldShowFooterSections(location.pathname);
+    const hideFooter = shouldHideFooter(location.pathname);
 
     useEffect(() => {
         let active = true;
@@ -44,6 +45,8 @@ export const Footer = () => {
             window.removeEventListener("footer-content-updated", loadContent);
         };
     }, []);
+
+    if (hideFooter) return null;
 
     const showFooterContent = showFooterSections && Boolean(
         content.footer_topic_teacher_body.trim() || content.footer_topic_platform_body.trim(),

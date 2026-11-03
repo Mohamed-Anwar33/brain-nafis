@@ -17,3 +17,10 @@ export function shouldShowFooterSections(pathname: string): boolean {
   if (ASSESSMENT_ROUTES.has(normalizedPath)) return false;
   return !ASSESSMENT_ROUTE_PREFIXES.some((prefix) => normalizedPath.startsWith(prefix));
 }
+
+export function shouldHideFooter(pathname: string): boolean {
+  const normalizedPath = pathname.replace(/\/+$/, "") || "/";
+  return normalizedPath.startsWith("/games/")
+    || normalizedPath === "/central-exam/games"
+    || normalizedPath.startsWith("/central-exam/games/");
+}

@@ -57,6 +57,7 @@ export default function ScientificActivities() {
   const showLab = activityType !== "reading";
   const [readings, setReadings] = useState<Reading[]>([]);
   const [labs, setLabs] = useState<Lab[]>([]);
+  const [activeLabId, setActiveLabId] = useState<string | null>(null);
   const [selectedDomainName, setSelectedDomainName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [readingAnswers, setReadingAnswers] = useState<Record<string, string>>({});
@@ -102,7 +103,9 @@ export default function ScientificActivities() {
         isScientificActivityInScope(item, { domainId, gradeSubjectId });
       setReadings(orderKnownBiologyReadings(((readingData || []) as unknown as Reading[]).filter(inScope)));
       setActiveReadingIndex(0);
-      setLabs(((labData || []) as unknown as Lab[]).filter(inScope));
+      const scopedLabs = ((labData || []) as unknown as Lab[]).filter(inScope);
+      setLabs(scopedLabs);
+      setActiveLabId((current) => current && scopedLabs.some((lab) => lab.id === current) ? current : scopedLabs[0]?.id || null);
       setLoading(false);
     };
     void load();
@@ -311,12 +314,27 @@ export default function ScientificActivities() {
       </div>}
     </section>}
 
-    {showLab && <section className="space-y-6"><div className="flex flex-wrap items-end justify-between gap-3 px-1"><div><h2 className="flex items-center gap-2 text-2xl font-black text-indigo-950 sm:text-3xl"><FlaskConical className="h-7 w-7 text-emerald-600" />استكشف وجرّب</h2><p className="mt-2 text-sm font-bold text-slate-600">ابدأ بتوقعك، ثم اختبر فهمك بعد مشاهدة التجربة.</p></div><span className="inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-white/85 px-4 py-2 text-sm font-black text-emerald-800 shadow-sm"><Atom className="h-4 w-4" /> {labs.length} {labs.length === 1 ? "تجربة علمية" : "تجارب علمية"}</span></div>
+    {showLab && <section className="space-y-6"><div className="flex flex-wrap items-end justify-between gap-3 px-1"><div><h2 className="flex items-center gap-2 text-2xl font-black text-indigo-950 sm:text-3xl"><FlaskConical className="h-7 w-7 text-emerald-600" />استكشف وجرّب</h2><p className="mt-2 text-sm font-bold text-slate-600">اختر تجربة من البطاقات، ثم استكشفها خطوة بخطوة.</p></div><span className="inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-white/85 px-4 py-2 text-sm font-black text-emerald-800 shadow-sm"><Atom className="h-4 w-4" /> {labs.length} {labs.length === 1 ? "تجربة علمية" : "تجارب علمية"}</span></div>
       {labs.length === 0 && <p className="rounded-xl bg-slate-50 p-4 text-slate-600">لا توجد تجارب افتراضية متاحة حاليًا.</p>}
-      {labs.map((lab) => {
+      {labs.length > 0 && <div className="rounded-[2rem] border border-emerald-100 bg-white/90 p-4 shadow-lg shadow-emerald-950/5 sm:p-6">
+        <div className="mb-4 flex items-center gap-3"><span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-md"><Atom className="h-6 w-6" /></span><div><h3 className="font-black text-slate-900">اختر التجربة التي تريد استكشافها</h3><p className="mt-1 text-xs font-bold text-slate-500 sm:text-sm">ستظهر تفاصيل التجربة المختارة وأسئلتها فقط.</p></div></div>
+        <div role="tablist" aria-label="التجارب الافتراضية" className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+          {labs.map((lab, index) => {
+            const selected = activeLabId === lab.id;
+            const icons = [FlaskConical, Atom, Microscope, Lightbulb];
+            const LabIcon = icons[index % icons.length];
+            return <button key={lab.id} type="button" role="tab" aria-selected={selected} aria-controls={`lab-panel-${lab.id}`} onClick={() => setActiveLabId(lab.id)} className={`group flex min-h-28 flex-col items-start justify-between rounded-2xl border-2 p-4 text-right transition duration-200 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-200 ${selected ? "border-emerald-500 bg-gradient-to-br from-emerald-50 to-teal-50 shadow-md shadow-emerald-900/10" : "border-slate-100 bg-slate-50/80 hover:border-emerald-200 hover:bg-white"}`}>
+              <span className={`flex h-10 w-10 items-center justify-center rounded-xl ${selected ? "bg-emerald-600 text-white" : "bg-white text-emerald-700 shadow-sm"}`}><LabIcon className="h-5 w-5" /></span>
+              <span className="mt-3 line-clamp-2 w-full text-sm font-black leading-6 text-slate-800 sm:text-base">{lab.title}</span>
+              <span className={`mt-2 text-[11px] font-black ${selected ? "text-emerald-700" : "text-slate-400"}`}>{selected ? "التجربة المختارة" : `التجربة ${index + 1}`}</span>
+            </button>;
+          })}
+        </div>
+      </div>}
+      {labs.filter((lab) => lab.id === activeLabId).map((lab) => {
         const questions = lab.question_set || [];
         const usesQuestionSet = questions.length >= 4;
-        return <Card key={lab.id} className="relative overflow-hidden rounded-[2rem] border-2 border-emerald-100 bg-white shadow-xl shadow-emerald-950/10"><CardHeader className="relative overflow-hidden border-b border-emerald-100 bg-[radial-gradient(circle_at_8%_50%,rgba(255,255,255,0.8),transparent_25%),linear-gradient(110deg,#d9f8ee,#f0fbff_50%,#eeebff)] px-5 py-5 sm:px-8 sm:py-7"><div aria-hidden="true" className="pointer-events-none absolute -left-6 -top-10 h-36 w-36 rounded-full border border-emerald-300/40" /><CardTitle className="relative z-10 flex items-center gap-3 text-xl leading-relaxed text-emerald-950 sm:text-2xl"><span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-700/20"><FlaskConical className="h-6 w-6" /></span><span className="flex-1">{lab.title}</span><span className="hidden h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white bg-white/80 text-violet-600 shadow-sm sm:flex"><Atom className="h-6 w-6" /></span></CardTitle></CardHeader><CardContent className="relative space-y-6 p-4 sm:p-7">
+        return <Card key={lab.id} id={`lab-panel-${lab.id}`} role="tabpanel" aria-label={lab.title} className="relative overflow-hidden rounded-[2rem] border-2 border-emerald-100 bg-white shadow-xl shadow-emerald-950/10"><CardHeader className="relative overflow-hidden border-b border-emerald-100 bg-[radial-gradient(circle_at_8%_50%,rgba(255,255,255,0.8),transparent_25%),linear-gradient(110deg,#d9f8ee,#f0fbff_50%,#eeebff)] px-5 py-5 sm:px-8 sm:py-7"><div aria-hidden="true" className="pointer-events-none absolute -left-6 -top-10 h-36 w-36 rounded-full border border-emerald-300/40" /><CardTitle className="relative z-10 flex items-center gap-3 text-xl leading-relaxed text-emerald-950 sm:text-2xl"><span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-700/20"><FlaskConical className="h-6 w-6" /></span><span className="flex-1">{lab.title}</span><span className="hidden h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white bg-white/80 text-violet-600 shadow-sm sm:flex"><Atom className="h-6 w-6" /></span></CardTitle></CardHeader><CardContent className="relative space-y-6 p-4 sm:p-7">
           {lab.instructions && <div className="flex items-start gap-3 rounded-2xl border border-sky-100 bg-gradient-to-l from-sky-50 to-white p-4 text-right shadow-sm sm:p-5"><span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-sky-100 text-sky-700"><CircleHelp className="h-5 w-5" /></span><p className="whitespace-pre-wrap text-sm font-semibold leading-7 text-slate-700 sm:text-base">{lab.instructions}</p></div>}
           {usesQuestionSet ? <>
             <div className="space-y-4 rounded-[1.75rem] border border-indigo-100 bg-gradient-to-br from-indigo-50/90 via-white to-sky-50/80 p-4 shadow-inner sm:p-6"><div className="flex items-center justify-between gap-3 rounded-2xl border border-white bg-white/85 p-3 shadow-sm sm:p-4"><div className="flex items-center gap-3"><span className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-100 text-indigo-700"><ClipboardCheck className="h-5 w-5" /></span><div><p className="font-black text-indigo-950">قبل المشاهدة</p><p className="text-xs font-bold text-slate-500 sm:text-sm">أجب عن الأسئلة لقياس فهمك الأولي</p></div></div><span className="rounded-full bg-indigo-50 px-3 py-1.5 text-xs font-black text-indigo-800">{questions.length} أسئلة</span></div>

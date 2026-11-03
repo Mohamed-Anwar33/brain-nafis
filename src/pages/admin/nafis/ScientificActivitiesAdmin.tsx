@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Pencil, X } from "lucide-react";
 import { toast } from "sonner";
 
 type Domain = { id: string; name: string; grade_subject_id: string };
@@ -13,7 +14,13 @@ type ChoiceDraft = { id: string; text: string; correct: boolean };
 type ReadingQuestionDraft = { id: string; text: string; choices: ChoiceDraft[] };
 type LabQuestionDraft = { id: string; text: string; choices: ChoiceDraft[] };
 type ReadingAdminRow = { id: string; title: string; questions?: Array<{ id: string }> };
-type LabAdminRow = { id: string; title: string; display_mode: "iframe" | "external"; question_set?: LabQuestionDraft[] };
+type LabAdminRow = {
+  id: string; title: string; display_mode: "iframe" | "external"; question_set?: LabQuestionDraft[];
+  domain_id?: string | null; scientific_concept?: string | null; instructions?: string;
+  simulation_url?: string; before_question?: string; before_choices?: ChoiceDraft[];
+  after_question?: string; after_choices?: ChoiceDraft[];
+  answer_keys?: { question_answer_keys?: Record<string, string>; before_correct_answer?: string; after_correct_answer?: string } | null;
+};
 
 const makeChoices = (): ChoiceDraft[] => [
   { id: crypto.randomUUID(), text: "", correct: true },
@@ -43,11 +50,13 @@ export default function ScientificActivitiesAdmin() {
   const [labQuestions, setLabQuestions] = useState<LabQuestionDraft[]>([
     makeLabQuestion(), makeLabQuestion(), makeLabQuestion(), makeLabQuestion(),
   ]);
+  const [editingLabId, setEditingLabId] = useState<string | null>(null);
+  const [savingLab, setSavingLab] = useState(false);
 
   const refresh = async () => {
     const [{ data: readingData, error: readingError }, { data: labData, error: labError }] = await Promise.all([
       supabase.from("scientific_readings").select("*,questions:scientific_reading_questions(*)").order("created_at", { ascending: false }),
-      supabase.from("virtual_lab_activities").select("id,title,display_mode,question_set").order("created_at", { ascending: false }),
+      supabase.from("virtual_lab_activities").select("id,title,display_mode,question_set,domain_id,scientific_concept,instructions,simulation_url,before_question,before_choices,after_question,after_choices,answer_keys:virtual_lab_answer_keys(question_answer_keys,before_correct_answer,after_correct_answer)").order("created_at", { ascending: false }),
     ]);
     if (readingError || labError) toast.error("تعذر تحميل الأنشطة العلمية");
     setReadings((readingData || []) as unknown as ReadingAdminRow[]);
@@ -67,6 +76,31 @@ export default function ScientificActivitiesAdmin() {
     setReadingQuestions((current) => current.map((item) => item.id === id ? { ...item, ...update } : item));
   const updateLabQuestion = (id: string, update: Partial<LabQuestionDraft>) =>
     setLabQuestions((current) => current.map((item) => item.id === id ? { ...item, ...update } : item));
+
+  const resetLabForm = () => {
+    setEditingLabId(null); setLabTitle(""); setLabDomain(""); setConcept(""); setInstructions(""); setVideoUrl("");
+    setLabQuestions(Array.from({ length: 4 }, makeLabQuestion));
+  };
+
+  const editLab = (lab: LabAdminRow) => {
+    const answerKeyMap = lab.answer_keys?.question_answer_keys || {};
+    const questions = lab.question_set?.length ? lab.question_set : [{
+      id: "legacy-before", text: lab.before_question || "", choices: (lab.before_choices || []).map((choice) => ({ ...choice, correct: choice.id === (lab.answer_keys?.before_correct_answer || answerKeyMap["legacy-before"]) })),
+    }, {
+      id: "legacy-after", text: lab.after_question || "", choices: (lab.after_choices || []).map((choice) => ({ ...choice, correct: choice.id === (lab.answer_keys?.after_correct_answer || answerKeyMap["legacy-after"]) })),
+    }];
+    setEditingLabId(lab.id);
+    setLabTitle(lab.title);
+    setLabDomain(lab.domain_id || "");
+    setConcept(lab.scientific_concept || "");
+    setInstructions(lab.instructions || "");
+    setVideoUrl(lab.simulation_url || "");
+    setLabQuestions(questions.map((question) => ({
+      ...question,
+      choices: question.choices.map((choice) => ({ ...choice, correct: choice.id === answerKeyMap[question.id] || choice.correct })),
+    })));
+    document.getElementById("virtual-lab-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   const saveReading = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -137,7 +171,8 @@ export default function ScientificActivitiesAdmin() {
       question.id, question.choices.find((choice) => choice.correct && choice.text.trim())!.id,
     ]));
     const first = questionSet[0];
-    const { data: activity, error } = await supabase.from("virtual_lab_activities").insert({
+    setSavingLab(true);
+    const activityPayload = {
       title: labTitle.trim(), domain_id: labDomain || null,
       grade_subject_id: domains.find((domain) => domain.id === labDomain)?.grade_subject_id || null,
       scientific_concept: concept.trim() || null, instructions: instructions.trim(),
@@ -146,21 +181,24 @@ export default function ScientificActivitiesAdmin() {
       // Keep these legacy columns populated for compatibility with existing readers.
       before_question: first.text, before_choices: first.choices,
       after_question: first.text, after_choices: first.choices,
-    }).select("id").single();
-    if (error || !activity) { toast.error("تعذر حفظ تجربة الفيديو"); return; }
-    const { error: keysError } = await supabase.from("virtual_lab_answer_keys").insert({
+    };
+    const { data: activity, error } = editingLabId
+      ? await supabase.from("virtual_lab_activities").update(activityPayload).eq("id", editingLabId).select("id").single()
+      : await supabase.from("virtual_lab_activities").insert(activityPayload).select("id").single();
+    if (error || !activity) { setSavingLab(false); toast.error(editingLabId ? "تعذر تعديل التجربة" : "تعذر حفظ تجربة الفيديو"); return; }
+    const { error: keysError } = await supabase.from("virtual_lab_answer_keys").upsert({
       activity_id: activity.id,
       before_correct_answer: answerKeys[first.id],
       after_correct_answer: answerKeys[first.id],
       question_answer_keys: answerKeys,
     });
     if (keysError) {
-      await supabase.from("virtual_lab_activities").delete().eq("id", activity.id);
-      toast.error("تعذر حفظ مفاتيح إجابات التجربة"); return;
+      setSavingLab(false);
+      toast.error("حُفظت بيانات التجربة لكن تعذر تحديث مفاتيح الإجابات؛ أعد المحاولة أو تواصل مع الدعم."); return;
     }
-    toast.success("تمت إضافة التجربة وأسئلتها");
-    setLabTitle(""); setConcept(""); setInstructions(""); setVideoUrl("");
-    setLabQuestions(Array.from({ length: 4 }, makeLabQuestion));
+    setSavingLab(false);
+    toast.success(editingLabId ? "تم تعديل التجربة وأسئلتها" : "تمت إضافة التجربة وأسئلتها");
+    resetLabForm();
     await refresh();
   };
 
@@ -190,7 +228,7 @@ export default function ScientificActivitiesAdmin() {
       </form>
     </CardContent></Card>
 
-    <Card><CardHeader><CardTitle>إضافة تجربة «استكشفي وجربي»</CardTitle></CardHeader><CardContent>
+    <Card id="virtual-lab-form"><CardHeader><CardTitle>{editingLabId ? "تعديل التجربة" : "إضافة تجربة «استكشفي وجربي»"}</CardTitle></CardHeader><CardContent>
       <form onSubmit={(event) => void saveLab(event)} className="space-y-4">
         <Input required value={labTitle} onChange={(event) => setLabTitle(event.target.value)} placeholder="عنوان التجربة" />
         <Select value={labDomain || "none"} onValueChange={(value) => setLabDomain(value === "none" ? "" : value)}><SelectTrigger><SelectValue placeholder="المجال العلمي" /></SelectTrigger><SelectContent><SelectItem value="none">اختياري — كل المجالات</SelectItem>{domains.map((domain) => <SelectItem key={domain.id} value={domain.id}>{domain.name}</SelectItem>)}</SelectContent></Select>
@@ -200,13 +238,13 @@ export default function ScientificActivitiesAdmin() {
         <p className="text-sm text-muted-foreground">الطالبة تجيب عن ٤ أو ٥ أسئلة، تشاهد الفيديو، ثم تجيب عن الأسئلة نفسها لقياس التحسن.</p>
         {labQuestions.map((question, index) => <div key={question.id} className="space-y-3 rounded-xl border p-4"><Label>السؤال {index + 1} — يظهر قبل الفيديو وبعده</Label><Input required value={question.text} onChange={(event) => updateLabQuestion(question.id, { text: event.target.value })} placeholder="نص السؤال" />{renderChoiceEditor(question.choices, (choices) => updateLabQuestion(question.id, { choices }), `lab-${question.id}`)}{labQuestions.length > 4 && <Button type="button" variant="ghost" onClick={() => setLabQuestions(labQuestions.filter((item) => item.id !== question.id))}>حذف السؤال</Button>}</div>)}
         {labQuestions.length < 5 && <Button type="button" variant="outline" onClick={() => setLabQuestions([...labQuestions, makeLabQuestion()])}>إضافة سؤال</Button>}
-        <Button type="submit">حفظ التجربة</Button>
+        <div className="flex flex-wrap gap-2"><Button type="submit" disabled={savingLab}>{savingLab ? "جارٍ الحفظ…" : editingLabId ? "حفظ التعديلات" : "حفظ التجربة"}</Button>{editingLabId && <Button type="button" variant="outline" onClick={resetLabForm}><X className="ml-2 h-4 w-4" />إلغاء التعديل</Button>}</div>
       </form>
     </CardContent></Card>
 
     <div className="grid gap-4 md:grid-cols-2">
       <Card><CardHeader><CardTitle>النصوص المضافة ({readings.length})</CardTitle></CardHeader><CardContent>{readings.map((reading) => <div key={reading.id} className="border-b py-2"><b>{reading.title}</b><p className="text-xs text-muted-foreground">{reading.questions?.length || 0} أسئلة</p></div>)}</CardContent></Card>
-      <Card><CardHeader><CardTitle>التجارب المضافة ({labs.length})</CardTitle></CardHeader><CardContent>{labs.map((lab) => <div key={lab.id} className="border-b py-2"><b>{lab.title}</b><p className="text-xs text-muted-foreground">{lab.question_set?.length || 2} أسئلة، والفيديو داخل الموقع</p></div>)}</CardContent></Card>
+      <Card><CardHeader><CardTitle>التجارب المضافة ({labs.length})</CardTitle></CardHeader><CardContent>{labs.map((lab) => <div key={lab.id} className="flex items-center justify-between gap-3 border-b py-3"><div><b>{lab.title}</b><p className="text-xs text-muted-foreground">{lab.question_set?.length || 2} أسئلة، والفيديو داخل الموقع</p></div><Button type="button" variant="outline" size="sm" onClick={() => editLab(lab)} aria-label={`تعديل تجربة ${lab.title}`}><Pencil className="ml-2 h-4 w-4" />تعديل</Button></div>)}</CardContent></Card>
     </div>
   </main>;
 }

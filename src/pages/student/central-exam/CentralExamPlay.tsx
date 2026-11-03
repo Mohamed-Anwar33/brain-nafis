@@ -807,9 +807,9 @@ export default function CentralExamPlay() {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 container max-w-4xl mx-auto px-4 py-8 flex flex-col relative z-10">
+      <div className="flex-1 container max-w-4xl mx-auto px-3 py-4 sm:px-4 sm:py-8 flex flex-col relative z-10">
         {/* Question Card */}
-        <Card className="mb-8 overflow-hidden border-0 shadow-2xl shadow-purple-500/10 bg-white/80 backdrop-blur-xl">
+        <Card className="mb-4 sm:mb-8 overflow-hidden border-0 shadow-2xl shadow-purple-500/10 bg-white/80 backdrop-blur-xl">
           {currentQuestion.image_url && (
             <div className="relative group">
               <Dialog>
@@ -846,9 +846,9 @@ export default function CentralExamPlay() {
             </div>
           )}
           
-          <div className="p-8">
+          <div className="p-4 sm:p-8">
             {/* Question Number Badge */}
-            <div className="flex items-center justify-center mb-6">
+            <div className="flex items-center justify-center mb-3 sm:mb-6">
               <div className="bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white px-6 py-2 rounded-full font-bold shadow-lg shadow-purple-500/30 flex items-center gap-2">
                 <Zap className="w-4 h-4" />
                 <span>سؤال {currentIndex + 1}</span>
@@ -856,7 +856,7 @@ export default function CentralExamPlay() {
             </div>
 
             {selectionContext && (
-              <div className="mb-6 text-center text-sm text-slate-500">
+              <div className="mb-3 sm:mb-6 text-center text-sm text-slate-500">
                 {getSelectionDisplayText(selectionContext)}
               </div>
             )}
@@ -868,7 +868,7 @@ export default function CentralExamPlay() {
         </Card>
 
         {/* Choices Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 sm:gap-4 mb-4 sm:mb-8">
           {/* Deduplicate choices by text, prefer is_correct=true when duplicates exist */}
           {Array.from(currentQuestion.choices
             ?.reduce((map, c) => {
@@ -906,10 +906,10 @@ export default function CentralExamPlay() {
               <Card
                 key={choice.id}
                 onClick={() => !isAnswered && handleSelectChoice(choice.id)}
-                className={`p-6 cursor-pointer transition-all duration-300 ${cardClass}`}
+                className={`p-3.5 sm:p-6 cursor-pointer transition-all duration-300 ${cardClass}`}
               >
-                <div className="flex items-center gap-4">
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-black text-lg shrink-0 ${
+                <div className="flex items-center gap-3 sm:gap-4">
+                  <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center font-black text-lg shrink-0 ${
                     isAnswered && isCorrect ? 'bg-white/20' :
                     isAnswered && isSelected && !isCorrect ? 'bg-white/20' :
                     isSelected ? 'bg-white/20' : 'bg-violet-100 text-violet-600'

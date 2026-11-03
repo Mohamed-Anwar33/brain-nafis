@@ -23,6 +23,7 @@ const defaultFooterContent: FooterContent = {
 export const Footer = () => {
     const location = useLocation();
     const [content, setContent] = useState<FooterContent>(defaultFooterContent);
+    const showFooterSections = shouldShowFooterSections(location.pathname);
 
     useEffect(() => {
         let active = true;
@@ -44,11 +45,11 @@ export const Footer = () => {
         };
     }, []);
 
-    const showFooterContent = shouldShowFooterSections(location.pathname) && Boolean(
+    const showFooterContent = showFooterSections && Boolean(
         content.footer_topic_teacher_body.trim() || content.footer_topic_platform_body.trim(),
     );
     return (
-        <footer className="w-full py-4 mt-auto bg-white/80 backdrop-blur-xl border-t border-slate-200/60 relative select-none">
+        <footer className={`w-full mt-auto bg-white/80 backdrop-blur-xl border-t border-slate-200/60 relative select-none ${showFooterSections ? "py-4" : "py-1.5 sm:py-3"}`}>
             <div className="sadu-strip absolute top-0 left-0 w-full" />
             {showFooterContent && (
                 <div className="container mx-auto px-4 pb-4">
@@ -69,23 +70,23 @@ export const Footer = () => {
                 </div>
             )}
             {!location.pathname.startsWith("/admin") && (
-                <div className="container mx-auto px-4 pb-4 flex justify-center">
+                <div className={`container mx-auto px-4 flex justify-center ${showFooterSections ? "pb-4" : "pb-1 sm:pb-2"}`}>
                     <Link
                         to="/student/dashboard"
-                        className="inline-flex min-h-12 items-center justify-center gap-2.5 rounded-2xl border-2 border-slate-200/90 bg-white/95 px-6 font-black text-sm text-slate-700 shadow-sm transition-all hover:border-indigo-300 hover:bg-slate-50 hover:text-indigo-600 hover:shadow-md active:scale-95"
+                        className={`inline-flex items-center justify-center gap-2 rounded-2xl border-2 border-slate-200/90 bg-white/95 font-black text-slate-700 shadow-sm transition-all hover:border-indigo-300 hover:bg-slate-50 hover:text-indigo-600 hover:shadow-md active:scale-95 ${showFooterSections ? "min-h-12 px-6 text-sm gap-2.5" : "min-h-9 px-4 text-xs sm:min-h-10 sm:text-sm"}`}
                     >
                         <span>العودة لاختيار المسار التعليمي</span>
-                        <ArrowRight className="h-4 w-4" />
+                        <ArrowRight className={`${showFooterSections ? "h-4 w-4" : "h-3.5 w-3.5 sm:h-4 sm:w-4"}`} />
                     </Link>
                 </div>
             )}
-            <div className="container mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-right">
-                <p className="flex items-center justify-center gap-2 text-xs sm:text-sm font-bold text-slate-700">
+            <div className={`container mx-auto px-4 flex flex-col sm:flex-row items-center justify-between text-center sm:text-right ${showFooterSections ? "gap-3" : "gap-1 sm:gap-3"}`}>
+                <p className={`flex items-center justify-center gap-2 font-bold text-slate-700 ${showFooterSections ? "text-xs sm:text-sm" : "text-[10px] sm:text-xs"}`}>
                     <span>صنع بإتقان في المملكة العربية السعودية</span>
                     <span className="text-base">🇸🇦</span>
                     <span className="text-base">🌴</span>
                 </p>
-                <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 text-xs font-bold text-slate-500">
+                <div className={`flex flex-wrap items-center justify-center gap-x-2 sm:gap-3 font-bold text-slate-500 ${showFooterSections ? "gap-y-2 text-xs" : "gap-y-0.5 text-[9px] sm:text-xs"}`}>
                     <span>المعلمة: أ/ هيفاء السلمي</span>
                     <span className="text-slate-300">•</span>
                     <span className="text-[#1e3a8a] font-black">منصة براين ساينس للتفوق © جميع الحقوق محفوظة</span>

@@ -28,6 +28,9 @@ export function TreasureChamber({
   const durationMins = Math.floor(finalResult.duration_seconds / 60);
   const durationSecs = finalResult.duration_seconds % 60;
   const isPassed = finalResult.is_passed;
+  const isPerfectRunEligible = finalResult.final_score === 100
+    && finalResult.duration_seconds < 5 * 60
+    && finalResult.subject_point_eligible === true;
   const {
     earnedPerfectScore,
     hasPerfectRun,
@@ -123,7 +126,7 @@ export function TreasureChamber({
 
       {/* 4. 3D Tactile Action Buttons */}
       <div className="space-y-3">
-        {finalResult.is_certificate_eligible && (
+        {isPerfectRunEligible && finalResult.is_certificate_eligible && (
           <button
             type="button"
             onClick={onOpenCertificate}

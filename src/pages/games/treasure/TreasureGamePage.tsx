@@ -572,7 +572,9 @@ export default function TreasureGamePage() {
       final_score: finalized?.final_score ?? score,
       base_score: finalized?.base_score ?? score,
       is_passed: finalized?.is_passed ?? score >= 60,
-      is_certificate_eligible: finalized?.is_certificate_eligible ?? score >= 80,
+      // The treasure certificate follows the same strict perfect-run rule as
+      // the subject point; never fall back to the legacy 80% certificate rule.
+      is_certificate_eligible: finalized?.subject_point_eligible === true,
       speed_bonus: finalized?.speed_bonus ?? 0,
       duration_seconds: finalized?.duration_seconds ?? 120,
       challenges_snapshot: fallbackChallenges || sessionData?.challenges || DEFAULT_TREASURE_12_CHALLENGES,

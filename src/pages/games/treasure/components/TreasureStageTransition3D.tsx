@@ -123,7 +123,7 @@ export function TreasureStageTransition3D({
 
   return (
     <div
-      className="fixed inset-0 z-50 w-screen h-screen overflow-hidden bg-slate-950 text-foreground flex flex-col justify-between select-none animate-in fade-in duration-300"
+      className="fixed inset-0 z-[70] h-[100dvh] min-h-[100svh] w-screen overflow-hidden bg-slate-950 text-foreground flex flex-col select-none animate-in fade-in duration-300"
       dir="rtl"
     >
       {/* Lightweight island-night backdrop */}
@@ -133,7 +133,7 @@ export function TreasureStageTransition3D({
       <div className="absolute inset-0 bg-gradient-to-b from-black/35 via-transparent to-black/55 pointer-events-none z-10" />
 
       {/* 3. Top Status HUD Bar */}
-      <div className="relative z-20 p-4 sm:p-6 w-full max-w-5xl mx-auto flex items-center justify-between">
+      <div className="relative z-20 w-full max-w-5xl shrink-0 mx-auto flex flex-wrap items-center justify-center gap-2 p-2 sm:flex-nowrap sm:justify-between sm:gap-3 sm:p-6">
         {/* Left: Interactive Badge */}
         <div className="flex items-center gap-2">
           <div className="px-4 py-1.5 rounded-full bg-black/60 backdrop-blur-md border-2 border-white/20 text-white font-black text-xs sm:text-sm flex items-center gap-2 shadow-xl">
@@ -151,7 +151,7 @@ export function TreasureStageTransition3D({
       </div>
 
       {/* 4. Center Cinematic Stage Presentation Card */}
-      <div className="relative z-20 mx-auto flex w-full max-w-3xl flex-col items-center justify-center gap-3 p-3 text-center pointer-events-auto">
+      <div className="relative z-20 mx-auto flex w-full max-w-3xl min-h-0 flex-1 flex-col items-center justify-start gap-2 overflow-y-auto p-2 text-center pointer-events-auto sm:justify-center sm:gap-3 sm:overflow-visible sm:p-3">
         {/* Stage Leap Indicator */}
         <div className="inline-flex items-center gap-2 px-5 py-1 rounded-full bg-gradient-to-r from-amber-400/20 via-yellow-400/30 to-amber-500/20 border-2 border-amber-400/60 backdrop-blur-md text-amber-200 font-black text-xs sm:text-sm shadow-2xl animate-pulse">
           <span>{config.fromName}</span>
@@ -188,7 +188,7 @@ export function TreasureStageTransition3D({
       </div>
 
       {/* 5. Bottom Interactive Launchpad & Progress Gauge */}
-      <div className="relative z-20 p-4 sm:p-8 w-full max-w-xl mx-auto flex flex-col items-center space-y-3">
+      <div className="relative z-30 w-full max-w-xl shrink-0 mx-auto flex flex-col items-center space-y-2 border-t border-white/10 bg-slate-950/90 px-3 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur-md sm:space-y-3 sm:border-0 sm:bg-transparent sm:p-8">
         {/* Progress Bar with Glow */}
         <div className="w-full bg-black/50 backdrop-blur-md rounded-full h-3 border-2 border-white/20 p-0.5 overflow-hidden shadow-2xl">
           <div
@@ -201,7 +201,7 @@ export function TreasureStageTransition3D({
         <button
           type="button"
           onClick={handleFinish}
-          className={`pointer-events-auto py-3.5 sm:py-4 px-8 sm:px-12 rounded-full border-2 border-white/40 bg-gradient-to-r ${config.accentGradient} text-stone-950 font-black text-sm sm:text-base shadow-[0_8px_25px_rgba(0,0,0,0.6)] hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer group`}
+          className={`pointer-events-auto min-h-11 py-2.5 sm:py-4 px-8 sm:px-12 rounded-full border-2 border-white/40 bg-gradient-to-r ${config.accentGradient} text-stone-950 font-black text-sm sm:text-base shadow-[0_8px_25px_rgba(0,0,0,0.6)] hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer group`}
         >
           <span>{transitionData.toStage <= TREASURE_STAGE_COUNT ? `ابدأ ${config.toName}` : "افتح صندوق الكنز"}</span>
           <ArrowLeft className="w-5 h-5 text-stone-950 group-hover:-translate-x-1 transition-transform" />

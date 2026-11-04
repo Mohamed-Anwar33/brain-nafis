@@ -6,14 +6,29 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Pencil, X } from "lucide-react";
+import { Pencil, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 
 type Domain = { id: string; name: string; grade_subject_id: string };
 type ChoiceDraft = { id: string; text: string; correct: boolean };
 type ReadingQuestionDraft = { id: string; text: string; choices: ChoiceDraft[] };
 type LabQuestionDraft = { id: string; text: string; choices: ChoiceDraft[] };
-type ReadingAdminRow = { id: string; title: string; questions?: Array<{ id: string }> };
+type ReadingAdminQuestion = {
+  id: string;
+  text: string;
+  question_order: number;
+  choices: Array<{ id: string; text: string }>;
+  answer_key?: { correct_choice_id: string } | Array<{ correct_choice_id: string }> | null;
+};
+type ReadingAdminRow = {
+  id: string;
+  title: string;
+  passage: string;
+  image_url?: string | null;
+  domain_id?: string | null;
+  grade_subject_id?: string | null;
+  questions?: ReadingAdminQuestion[];
+};
 type LabAdminRow = {
   id: string; title: string; display_mode: "iframe" | "external"; question_set?: LabQuestionDraft[];
   domain_id?: string | null; scientific_concept?: string | null; instructions?: string;
@@ -39,6 +54,9 @@ export default function ScientificActivitiesAdmin() {
   const [passage, setPassage] = useState("");
   const [readingImageUrl, setReadingImageUrl] = useState("");
   const [readingDomain, setReadingDomain] = useState("");
+  const [editingReadingId, setEditingReadingId] = useState<string | null>(null);
+  const [savingReading, setSavingReading] = useState(false);
+  const [deletingReadingId, setDeletingReadingId] = useState<string | null>(null);
   const [readingQuestions, setReadingQuestions] = useState<ReadingQuestionDraft[]>([
     makeReadingQuestion(), makeReadingQuestion(), makeReadingQuestion(), makeReadingQuestion(),
   ]);
@@ -55,7 +73,7 @@ export default function ScientificActivitiesAdmin() {
 
   const refresh = async () => {
     const [{ data: readingData, error: readingError }, { data: labData, error: labError }] = await Promise.all([
-      supabase.from("scientific_readings").select("*,questions:scientific_reading_questions(*)").order("created_at", { ascending: false }),
+      supabase.from("scientific_readings").select("*,questions:scientific_reading_questions(*,answer_key:scientific_reading_answer_keys(correct_choice_id))").order("created_at", { ascending: false }),
       supabase.from("virtual_lab_activities").select("id,title,display_mode,question_set,domain_id,scientific_concept,instructions,simulation_url,before_question,before_choices,after_question,after_choices,answer_keys:virtual_lab_answer_keys(question_answer_keys,before_correct_answer,after_correct_answer)").order("created_at", { ascending: false }),
     ]);
     if (readingError || labError) toast.error("تعذر تحميل الأنشطة العلمية");
@@ -76,6 +94,40 @@ export default function ScientificActivitiesAdmin() {
     setReadingQuestions((current) => current.map((item) => item.id === id ? { ...item, ...update } : item));
   const updateLabQuestion = (id: string, update: Partial<LabQuestionDraft>) =>
     setLabQuestions((current) => current.map((item) => item.id === id ? { ...item, ...update } : item));
+
+  const resetReadingForm = () => {
+    setEditingReadingId(null);
+    setTitle(""); setPassage(""); setReadingImageUrl(""); setReadingDomain("");
+    setReadingQuestions(Array.from({ length: 4 }, makeReadingQuestion));
+  };
+
+  const editReading = (reading: ReadingAdminRow) => {
+    setEditingReadingId(reading.id);
+    setTitle(reading.title);
+    setPassage(reading.passage);
+    setReadingImageUrl(reading.image_url || "");
+    setReadingDomain(reading.domain_id || "");
+    setReadingQuestions((reading.questions || []).slice().sort((a, b) => a.question_order - b.question_order).map((question) => {
+      const answerKey = Array.isArray(question.answer_key) ? question.answer_key[0] : question.answer_key;
+      return {
+        id: question.id,
+        text: question.text,
+        choices: (question.choices || []).map((choice) => ({ ...choice, correct: choice.id === answerKey?.correct_choice_id })),
+      };
+    }));
+    document.getElementById("scientific-reading-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  const deleteReading = async (reading: ReadingAdminRow) => {
+    if (!window.confirm(`هل تريد حذف النص «${reading.title}»؟ سيُحذف معه أسئلته وسجل إجابات الطلاب المرتبط بها.`)) return;
+    setDeletingReadingId(reading.id);
+    const { data, error } = await supabase.from("scientific_readings").delete().eq("id", reading.id).select("id").maybeSingle();
+    setDeletingReadingId(null);
+    if (error || !data) { toast.error("تعذر حذف النص العلمي"); return; }
+    if (editingReadingId === reading.id) resetReadingForm();
+    toast.success("تم حذف النص وأسئلته");
+    await refresh();
+  };
 
   const resetLabForm = () => {
     setEditingLabId(null); setLabTitle(""); setLabDomain(""); setConcept(""); setInstructions(""); setVideoUrl("");
@@ -122,31 +174,49 @@ export default function ScientificActivitiesAdmin() {
         return;
       }
     }
-    const { data: reading, error } = await supabase.from("scientific_readings").insert({
+    setSavingReading(true);
+    const readingPayload = {
       title: title.trim(), passage: passage.trim(), image_url: imageUrl, domain_id: readingDomain || null,
       grade_subject_id: domains.find((domain) => domain.id === readingDomain)?.grade_subject_id || null,
-    }).select("id").single();
-    if (error || !reading) { toast.error("تعذر حفظ النص العلمي"); return; }
+    };
+    const currentReading = editingReadingId ? readings.find((item) => item.id === editingReadingId) : null;
+    const { data: reading, error } = editingReadingId
+      ? await supabase.from("scientific_readings").update(readingPayload).eq("id", editingReadingId).select("id").single()
+      : await supabase.from("scientific_readings").insert(readingPayload).select("id").single();
+    if (error || !reading) { setSavingReading(false); toast.error(editingReadingId ? "تعذر تعديل النص العلمي" : "تعذر حفظ النص العلمي"); return; }
 
     for (const [index, question] of valid.entries()) {
       const choices = question.choices.filter((choice) => choice.text.trim());
-      const { data: inserted, error: questionError } = await supabase.from("scientific_reading_questions").insert({
+      const questionPayload = {
         reading_id: reading.id, text: question.text.trim(), question_order: index + 1,
         choices: choices.map(({ id, text }) => ({ id, text: text.trim() })),
-      }).select("id").single();
-      if (questionError || !inserted) {
-        await supabase.from("scientific_readings").delete().eq("id", reading.id);
-        toast.error("تعذر حفظ أسئلة النص"); return;
+      };
+      const isExistingQuestion = currentReading?.questions?.some((item) => item.id === question.id) || false;
+      const { data: savedQuestion, error: questionError } = isExistingQuestion
+        ? await supabase.from("scientific_reading_questions").update(questionPayload).eq("id", question.id).eq("reading_id", reading.id).select("id").single()
+        : await supabase.from("scientific_reading_questions").insert(questionPayload).select("id").single();
+      if (questionError || !savedQuestion) {
+        setSavingReading(false);
+        toast.error("تعذر حفظ أحد أسئلة النص؛ راجع النص ثم أعد المحاولة"); return;
       }
       const correct = choices.find((choice) => choice.correct)!;
-      const { error: keyError } = await supabase.from("scientific_reading_answer_keys").insert({ question_id: inserted.id, correct_choice_id: correct.id });
+      const { error: keyError } = await supabase.from("scientific_reading_answer_keys").upsert({ question_id: savedQuestion.id, correct_choice_id: correct.id });
       if (keyError) {
-        await supabase.from("scientific_readings").delete().eq("id", reading.id);
-        toast.error("تعذر حفظ مفتاح الإجابة"); return;
+        setSavingReading(false);
+        toast.error("حُفظ السؤال لكن تعذر تحديث إجابته الصحيحة؛ أعد حفظ النص"); return;
       }
     }
-    toast.success("تمت إضافة النص وأسئلته");
-    setTitle(""); setPassage(""); setReadingImageUrl(""); setReadingQuestions(Array.from({ length: 4 }, makeReadingQuestion));
+    if (editingReadingId && currentReading) {
+      const retainedIds = new Set(valid.filter((question) => currentReading.questions?.some((item) => item.id === question.id)).map((question) => question.id));
+      const removedIds = (currentReading.questions || []).map((question) => question.id).filter((id) => !retainedIds.has(id));
+      if (removedIds.length) {
+        const { error: deleteQuestionsError } = await supabase.from("scientific_reading_questions").delete().in("id", removedIds).eq("reading_id", reading.id);
+        if (deleteQuestionsError) { setSavingReading(false); toast.error("تم حفظ التعديلات، لكن تعذر حذف بعض الأسئلة المحذوفة من النموذج"); await refresh(); return; }
+      }
+    }
+    setSavingReading(false);
+    toast.success(editingReadingId ? "تم تعديل النص وأسئلته" : "تمت إضافة النص وأسئلته");
+    resetReadingForm();
     await refresh();
   };
 
@@ -216,7 +286,7 @@ export default function ScientificActivitiesAdmin() {
 
   return <main dir="rtl" className="mx-auto max-w-5xl space-y-8 p-4 pb-12">
     <header><h1 className="text-3xl font-black">الفهم القرائي والمختبر الافتراضي</h1><p className="mt-2 text-muted-foreground">أضيفي نصوصًا وأسئلة لكل مجال، أو تجربة بفيديو ومجموعة الأسئلة نفسها قبل المشاهدة وبعدها.</p></header>
-    <Card><CardHeader><CardTitle>إضافة نص «اقرئي واستنتجي»</CardTitle></CardHeader><CardContent>
+    <Card id="scientific-reading-form"><CardHeader><CardTitle>{editingReadingId ? "تعديل النص القرائي" : "إضافة نص «اقرئي واستنتجي»"}</CardTitle></CardHeader><CardContent>
       <form onSubmit={(event) => void saveReading(event)} className="space-y-4">
         <Input required value={title} onChange={(event) => setTitle(event.target.value)} placeholder="عنوان النص" />
         <Select value={readingDomain || "none"} onValueChange={(value) => setReadingDomain(value === "none" ? "" : value)}><SelectTrigger><SelectValue placeholder="المجال العلمي" /></SelectTrigger><SelectContent><SelectItem value="none">اختياري — كل المجالات</SelectItem>{domains.map((domain) => <SelectItem key={domain.id} value={domain.id}>{domain.name}</SelectItem>)}</SelectContent></Select>
@@ -224,7 +294,7 @@ export default function ScientificActivitiesAdmin() {
         <Input type="url" value={readingImageUrl} onChange={(event) => setReadingImageUrl(event.target.value)} placeholder="رابط صورة توضيحية للقطعة (اختياري — HTTPS)" dir="ltr" />
         {readingQuestions.map((question, index) => <div key={question.id} className="space-y-3 rounded-xl border p-4"><Label>السؤال {index + 1}</Label><Input value={question.text} onChange={(event) => updateReadingQuestion(question.id, { text: event.target.value })} placeholder="نص السؤال" />{renderChoiceEditor(question.choices, (choices) => updateReadingQuestion(question.id, { choices }), `reading-${question.id}`)}{readingQuestions.length > 4 && <Button type="button" variant="ghost" onClick={() => setReadingQuestions(readingQuestions.filter((item) => item.id !== question.id))}>حذف السؤال</Button>}</div>)}
         {readingQuestions.length < 6 && <Button type="button" variant="outline" onClick={() => setReadingQuestions([...readingQuestions, makeReadingQuestion()])}>إضافة سؤال للنص</Button>}
-        <Button type="submit">حفظ النص وأسئلته</Button>
+        <div className="flex flex-wrap gap-2"><Button type="submit" disabled={savingReading}>{savingReading ? "جارٍ الحفظ…" : editingReadingId ? "حفظ تعديلات النص" : "حفظ النص وأسئلته"}</Button>{editingReadingId && <Button type="button" variant="outline" onClick={resetReadingForm}><X className="ml-2 h-4 w-4" />إلغاء التعديل</Button>}</div>
       </form>
     </CardContent></Card>
 
@@ -243,7 +313,7 @@ export default function ScientificActivitiesAdmin() {
     </CardContent></Card>
 
     <div className="grid gap-4 md:grid-cols-2">
-      <Card><CardHeader><CardTitle>النصوص المضافة ({readings.length})</CardTitle></CardHeader><CardContent>{readings.map((reading) => <div key={reading.id} className="border-b py-2"><b>{reading.title}</b><p className="text-xs text-muted-foreground">{reading.questions?.length || 0} أسئلة</p></div>)}</CardContent></Card>
+      <Card><CardHeader><CardTitle>النصوص المضافة ({readings.length})</CardTitle></CardHeader><CardContent>{readings.map((reading) => <div key={reading.id} className="flex items-center justify-between gap-3 border-b py-3"><div className="min-w-0"><b>{reading.title}</b><p className="text-xs text-muted-foreground">{reading.questions?.length || 0} أسئلة · {domains.find((domain) => domain.id === reading.domain_id)?.name || "كل المجالات"}</p></div><div className="flex shrink-0 gap-2"><Button type="button" variant="outline" size="sm" onClick={() => editReading(reading)} aria-label={`تعديل النص ${reading.title}`}><Pencil className="ml-2 h-4 w-4" />تعديل</Button><Button type="button" variant="destructive" size="sm" disabled={deletingReadingId === reading.id} onClick={() => void deleteReading(reading)} aria-label={`حذف النص ${reading.title}`}><Trash2 className="ml-2 h-4 w-4" />{deletingReadingId === reading.id ? "جارٍ الحذف…" : "حذف"}</Button></div></div>)}</CardContent></Card>
       <Card><CardHeader><CardTitle>التجارب المضافة ({labs.length})</CardTitle></CardHeader><CardContent>{labs.map((lab) => <div key={lab.id} className="flex items-center justify-between gap-3 border-b py-3"><div><b>{lab.title}</b><p className="text-xs text-muted-foreground">{lab.question_set?.length || 2} أسئلة، والفيديو داخل الموقع</p></div><Button type="button" variant="outline" size="sm" onClick={() => editLab(lab)} aria-label={`تعديل تجربة ${lab.title}`}><Pencil className="ml-2 h-4 w-4" />تعديل</Button></div>)}</CardContent></Card>
     </div>
   </main>;

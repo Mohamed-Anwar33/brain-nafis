@@ -165,7 +165,8 @@ export function StartScreen({ onStart, isLoading }: StartScreenProps) {
               <div className="relative p-4 rounded-3xl bg-white/95 backdrop-blur-xl shadow-xl shadow-indigo-100/60 border border-white group-hover:scale-105 transition-transform duration-500">
                 <img
                   src="/logo.jpg"
-                  alt="براين ساينس"
+                  alt="لوغو منصة الاختبارات والألعاب التعليمية التفاعلية براين ساينس للتفوق"
+                  title="لوغو منصة الاختبارات والألعاب التعليمية التفاعلية براين ساينس للتفوق"
                   className="h-20 sm:h-28 w-auto object-contain mix-blend-multiply"
                 />
               </div>

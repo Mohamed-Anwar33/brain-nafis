@@ -136,7 +136,7 @@ export default function StudentGamesHub() {
                 </p>
               </div>
               <div className="w-11 h-11 rounded-2xl bg-white p-1 border border-slate-200 shadow-sm flex items-center justify-center overflow-hidden">
-                <img src="/brain-science-logo.png" alt="Logo" className="w-full h-full object-contain" />
+                <img src="/brain-science-logo.png" alt="شعار منصة براين ساينس للتفوق" title="براين ساينس للتفوق" className="w-full h-full object-contain" />
               </div>
             </div>
           </div>

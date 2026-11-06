@@ -50,6 +50,7 @@ import AdminResultsPage from "./pages/admin/AdminResultsPage";
 import TreasureAdventuresAdmin from "./pages/admin/treasure/TreasureAdventuresAdmin";
 import ScientificActivities from "./pages/student/ScientificActivities";
 import ScientificActivitiesAdmin from "./pages/admin/nafis/ScientificActivitiesAdmin";
+import { SeoMetadata } from "@/components/SeoMetadata";
 
 const queryClient = new QueryClient();
 
@@ -59,6 +60,7 @@ const App = () => (
       <Toaster />
       <Sonner position="top-center" dir="rtl" />
       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <SeoMetadata />
         <div className="flex flex-col min-h-screen">
           <Routes>
             {/* Student Routes */}

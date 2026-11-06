@@ -47,7 +47,6 @@ const today = new Date().toISOString().split('T')[0];
 // 1. Static Public Pages
 const staticRoutes = [
   { path: '', priority: '1.0', changefreq: 'daily', title: 'الرئيسية' },
-  { path: '/student/dashboard', priority: '0.9', changefreq: 'daily', title: 'لوحة تحكم الطالب' },
   { path: '/student/games', priority: '0.9', changefreq: 'weekly', title: 'مركز الألعاب التعليمية' },
   { path: '/student/science-activities', priority: '0.8', changefreq: 'weekly', title: 'الأنشطة والتجارب العلمية' },
   { path: '/central-exam', priority: '0.9', changefreq: 'weekly', title: 'الاختبارات المركزية' },
@@ -95,7 +94,8 @@ function buildSitemapXml(urls) {
 
   for (const item of urls) {
     xml += `  <url>\n`;
-    xml += `    <loc>${SITE_URL}${item.path}</loc>\n`;
+    const routePath = item.path || '/';
+    xml += `    <loc>${SITE_URL}${routePath}</loc>\n`;
     xml += `    <lastmod>${item.lastmod || today}</lastmod>\n`;
     xml += `    <changefreq>${item.changefreq || 'weekly'}</changefreq>\n`;
     xml += `    <priority>${item.priority || '0.7'}</priority>\n`;

@@ -4,74 +4,86 @@
         xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9
         http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
   <url>
-    <loc>https://www.brain-scince-edecutioun.com</loc>
-    <lastmod>2026-10-28</lastmod>
+    <loc>https://www.brain-scince-edecutioun.com/</loc>
+    <lastmod>2026-11-06</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://www.brain-scince-edecutioun.com/student/dashboard</loc>
-    <lastmod>2026-10-28</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.9</priority>
-  </url>
-  <url>
     <loc>https://www.brain-scince-edecutioun.com/student/games</loc>
-    <lastmod>2026-10-28</lastmod>
+    <lastmod>2026-11-06</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
     <loc>https://www.brain-scince-edecutioun.com/student/science-activities</loc>
-    <lastmod>2026-10-28</lastmod>
+    <lastmod>2026-11-06</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://www.brain-scince-edecutioun.com/central-exam</loc>
-    <lastmod>2026-10-28</lastmod>
+    <lastmod>2026-11-06</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
     <loc>https://www.brain-scince-edecutioun.com/central-exam/games</loc>
-    <lastmod>2026-10-28</lastmod>
+    <lastmod>2026-11-06</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://www.brain-scince-edecutioun.com/games/matching</loc>
-    <lastmod>2026-10-28</lastmod>
+    <lastmod>2026-11-06</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://www.brain-scince-edecutioun.com/games/ordering</loc>
-    <lastmod>2026-10-28</lastmod>
+    <lastmod>2026-11-06</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://www.brain-scince-edecutioun.com/games/speed</loc>
-    <lastmod>2026-10-28</lastmod>
+    <lastmod>2026-11-06</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://www.brain-scince-edecutioun.com/games/wheel</loc>
-    <lastmod>2026-10-28</lastmod>
+    <lastmod>2026-11-06</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://www.brain-scince-edecutioun.com/games/treasure/active</loc>
-    <lastmod>2026-10-28</lastmod>
+    <lastmod>2026-11-06</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://www.brain-scince-edecutioun.com/games/treasure/a5a7b3ec-0b9f-4c63-bde8-659116696c29</loc>
+    <lastmod>2026-11-02</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://www.brain-scince-edecutioun.com/games/treasure/48d6bc8c-0340-499c-b73a-4558179e7e29</loc>
-    <lastmod>2026-10-28</lastmod>
+    <lastmod>2026-11-02</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.brain-scince-edecutioun.com/games/treasure/698ea96a-e904-457e-b555-b1a9fffd0e9b</loc>
+    <lastmod>2026-11-02</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.brain-scince-edecutioun.com/games/treasure/882e63cf-38ad-4692-8d65-31a02ab5d812</loc>
+    <lastmod>2026-11-02</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
